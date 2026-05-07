@@ -1,0 +1,216 @@
+{
+  "summary": {
+    "total_tests": 34,
+    "passed_tests": 34,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "failed_test_names": []
+  },
+  "detailed_results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "details": "System is healthy",
+      "timestamp": "2026-04-02T20:14:13.285851"
+    },
+    {
+      "test": "Login admin",
+      "success": true,
+      "details": "Token received for admin",
+      "timestamp": "2026-04-02T20:14:13.550532"
+    },
+    {
+      "test": "Login manager",
+      "success": true,
+      "details": "Token received for manager1",
+      "timestamp": "2026-04-02T20:14:13.816528"
+    },
+    {
+      "test": "Login teacher",
+      "success": true,
+      "details": "Token received for teacher1",
+      "timestamp": "2026-04-02T20:14:14.083534"
+    },
+    {
+      "test": "Login student",
+      "success": true,
+      "details": "Token received for student1",
+      "timestamp": "2026-04-02T20:14:14.349533"
+    },
+    {
+      "test": "Login parent",
+      "success": true,
+      "details": "Token received for parent1",
+      "timestamp": "2026-04-02T20:14:14.614523"
+    },
+    {
+      "test": "GET Centers",
+      "success": true,
+      "details": "Retrieved 4 centers",
+      "timestamp": "2026-04-02T20:14:14.662605"
+    },
+    {
+      "test": "Centers Data Structure",
+      "success": true,
+      "details": "All required fields present",
+      "timestamp": "2026-04-02T20:14:14.662620"
+    },
+    {
+      "test": "POST Centers",
+      "success": true,
+      "details": "Created center with ID: 69cece16bc27129082f73f4b",
+      "timestamp": "2026-04-02T20:14:14.707536"
+    },
+    {
+      "test": "DELETE Centers",
+      "success": true,
+      "details": "Center soft deleted successfully",
+      "timestamp": "2026-04-02T20:14:14.750513"
+    },
+    {
+      "test": "GET Students",
+      "success": true,
+      "details": "Retrieved 7 students",
+      "timestamp": "2026-04-02T20:14:14.794547"
+    },
+    {
+      "test": "POST Students",
+      "success": true,
+      "details": "Created student with ID: 69cece16bc27129082f73f4c",
+      "timestamp": "2026-04-02T20:14:14.839534"
+    },
+    {
+      "test": "PUT Students",
+      "success": true,
+      "details": "Student updated successfully",
+      "timestamp": "2026-04-02T20:14:14.884041"
+    },
+    {
+      "test": "DELETE Students",
+      "success": true,
+      "details": "Student soft deleted successfully",
+      "timestamp": "2026-04-02T20:14:14.928503"
+    },
+    {
+      "test": "GET Teachers",
+      "success": true,
+      "details": "Retrieved 5 teachers with halaqat and student counts",
+      "timestamp": "2026-04-02T20:14:14.975523"
+    },
+    {
+      "test": "Teachers Data Structure",
+      "success": true,
+      "details": "All required fields present",
+      "timestamp": "2026-04-02T20:14:14.975538"
+    },
+    {
+      "test": "POST Teachers",
+      "success": true,
+      "details": "Created teacher with ID: 69cece17bc27129082f73f4e",
+      "timestamp": "2026-04-02T20:14:15.242531"
+    },
+    {
+      "test": "DELETE Teachers",
+      "success": true,
+      "details": "Teacher soft deleted successfully",
+      "timestamp": "2026-04-02T20:14:15.285530"
+    },
+    {
+      "test": "GET Halaqat",
+      "success": true,
+      "details": "Retrieved 6 halaqat with student counts",
+      "timestamp": "2026-04-02T20:14:15.331515"
+    },
+    {
+      "test": "Halaqat Data Structure",
+      "success": true,
+      "details": "All required fields present",
+      "timestamp": "2026-04-02T20:14:15.331529"
+    },
+    {
+      "test": "POST Halaqat",
+      "success": true,
+      "details": "Created halaqah with ID: 69cece17bc27129082f73f4f",
+      "timestamp": "2026-04-02T20:14:15.375539"
+    },
+    {
+      "test": "DELETE Halaqat",
+      "success": true,
+      "details": "Halaqah soft deleted successfully",
+      "timestamp": "2026-04-02T20:14:15.418508"
+    },
+    {
+      "test": "POST Recitations",
+      "success": true,
+      "details": "Created recitation with ID: 69cece17bc27129082f73f50",
+      "timestamp": "2026-04-02T20:14:15.462522"
+    },
+    {
+      "test": "GET Recitations",
+      "success": true,
+      "details": "Retrieved 5 recitations",
+      "timestamp": "2026-04-02T20:14:15.509557"
+    },
+    {
+      "test": "POST Attendance",
+      "success": true,
+      "details": "Submitted attendance for 2 students",
+      "timestamp": "2026-04-02T20:14:15.553505"
+    },
+    {
+      "test": "GET Attendance",
+      "success": true,
+      "details": "Retrieved 10 attendance records",
+      "timestamp": "2026-04-02T20:14:15.597548"
+    },
+    {
+      "test": "POST Fees",
+      "success": true,
+      "details": "Created fee with ID: 69cece17bc27129082f73f53",
+      "timestamp": "2026-04-02T20:14:15.640500"
+    },
+    {
+      "test": "GET Fees",
+      "success": true,
+      "details": "Retrieved 5 fee records",
+      "timestamp": "2026-04-02T20:14:15.683563"
+    },
+    {
+      "test": "POST Fees Pay",
+      "success": true,
+      "details": "Fee marked as paid successfully",
+      "timestamp": "2026-04-02T20:14:15.728525"
+    },
+    {
+      "test": "Dashboard Stats (admin)",
+      "success": true,
+      "details": "Retrieved stats: {'total_students': 7, 'total_teachers': 5, 'total_centers': 4, 'total_halaqat': 6, 'attendance_rate': 50.0, 'pending_fees': 1}",
+      "timestamp": "2026-04-02T20:14:15.773540"
+    },
+    {
+      "test": "Dashboard Stats (manager)",
+      "success": true,
+      "details": "Retrieved stats: {'total_students': 7, 'total_teachers': 5, 'total_centers': 4, 'total_halaqat': 6, 'attendance_rate': 0.0, 'pending_fees': 1}",
+      "timestamp": "2026-04-02T20:14:15.820512"
+    },
+    {
+      "test": "Dashboard Stats (teacher)",
+      "success": true,
+      "details": "Retrieved stats: {'total_students': 7, 'total_teachers': 5, 'total_centers': 4, 'total_halaqat': 6, 'attendance_rate': 0.0, 'pending_fees': 1}",
+      "timestamp": "2026-04-02T20:14:15.867539"
+    },
+    {
+      "test": "Dashboard Stats (student)",
+      "success": true,
+      "details": "Retrieved stats: {'total_students': 7, 'total_teachers': 5, 'total_centers': 4, 'total_halaqat': 6, 'attendance_rate': 50.0, 'pending_fees': 1}",
+      "timestamp": "2026-04-02T20:14:15.913571"
+    },
+    {
+      "test": "Dashboard Stats (parent)",
+      "success": true,
+      "details": "Retrieved stats: {'total_students': 7, 'total_teachers': 5, 'total_centers': 4, 'total_halaqat': 6, 'attendance_rate': 50.0, 'pending_fees': 1}",
+      "timestamp": "2026-04-02T20:14:15.958565"
+    }
+  ],
+  "timestamp": "2026-04-02T20:14:15.958724"
+}

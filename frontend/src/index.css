@@ -1,0 +1,272 @@
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* ========== لوحة ألوان إسلامية (3 ألوان) ========== */
+
+  /* اللون الأساسي: الأخضر الزمردي الإسلامي */
+  --primary: 152 62% 25%;          /* #1B6B45 */
+  --primary-mid: 152 62% 32%;      /* #24895a */
+  --primary-light: 152 45% 95%;    /* خلفية فاتحة */
+  --primary-foreground: 0 0% 100%;
+
+  /* اللون الثانوي: الذهبي */
+  --gold: 40 55% 50%;              /* #C89B3C */
+  --gold-dark: 38 60% 40%;
+  --gold-light: 40 80% 94%;
+
+  /* اللون الداكن: الكحلي */
+  --navy: 222 42% 18%;             /* #1A2744 */
+  --navy-mid: 222 40% 22%;
+  --navy-light: 222 35% 26%;
+
+  /* ألوان الخلفية والمحتوى */
+  --background: 150 20% 97%;
+  --foreground: 222 42% 15%;
+
+  --card: 0 0% 100%;
+  --card-foreground: 222 42% 15%;
+
+  /* الشريط الجانبي */
+  --sidebar: 222 42% 18%;
+  --sidebar-foreground: 222 20% 85%;
+  --sidebar-active: 152 62% 25%;
+  --sidebar-hover: 222 40% 24%;
+
+  --muted: 150 15% 93%;
+  --muted-foreground: 222 20% 45%;
+
+  --accent: 152 45% 92%;
+  --accent-foreground: 152 62% 20%;
+
+  --destructive: 0 72% 51%;
+  --destructive-foreground: 0 0% 98%;
+
+  --border: 150 15% 88%;
+  --input: 150 15% 88%;
+  --ring: 152 62% 25%;
+  --radius: 0.875rem;
+}
+
+* {
+  border-color: hsl(var(--border));
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  direction: rtl;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== Scrollbar ===== */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 10px; }
+::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.35); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
+
+/* ===== RTL input ===== */
+input[dir="ltr"], textarea[dir="ltr"] { text-align: left; }
+input:not([dir]), textarea:not([dir]) { text-align: right; }
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);   opacity: 1; }
+}
+
+@keyframes slideInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.animate-fade-in        { animation: fadeIn 0.4s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.35s ease-out; }
+.animate-slide-in-up    { animation: slideInUp 0.4s ease-out; }
+.animate-float          { animation: float 3s ease-in-out infinite; }
+.animate-pulse-soft     { animation: pulse-soft 2s ease-in-out infinite; }
+
+/* Stagger children */
+.stagger > *:nth-child(1) { animation: fadeIn 0.4s ease-out 0.05s both; }
+.stagger > *:nth-child(2) { animation: fadeIn 0.4s ease-out 0.10s both; }
+.stagger > *:nth-child(3) { animation: fadeIn 0.4s ease-out 0.15s both; }
+.stagger > *:nth-child(4) { animation: fadeIn 0.4s ease-out 0.20s both; }
+.stagger > *:nth-child(5) { animation: fadeIn 0.4s ease-out 0.25s both; }
+
+/* ===== Glass card ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.90);
+}
+
+/* ===== Gradient utilities ===== */
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(152,62%,22%) 0%, hsl(152,62%,30%) 100%);
+}
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(40,55%,45%) 0%, hsl(40,65%,55%) 100%);
+}
+.gradient-sidebar {
+  background: linear-gradient(180deg, hsl(222,42%,16%) 0%, hsl(222,40%,20%) 100%);
+}
+.gradient-page-bg {
+  background: linear-gradient(135deg, hsl(150,25%,96%) 0%, hsl(150,20%,98%) 50%, hsl(40,20%,97%) 100%);
+}
+
+/* ===== Stat card hover ===== */
+.stat-card {
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(27, 107, 69, 0.18);
+}
+
+/* ===== Nav item ===== */
+.nav-item {
+  transition: all 0.2s ease;
+  border-radius: 10px;
+}
+.nav-item:hover {
+  background: hsl(222, 40%, 24%);
+  padding-right: calc(1rem + 3px);
+}
+.nav-item.active {
+  background: linear-gradient(90deg, hsl(152,62%,22%), hsl(152,55%,30%));
+  box-shadow: 0 4px 16px hsl(152 62% 25% / 0.40);
+}
+
+/* ===== Button glow ===== */
+.btn-primary {
+  background: linear-gradient(135deg, hsl(152,62%,22%), hsl(152,55%,30%));
+  color: white;
+  font-weight: 700;
+  border-radius: 12px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px hsl(152 62% 25% / 0.30);
+}
+.btn-primary:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 24px hsl(152 62% 25% / 0.45);
+}
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* ===== Badge gold ===== */
+.badge-gold {
+  background: linear-gradient(135deg, hsl(40,55%,45%), hsl(40,65%,55%));
+  color: white;
+  font-weight: 700;
+}
+
+/* ===== Role quick-login badges ===== */
+.role-badge {
+  border: 2px solid;
+  border-radius: 9999px;
+  padding: 4px 14px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+.role-badge:hover { filter: brightness(0.95); transform: translateY(-1px); }
+.role-badge:active { transform: scale(0.96); }
+
+/* ===== Login card background ===== */
+.login-bg {
+  background: linear-gradient(135deg, hsl(222,42%,16%) 0%, hsl(152,62%,20%) 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+/* ===== Form input ===== */
+.form-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 16px;
+  border: 2px solid hsl(var(--border));
+  border-radius: 12px;
+  background: white;
+  font-size: 0.95rem;
+  color: hsl(var(--foreground));
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  font-family: 'Tajawal', sans-serif;
+}
+.form-input:focus {
+  border-color: hsl(var(--primary));
+  box-shadow: 0 0 0 3px hsl(152 62% 25% / 0.12);
+}
+.form-input::placeholder {
+  color: hsl(var(--muted-foreground));
+}
+
+/* ===== Modal overlay ===== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(0,0,0,0.55);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+
+/* ===== بطاقة (card) أساسية ===== */
+.card {
+  background: white;
+  border-radius: 1.25rem;
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 2px 8px rgba(27,107,69,0.06);
+}
+
+/* ===== جدول ===== */
+.table-row:hover { background: hsl(var(--primary-light)); }
+
+/* ===== تلوين حالة ===== */
+.status-present  { background: #d1fae5; color: #065f46; }
+.status-absent   { background: #fee2e2; color: #991b1b; }
+.status-late     { background: #fef3c7; color: #92400e; }
+.status-excused  { background: #dbeafe; color: #1e40af; }
+
+.eval-excellent  { background: #d1fae5; color: #065f46; }
+.eval-good       { background: #dbeafe; color: #1e40af; }
+.eval-acceptable { background: #fef3c7; color: #92400e; }
+.eval-needs_improvement { background: #fee2e2; color: #991b1b; }
+
+/* ===== تحسين الأداء ===== */
+.will-change-transform { will-change: transform; }
+img { content-visibility: auto; }
