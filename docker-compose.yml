@@ -1,0 +1,77 @@
+# =============================================================================
+# Mishkaat — production stack
+# Network topology:
+#   Internet → Nginx (TLS, security headers, rate-limit) → app (8001) → mongo (27017)
+#   Only Nginx is exposed publicly. App and Mongo are on an internal-only network.
+# =============================================================================
+services:
+
+  mongo:
+    image: mongo:7.0
+    restart: unless-stopped
+    command: ["mongod", "--auth", "--bind_ip_all"]
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:?set MONGO_ROOT_USER}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:?set MONGO_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${DB_NAME:-quran_center}
+    volumes:
+      - mongo_data:/data/db
+      - ./ops/mongo-init.js:/docker-entrypoint-initdb.d/01-init.js:ro
+    networks:
+      - internal
+    # Do NOT publish ports — Mongo must never be reachable from outside the host.
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      APP_ENV: production
+      MONGO_URL: mongodb://${MONGO_APP_USER}:${MONGO_APP_PASSWORD}@mongo:27017/${DB_NAME:-quran_center}?authSource=${DB_NAME:-quran_center}
+      UVICORN_WORKERS: "4"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - internal
+    # No published port — only Nginx talks to the app via the internal network.
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./ops/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ops/tls:/etc/nginx/tls:ro          # mount your fullchain.pem + privkey.pem here
+      - certbot_webroot:/var/www/certbot:ro
+    networks:
+      - internal
+      - public
+
+networks:
+  internal:
+    internal: true       # no outbound internet for these services
+  public:
+
+volumes:
+  mongo_data:
+  certbot_webroot:

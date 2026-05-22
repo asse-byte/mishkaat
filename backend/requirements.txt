@@ -6,3 +6,5 @@ python-dotenv==1.2.1
 PyJWT==2.11.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.22
+cryptography==44.0.1
+

@@ -1,0 +1,58 @@
+[Unit]
+Description=Mishkaat API (FastAPI / uvicorn)
+After=network-online.target mongod.service
+Wants=network-online.target
+Requires=mongod.service
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/mishkaat/backend
+EnvironmentFile=/etc/mishkaat/mishkaat.env
+ExecStart=/opt/mishkaat/venv/bin/uvicorn server:app \
+    --host 127.0.0.1 \
+    --port 8001 \
+    --workers 4 \
+    --proxy-headers \
+    --forwarded-allow-ips=127.0.0.1
+Restart=on-failure
+RestartSec=5s
+KillSignal=SIGINT
+TimeoutStopSec=15s
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mishkaat
+
+# ===== Sandboxing =====
+DynamicUser=yes
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+ProtectClock=true
+ProtectHostname=true
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@mount @debug @cpu-emulation @obsolete @privileged @raw-io @reboot @swap
+CapabilityBoundingSet=
+AmbientCapabilities=
+ReadWritePaths=
+# Only allow outbound to Mongo (local); no listening on public ports — Nginx fronts.
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+IPAddressDeny=any
+IPAddressAllow=localhost
+IPAddressAllow=127.0.0.0/8
+
+[Install]
+WantedBy=multi-user.target

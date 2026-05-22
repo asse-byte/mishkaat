@@ -1,0 +1,28 @@
+[Unit]
+Description=Mishkaat encrypted MongoDB backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/mishkaat/backup.env
+ExecStart=/opt/mishkaat/ops/backup.sh
+
+# Sandboxing
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/backups/mishkaat
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+CapabilityBoundingSet=
+
+# Run as a dedicated user with access to backup dir + GPG keyring
+User=mishkaat-backup
+Group=mishkaat-backup

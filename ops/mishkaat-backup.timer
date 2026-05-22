@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Mishkaat encrypted backup daily
+
+[Timer]
+# 03:17 UTC every day — staggered to avoid the top of the hour
+OnCalendar=*-*-* 03:17:00 UTC
+RandomizedDelaySec=10m
+Persistent=true
+Unit=mishkaat-backup.service
+
+[Install]
+WantedBy=timers.target

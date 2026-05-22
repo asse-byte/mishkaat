@@ -82,6 +82,23 @@ android-sdk/ -e
 # *.env
 # *.env.*
 -e 
-# Environment files
+# Environment files — ignore real envs but ALLOW the template
 *.env
 *.env.*
+.env
+.env.*
+!*.env.example
+!.env.example
+
+# [AUDIT-2026-05-22] secrets/keys/backups that MUST NEVER reach git
+**/tls/
+**/*.key
+**/*.gpg
+**/*.asc
+**/*-private-key*
+**/backups/
+**/mishkaat-*.archive*
+ops/tls/
+/etc/mishkaat/
+pii_key*
+secret_key*
