@@ -17,12 +17,12 @@
   --gold-light: 43 85% 93%;          /* خلفية ذهبية هادئة للتنبيهات */
 
   /* ألوان الخلفية والمحتوى */
-  --background: 174 30% 95%;        /* خضراء-كريمية ناعمة واضحة للخلفية العامة */
-  --foreground: 174 85% 10%;         /* تيلي داكن مريح للنص */
+  --background: 174 25% 93%;        /* خضراء-تيلية ناعمة واضحة للخلفية العامة */
+  --foreground: 222 47% 12%;         /* كحلي فحمي داكن مقارب للحبر - تباين عالي للنص */
 
-  /* البطاقات والعناصر - خضراء تيلية ناعمة واضحة بعيدة تماماً عن الأبيض */
-  --card: 174 45% 91%;               /* منت تيلي ناعم - واضح وجميل للعين */
-  --card-foreground: 174 85% 10%;    /* تيلي داكن مريح للنص */
+  /* البطاقات والعناصر - تيلي ناعم واضح بعيد عن الأبيض */
+  --card: 174 40% 89%;               /* منت تيلي - واضح وجميل بدون أبيض */
+  --card-foreground: 222 47% 12%;    /* نفس الكحلي الداكن للتباين المثالي */
 
   /* الشريط الجانبي */
   --sidebar: 222 47% 10%;            /* كحلي مسجدي عميق وقور */
@@ -535,12 +535,12 @@ select option, select, option {
 /* ==================== 🛡️ فئات نظام التصميم المشترك الإضافية (Design System Additions) ==================== */
 
 /* 1.1 تدرجات بطاقات الإحصاء الفاخرة (Stat Card Gradients) */
-.stat-card-blue   { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important; border: 1px solid #bfdbfe !important; }
-.stat-card-green  { background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important; border: 1px solid #bbf7d0 !important; }
-.stat-card-amber  { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important; border: 1px solid #fde68a !important; }
-.stat-card-purple { background: linear-gradient(135deg, #faf5ff 0%, #ede9fe 100%) !important; border: 1px solid #ddd6fe !important; }
-.stat-card-rose   { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%) !important; border: 1px solid #fecdd3 !important; }
-.stat-card-teal   { background: linear-gradient(135deg, #f0fdfa 0%, #ccfbf1 100%) !important; border: 1px solid #99f6e4 !important; }
+.stat-card-blue   { background: linear-gradient(135deg, #c7e8f3 0%, #a5d4e8 100%) !important; border: 1px solid #7bbfdb !important; color: #0c3547 !important; }
+.stat-card-green  { background: linear-gradient(135deg, #c6f0e2 0%, #a3e4cf 100%) !important; border: 1px solid #6ecfb0 !important; color: #0a3d2b !important; }
+.stat-card-amber  { background: linear-gradient(135deg, #fce8b4 0%, #f8d98a 100%) !important; border: 1px solid #f0c14a !important; color: #5c3a00 !important; }
+.stat-card-purple { background: linear-gradient(135deg, #e2d5f5 0%, #cbb8ec 100%) !important; border: 1px solid #a98fe0 !important; color: #3b1a6b !important; }
+.stat-card-rose   { background: linear-gradient(135deg, #fcd5d5 0%, #f9b8b8 100%) !important; border: 1px solid #f08080 !important; color: #5c0a0a !important; }
+.stat-card-teal   { background: linear-gradient(135deg, #b2ede2 0%, #88dfd0 100%) !important; border: 1px solid #50c9b5 !important; color: #0a3d35 !important; }
 
 /* الوضع الداكن للبطاقات التدرجية */
 .dark .stat-card-blue   { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%) !important; border-color: #2563eb !important; color: white !important; }
