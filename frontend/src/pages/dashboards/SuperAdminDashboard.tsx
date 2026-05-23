@@ -6,15 +6,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   Building2, Plus, Search, MapPin, Phone, User,
-  CheckCircle2, XCircle, Edit, Users, GraduationCap,
-  BookOpen, AlertCircle, X, Eye, Calendar, Hash,
-  ShieldAlert, Landmark, ArrowUpRight, ArrowDownRight,
-  TrendingUp, CircleDot, RefreshCw, Key,
+  CheckCircle2, XCircle, Users, GraduationCap,
+  BookOpen, AlertCircle, X, Eye, Calendar,
+  ShieldAlert, Landmark,
+  TrendingUp, RefreshCw, Key,
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
-import WelcomeHero from '@/components/ui/WelcomeHero';
 import StatCard from '@/components/ui/StatCard';
-import { useTranslation } from '@/lib/i18n';
 
 interface CenterData {
   id: string;
@@ -46,7 +44,6 @@ const emptyForm = {
 };
 
 export default function SuperAdminDashboard() {
-  const { t } = useTranslation();
   const [showAddForm, setShowAddForm]     = useState(false);
   const [searchTerm, setSearchTerm]       = useState('');
   const [centers, setCenters]             = useState<CenterData[]>([]);
@@ -64,11 +61,11 @@ export default function SuperAdminDashboard() {
       setError('');
       const [centersResp, statsResp] = await Promise.all([
         centersApi.getAll(),
-        api.get('/api/super/dashboard/stats')
+        api.get('/super/dashboard/stats')
       ]);
       setCenters(centersResp as unknown as CenterData[]);
       setStats(statsResp.data);
-    } catch (err: any) {
+    } catch {
       setError('حدث خطأ أثناء تحميل بيانات الإشراف العام. الرجاء التحقق من الصلاحيات.');
     }
   }, []);
@@ -96,7 +93,7 @@ export default function SuperAdminDashboard() {
     try {
       setSubmitting(true);
       setError('');
-      await api.post('/api/super/centers', formData);
+      await api.post('/super/centers', formData);
       setShowAddForm(false);
       setFormData(emptyForm);
       await loadData();

@@ -28,7 +28,7 @@ export default function ProfilePage() {
     setIsLoading(true);
     setMessage(null);
     try {
-      await api.put('/api/auth/profile', profileData);
+      await api.put('/auth/profile', profileData);
       setMessage({ type: 'success', text: 'تم تحديث البيانات بنجاح. قد تحتاج لتسجيل الدخول مرة أخرى لتحديث كامل.' });
     } catch (error: any) {
       setMessage({ type: 'error', text: error.response?.data?.detail || 'حدث خطأ أثناء التحديث' });
@@ -46,7 +46,7 @@ export default function ProfilePage() {
     setIsLoading(true);
     setMessage(null);
     try {
-      await api.post('/api/auth/change-password', {
+      await api.post('/auth/change-password', {
         current_password: passwordData.currentPassword,
         new_password: passwordData.newPassword,
       });

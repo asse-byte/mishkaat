@@ -61,7 +61,7 @@ export default function AdminDashboard() {
       setLoading(true);
       const [data, sysResp] = await Promise.all([
         centersApi.getAll(),
-        api.get('/api/admin/system/status')
+        api.get('/admin/system/status')
       ]);
       setCenters(data as unknown as CenterData[]);
       setSysStatus(sysResp.data);
