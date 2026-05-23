@@ -17,12 +17,12 @@
   --gold-light: 43 85% 93%;          /* خلفية ذهبية هادئة للتنبيهات */
 
   /* ألوان الخلفية والمحتوى */
-  --background: 174 25% 93%;        /* خضراء-تيلية ناعمة واضحة للخلفية العامة */
-  --foreground: 222 47% 12%;         /* كحلي فحمي داكن مقارب للحبر - تباين عالي للنص */
+  --background: 174 18% 92%;         /* خلفية عامة: تيلي فاتح جداً للتمييز عن البطاقات */
+  --foreground: 222 47% 10%;         /* كحلي فحمي داكن - تباين عالي أسود للنص */
 
-  /* البطاقات والعناصر - تيلي ناعم واضح بعيد عن الأبيض */
-  --card: 174 40% 89%;               /* منت تيلي - واضح وجميل بدون أبيض */
-  --card-foreground: 222 47% 12%;    /* نفس الكحلي الداكن للتباين المثالي */
+  /* البطاقات والخانات: شبه أبيض بلمسة تيلية خفية - ليس أبيض صارخاً */
+  --card: 174 12% 96.5%;             /* أبيض دافئ بلمسة تيلية خفية جداً - نظيف ومريح للعين */
+  --card-foreground: 222 47% 10%;    /* كحلي داكن - تباين ساطع على خلفية البطاقة */
 
   /* الشريط الجانبي */
   --sidebar: 222 47% 10%;            /* كحلي مسجدي عميق وقور */
@@ -534,13 +534,37 @@ select option, select, option {
 
 /* ==================== 🛡️ فئات نظام التصميم المشترك الإضافية (Design System Additions) ==================== */
 
-/* 1.1 تدرجات بطاقات الإحصاء الفاخرة (Stat Card Gradients) */
-.stat-card-blue   { background: linear-gradient(135deg, #c7e8f3 0%, #a5d4e8 100%) !important; border: 1px solid #7bbfdb !important; color: #0c3547 !important; }
-.stat-card-green  { background: linear-gradient(135deg, #c6f0e2 0%, #a3e4cf 100%) !important; border: 1px solid #6ecfb0 !important; color: #0a3d2b !important; }
-.stat-card-amber  { background: linear-gradient(135deg, #fce8b4 0%, #f8d98a 100%) !important; border: 1px solid #f0c14a !important; color: #5c3a00 !important; }
-.stat-card-purple { background: linear-gradient(135deg, #e2d5f5 0%, #cbb8ec 100%) !important; border: 1px solid #a98fe0 !important; color: #3b1a6b !important; }
-.stat-card-rose   { background: linear-gradient(135deg, #fcd5d5 0%, #f9b8b8 100%) !important; border: 1px solid #f08080 !important; color: #5c0a0a !important; }
-.stat-card-teal   { background: linear-gradient(135deg, #b2ede2 0%, #88dfd0 100%) !important; border: 1px solid #50c9b5 !important; color: #0a3d35 !important; }
+/* 1.1 تدرجات بطاقات الإحصاء الفاخرة (Stat Card Gradients) - متنوعة وشديدة التباين */
+.stat-card-blue {
+  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
+  border: 1px solid #93c5fd !important;
+  color: #1e3a8a !important;  /* أزرق داكن جداً */
+}
+.stat-card-green {
+  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
+  border: 1px solid #6ee7b7 !important;
+  color: #064e3b !important;  /* أخضر غابي داكن */
+}
+.stat-card-amber {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border: 1px solid #fcd34d !important;
+  color: #78350f !important;  /* بني ذهبي داكن */
+}
+.stat-card-purple {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%) !important;
+  border: 1px solid #c4b5fd !important;
+  color: #3b0764 !important;  /* بنفسجي داكن جداً */
+}
+.stat-card-rose {
+  background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%) !important;
+  border: 1px solid #fda4af !important;
+  color: #881337 !important;  /* أحمر داكن */
+}
+.stat-card-teal {
+  background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%) !important;
+  border: 1px solid #5eead4 !important;
+  color: #042f2e !important;  /* تيلي داكن جداً */
+}
 
 /* الوضع الداكن للبطاقات التدرجية */
 .dark .stat-card-blue   { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%) !important; border-color: #2563eb !important; color: white !important; }
