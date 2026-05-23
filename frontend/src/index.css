@@ -2,74 +2,68 @@
 @import "tailwindcss";
 
 :root {
-  /* ========== لوحة ألوان إسلامية هادئة وفاخرة (Spiritual Emerald & Warm Gold) ========== */
-  
-  /* اللون الأساسي: الأخضر الزمردي الهادئ والوقور */
-  --primary: 162 85% 14%;            /* #043e2f - أخضر إسلامي عميق وقور */
-  --primary-mid: 162 80% 24%;        /* #0f5c47 */
-  --primary-light: 162 55% 94.5%;     /* خلفية كريمية مخضرة مريحة جداً */
+  /* ==================== 🎓 لوحة ألوان EduGete المدرسية الروحانية الفاخرة (Premium Teal & Muted Gold) ==================== */
+  /* تم نقلها وتطبيقها بالكامل على نظام إدارة مراكز التحفيظ لمنحها طابع الهدوء والوقار القرآني الأنيق والصلب */
+
+  /* اللون الأساسي: التيلي الأكاديمي العميق والوقور */
+  --primary: 174 85% 15%;            /* #0b4f49 - لون تيلي مدرسي هادئ جداً */
+  --primary-mid: 174 80% 25%;        /* #0F766E - لون التيلي المميز لنظام edugete.tech */
+  --primary-light: 174 50% 95%;      /* خلفية كريمية مخضرة ناعمة ومريحة للعين */
   --primary-foreground: 0 0% 100%;
 
-  /* اللون الثانوي: الذهبي الروحاني الدافئ */
-  --gold: 38 75% 36%;                /* ذهبي مطفأ يوحي بالوقار والهدوء */
+  /* اللون المساعد: الذهبي الدافئ للوقار واللوحات الشرفية */
+  --gold: 38 75% 36%;                /* ذهبي مطفأ يوحي بالتميز */
   --gold-dark: 38 70% 28%;
-  --gold-light: 43 85% 93%;          /* ذهبي فاتح للخلفيات والتنبيهات */
+  --gold-light: 43 85% 93%;          /* خلفية ذهبية هادئة للتنبيهات */
 
   /* ألوان الخلفية والمحتوى */
-  --background: 40 25% 97.5%;        /* كريمي دافئ مريح جداً للعين كصفحات المصاحف العتيقة */
-  --foreground: 222 47% 12%;         /* كحلي داكن مقارب للحبر */
+  --background: 40 20% 97.5%;        /* كريمي دافئ مريح جداً للعين كصفحات الكتب الفاخرة والمصاحف العتيقة */
+  --foreground: 222 47% 12%;         /* كحلي فحمي داكن مقارب للحبر */
 
-  /* البطاقات والعناصر */
-  --card: 0 0% 100%;                 /* ألوان صلبة غير شفافة لأناقة وبساطة مثالية */
+  /* البطاقات والعناصر (صلبة تماماً وغير شفافة لأناقة وبساطة مثالية) */
+  --card: 0 0% 100%;                 
   --card-foreground: 222 47% 12%;
 
   /* الشريط الجانبي */
   --sidebar: 222 47% 10%;            /* كحلي مسجدي عميق وقور */
   --sidebar-foreground: 215 20% 75%;
-  --sidebar-active: 162 85% 14%;
+  --sidebar-active: 174 80% 25%;
   --sidebar-hover: 222 40% 14%;
 
-  --muted: 162 25% 93%;              /* درجات هادئة ومطفأة */
-  --muted-foreground: 222 18% 42%;
-
-  --accent: 162 60% 93%;
-  --accent-foreground: 162 85% 14%;
-
-  --destructive: 0 72% 51%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 162 22% 87%;             /* حدود مريحة ومنسجمة */
-  --input: 162 22% 87%;
-  --ring: 162 85% 14%;
+  /* الحدود والخطوط */
+  --border: 174 20% 88%;             /* حدود مريحة متناسقة مع التيلي */
+  --input: 174 20% 88%;
   --radius: 0.875rem;
+
+  /* المكونات الأخرى */
+  --muted: 174 25% 93%;              
+  --muted-foreground: 222 18% 42%;
+  --accent: 174 60% 93%;
+  --accent-foreground: 174 85% 15%;
 }
 
-/* ========== نظام الألوان الداكن الروحاني (Spiritual Emerald Night) ========== */
-/* تصميم معتم بالكامل يوحي بالسكون والهدوء والوقار القرآني بمستويات تباين ممتازة */
+/* ==================== 🌙 نظام الألوان الداكن الروحاني لـ EduGete (Deep Teal Night) ==================== */
+/* تصميم معتم ومريح بالكامل للعين لتصفح مريح وخاصة أثناء الاستخدام المسائي الطويل للطلاب وأولياء الأمور */
 .dark, :root.dark {
-  --background: 165 35% 7.5%;        /* ليل زمردي داكن جداً وساكن */
-  --foreground: 45 25% 88%;          /* فضي كريمي ناعم ومريح للقراءة الليلية */
+  --background: 200 30% 7.5%;        /* ليل هادئ تيلي معتم جداً وساكن */
+  --foreground: 45 25% 88%;          /* فضي كريمي ناعم يمنع إجهاد العين تماماً */
 
-  --card: 165 25% 10.5%;             /* بطاقات صلبة غير شفافة بلون الليل الزمردي */
+  --card: 200 25% 10.5%;             /* بطاقات صلبة غير شفافة بلون الليل الزمردي التيل */
   --card-foreground: 45 25% 88%;
 
-  --sidebar: 165 35% 6%;             /* أكثر عتمة لراحة كاملة للعين */
-  --sidebar-foreground: 165 10% 68%;
-  --sidebar-active: 162 70% 20%;
-  --sidebar-hover: 165 25% 9%;
+  --sidebar: 200 35% 6%;             /* أكثر عتمة لراحة كاملة للعين */
+  --sidebar-foreground: 200 10% 68%;
+  --sidebar-active: 174 80% 20%;
+  --sidebar-hover: 200 25% 9%;
 
-  --muted: 165 20% 12.5%;            /* خلفيات مطفأة ناعمة */
-  --muted-foreground: 165 10% 62%;
+  --muted: 200 20% 12.5%;            /* درجات معتمة ومطفأة ناعمة */
+  --muted-foreground: 200 10% 62%;
 
-  --accent: 162 65% 14%;
-  --accent-foreground: 162 90% 88%;
-
-  --border: 165 16% 15%;             /* حدود ليلية متناسقة */
-  --input: 165 16% 15%;
-  --ring: 162 70% 32%;
+  --border: 200 15% 15%;             /* حدود ليلية متناسقة وهادئة */
+  --input: 200 15% 15%;
   
-  --primary-light: 162 60% 11%;      /* خلفية خضراء داكنة مريحة جداً */
-  --gold-light: 40 50% 13%;
+  --primary-light: 174 60% 11%;      /* خلفية تيلية داكنة جداً للنشاط */
+  --gold-light: 40 45% 12%;
 }
 
 * {
@@ -100,7 +94,7 @@ h1, h2, h3, h4, h5, h6, .spiritual-title {
   padding: 1.5rem;
 }
 
-/* ===== Scrollbar الروحاني الفاخر ===== */
+/* ===== Scrollbar الروحاني الفاخر لـ EduGete ===== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 10px; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--primary-mid) / 0.45); border-radius: 10px; }
@@ -110,7 +104,7 @@ h1, h2, h3, h4, h5, h6, .spiritual-title {
 input[dir="ltr"], textarea[dir="ltr"] { text-align: left; }
 input:not([dir]), textarea:not([dir]) { text-align: right; }
 
-/* ===== الحركات التفاعلية والميكرو-أنيميشن التفاعلي الهادئ ===== */
+/* ===== الحركات التفاعلية الأنيقة والميكرو-أنيميشن الهادئ ===== */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -133,7 +127,7 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 .animate-float          { animation: float-gentle 4s ease-in-out infinite; }
 .animate-pulse-soft     { animation: pulse-soft 3s ease-in-out infinite; }
 
-/* تأثير الظهور المتتابع */
+/* تأثير الظهور المتتابع للبطاقات */
 .stagger > *:nth-child(1) { animation: fadeIn 0.35s ease-out 0.04s both; }
 .stagger > *:nth-child(2) { animation: fadeIn 0.35s ease-out 0.08s both; }
 .stagger > *:nth-child(3) { animation: fadeIn 0.35s ease-out 0.12s both; }
@@ -141,36 +135,28 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 .stagger > *:nth-child(5) { animation: fadeIn 0.35s ease-out 0.20s both; }
 
 /* ===== بطاقات كلاسيكية فاخرة تناسب أنظمة المدارس والهدوء ===== */
-.card {
-  background-color: hsl(var(--card));
-  border-radius: var(--radius);
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 4px 12px rgba(4, 62, 47, 0.04);
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+.card, .stat-card {
+  background-color: hsl(var(--card)) !important;
+  border-radius: var(--radius) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.03) !important;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease !important;
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(4, 62, 47, 0.06);
-  border-color: hsl(var(--primary-mid) / 0.25);
-}
-
-.stat-card {
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
-}
-.stat-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 10px 24px rgba(4, 62, 47, 0.12);
+.card:hover, .stat-card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.06) !important;
+  border-color: hsl(var(--primary-mid) / 0.25) !important;
 }
 
-/* ===== التدرجات المنسجمة الروحانية ===== */
+/* ===== التدرجات المنسجمة التيلية الروحانية ===== */
 .gradient-primary {
-  background: linear-gradient(135deg, hsl(162, 85%, 14%) 0%, hsl(162, 75%, 22%) 100%);
+  background: linear-gradient(135deg, hsl(174, 85%, 15%) 0%, hsl(174, 80%, 25%) 100%) !important;
 }
 .gradient-gold {
-  background: linear-gradient(135deg, hsl(38, 75%, 36%) 0%, hsl(38, 65%, 44%) 100%);
+  background: linear-gradient(135deg, hsl(38, 75%, 36%) 0%, hsl(38, 65%, 44%) 100%) !important;
 }
 .gradient-sidebar {
-  background: linear-gradient(180deg, hsl(222, 47% 9%) 0%, hsl(222, 40%, 13%) 100%);
+  background: linear-gradient(180deg, hsl(222, 47%, 9%) 0%, hsl(222, 40%, 13%) 100%) !important;
 }
 
 /* ===== عناصر التنقل بالشريط الجانبي ===== */
@@ -183,23 +169,23 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   padding-right: calc(1rem + 4px);
 }
 .nav-item.active {
-  background: linear-gradient(90deg, hsl(162, 85%, 14%), hsl(162, 75%, 22%));
-  box-shadow: 0 4px 12px hsl(162 85% 14% / 0.35);
+  background: linear-gradient(90deg, hsl(174, 85%, 15%), hsl(174, 80%, 25%)) !important;
+  box-shadow: 0 4px 12px hsl(174 85% 15% / 0.35) !important;
 }
 
-/* ===== الأزرار التفاعلية الموقرة ===== */
+/* ===== الأزرار التفاعلية الموقرة ذات التدرجات المنسجمة ===== */
 .btn-primary {
-  background: linear-gradient(135deg, hsl(162, 85%, 14%), hsl(162, 75%, 22%));
-  color: white;
-  font-weight: 700;
-  border-radius: 10px;
-  transition: all 0.2s ease;
-  box-shadow: 0 3px 10px hsl(162 85% 14% / 0.20);
+  background: linear-gradient(135deg, hsl(174, 85%, 15%), hsl(174, 80%, 25%)) !important;
+  color: white !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 10px hsl(174 85% 15% / 0.20) !important;
 }
 .btn-primary:hover {
-  opacity: 0.95;
-  transform: translateY(-1px);
-  box-shadow: 0 5px 16px hsl(162 85% 14% / 0.30);
+  opacity: 0.95 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 5px 16px hsl(174 85% 15% / 0.30) !important;
 }
 .btn-primary:active {
   transform: scale(0.98);
@@ -231,7 +217,7 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 }
 
 .login-bg {
-  background: linear-gradient(135deg, hsl(222, 47%, 9%) 0%, hsl(162, 85%, 12%) 100%);
+  background: linear-gradient(135deg, hsl(222, 47%, 9%) 0%, hsl(174, 85%, 12%) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -255,7 +241,7 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 }
 .form-input:focus {
   border-color: hsl(var(--primary-mid));
-  box-shadow: 0 0 0 3px hsl(162 80% 24% / 0.12);
+  box-shadow: 0 0 0 3px hsl(174 80% 25% / 0.12);
 }
 .form-input::placeholder {
   color: hsl(var(--muted-foreground));
@@ -277,7 +263,7 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 /* ===== تحسينات الجداول التفاعلية المريحة للعين ===== */
 .table-row:hover { background-color: hsl(var(--primary-light)) !important; }
 
-/* ===== حالات الطلاب وتسميعهم بحس روحي هادئ ===== */
+/* ===== حالات الطلاب وتسميعهم بحس روحي هادئ وتيلي متميز ===== */
 .status-present  { background-color: hsl(162 70% 93%); color: hsl(162 85% 15%); border: 1px solid hsl(162 70% 88%); }
 .status-absent   { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); border: 1px solid hsl(0 80% 92%); }
 .status-late     { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); border: 1px solid hsl(38 85% 90%); }
@@ -288,9 +274,8 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 .eval-acceptable { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); }
 .eval-needs_improvement { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); }
 
-
-/* ==================== 🛡️ تغطية شاملة وقوية للوضع المعتم (Global Dark Mode Overrides) ==================== */
-/* لمنع ظهور أي مساحات بيضاء أو نصوص باهتة وضمان الأناقة الكاملة دون استثناءات */
+/* ==================== 🛡️ التغطية الشاملة للوضع المعتم الخاص بـ EduGete (Global Dark Mode Overrides) ==================== */
+/* يضمن عدم ظهور أي بطاقات أو تدرجات بيضاء على النطاق edugete.tech ويصحح تباين الجداول والخطوط بالكامل */
 .dark {
   background-color: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
@@ -341,12 +326,15 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   border-color: hsl(var(--border)) !important;
 }
 
-.dark .modal-overlay {
+.dark .modal-overlay,
+.dark [class*="modal-overlay"] {
   background-color: rgba(0, 0, 0, 0.78) !important;
 }
 
+.dark header,
 .dark header.sticky,
-.dark header {
+.dark aside,
+.dark [data-sidebar] {
   background-color: hsl(var(--card)) !important;
   border-color: hsl(var(--border)) !important;
 }
@@ -355,7 +343,6 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   background-color: hsl(var(--card)) !important;
   border-color: hsl(var(--border)) !important;
 }
-
 
 /* ==================== 📱 تحسينات استثنائية للاستخدام بالهاتف (Ultra-Responsive Mobile UX) ==================== */
 @media (max-width: 768px) {
