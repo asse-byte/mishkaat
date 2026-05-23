@@ -20,8 +20,8 @@
   --background: 40 20% 97.5%;        /* كريمي دافئ مريح جداً للعين كصفحات الكتب الفاخرة والمصاحف العتيقة */
   --foreground: 222 47% 12%;         /* كحلي فحمي داكن مقارب للحبر */
 
-  /* البطاقات والعناصر (صلبة تماماً وغير شفافة لأناقة وبساطة مثالية) */
-  --card: 0 0% 100%;                 
+  /* البطاقات والعناصر - لون كريمي-تيلي ناعم بدلاً من الأبيض الصارخ */
+  --card: 174 30% 97%;               /* أبيض كريمي مائل للتيلي الهادئ مريح جداً للعين */
   --card-foreground: 222 47% 12%;
 
   /* الشريط الجانبي */
@@ -337,14 +337,29 @@ textarea::placeholder {
   color: hsl(var(--foreground)) !important;
 }
 
+/* تغيير الأبيض في الوضع النهاري إلى لون الكريمي-التيلي */
+.bg-white {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+/* الوضع الليلي: يستخدم لون البطاقة المعتمة */
 .dark .bg-white {
   background-color: hsl(var(--card)) !important;
   color: hsl(var(--foreground)) !important;
 }
 
+/* تغيير الرمادي الفاتح في الوضع النهاري */
+.bg-slate-50,
+.bg-gray-50 {
+  background-color: hsl(174 25% 96%) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
 .dark .bg-slate-50,
 .dark .bg-slate-100\/60,
-.dark .bg-slate-100 {
+.dark .bg-slate-100,
+.dark .bg-gray-50 {
   background-color: hsl(var(--muted)) !important;
   color: hsl(var(--foreground)) !important;
 }
@@ -635,7 +650,7 @@ select option, select, option {
   position: sticky !important;
   top: 0 !important;
   z-index: 10 !important;
-  background: white !important;
+  background: hsl(var(--card)) !important;
   box-shadow: 0 1px 0 var(--color-border) !important;
 }
 .dark .table-sticky-head thead {
