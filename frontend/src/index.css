@@ -247,6 +247,48 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   color: hsl(var(--muted-foreground));
 }
 
+/* ==================== ✍️ تهيئة وحماية حقول الإدخال عبر النظام بأكمله (Robust Global Inputs styling) ==================== */
+/* يضمن هذا التنسيق ظهور نصوص حقول الإدخال بلون داكن وواضح جداً في الوضع النهاري، ولون فاتح وقور في الوضع الليلي */
+input[type="text"],
+input[type="number"],
+input[type="email"],
+input[type="password"],
+input[type="tel"],
+input[type="date"],
+input[type="time"],
+input[type="month"],
+input:not([type]),
+select,
+textarea {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+/* حالة التركيز (Focus State) لحقول الإدخال */
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="tel"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+input[type="month"]:focus,
+input:not([type]):focus,
+select:focus,
+textarea:focus {
+  border-color: hsl(var(--primary-mid)) !important;
+  box-shadow: 0 0 0 3px hsl(174 80% 25% / 0.12) !important;
+  outline: none !important;
+}
+
+/* تخصيص نصوص التلميح (Placeholder) لتكون واضحة ومقروءة */
+input::placeholder,
+textarea::placeholder {
+  color: hsl(var(--muted-foreground)) !important;
+  opacity: 0.7 !important;
+}
+
 /* ===== النوافذ المنبثقة ===== */
 .modal-overlay {
   position: fixed;
