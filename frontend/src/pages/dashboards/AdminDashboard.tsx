@@ -63,12 +63,17 @@ export default function AdminDashboard() {
   const [detailsLoading, setDetailsLoading] = useState(false);
   const [editMode, setEditMode]           = useState(false);
   const [editForm, setEditForm]           = useState(emptyEditForm);
+  const [sysStatus, setSysStatus]         = useState<any>(null);
 
   const loadCenters = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await centersApi.getAll();
+      const [data, sysResp] = await Promise.all([
+        centersApi.getAll(),
+        api.get('/api/admin/system/status')
+      ]);
       setCenters(data as unknown as CenterData[]);
+      setSysStatus(sysResp.data);
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
@@ -172,6 +177,187 @@ export default function AdminDashboard() {
         <StatCard icon={GraduationCap} value={totals.teachers}   label="المحفظون"        color="bg-[hsl(222,42%,28%)]" />
         <StatCard icon={BookOpen}      value={totals.halaqat}    label="الحلقات"          color="bg-[hsl(152,45%,38%)]" />
       </div>
+
+      {/* System Health & Security Monitor */}
+      {sysStatus && (
+        <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-6">
+          <div className="flex items-center justify-between border-b pb-3">
+            <div>
+              <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
+                <span className="text-xl">🛡️</span>
+                مراقبة أمان النظام وتشغيل قاعدة البيانات
+              </h3>
+              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">حالة اتصال الخادم الموحد، إحصائيات محاولات تسجيل الدخول، ومحاولات الاختراق</p>
+            </div>
+            <span className="badge-gold text-xs px-3 py-1 rounded-full font-bold">لوحة المراقبة الفنية</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Connection Status Card */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex items-center gap-4">
+              <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${sysStatus.db_connected ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                <div className={`w-3.5 h-3.5 rounded-full ${sysStatus.db_connected ? 'bg-emerald-600 animate-pulse' : 'bg-rose-600'}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block">قاعدة البيانات الموحدة</span>
+                <span className="font-bold text-sm text-gray-800 block truncate">
+                  {sysStatus.db_connected ? '🟢 متصل بنجاح' : '🔴 غير متصل'}
+                </span>
+                <span className="text-[10px] text-gray-400 font-mono" dir="ltr">{sysStatus.db_type}</span>
+              </div>
+            </div>
+
+            {/* Login successes progress */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex flex-col justify-between">
+              <div>
+                <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الناجحة</span>
+                <div className="flex items-center justify-between font-mono font-black text-emerald-600 text-lg">
+                  <span>{sysStatus.login_attempts.success} عملية</span>
+                  <span className="text-xs font-bold text-slate-500">
+                    {sysStatus.login_attempts.total > 0 
+                      ? `${Math.round((sysStatus.login_attempts.success / sysStatus.login_attempts.total) * 100)}%` 
+                      : '0%'}
+                  </span>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3">
+                <div 
+                  className="bg-emerald-600 h-full rounded-full" 
+                  style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.success / sysStatus.login_attempts.total) * 100 : 0}%` }} 
+                />
+              </div>
+            </div>
+
+            {/* Login failures progress */}
+            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex flex-col justify-between">
+              <div>
+                <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الفاشلة</span>
+                <div className="flex items-center justify-between font-mono font-black text-rose-600 text-lg">
+                  <span>{sysStatus.login_attempts.failed} محاولة</span>
+                  <span className="text-xs font-bold text-slate-500">
+                    {sysStatus.login_attempts.total > 0 
+                      ? `${Math.round((sysStatus.login_attempts.failed / sysStatus.login_attempts.total) * 100)}%` 
+                      : '0%'}
+                  </span>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3">
+                <div 
+                  className="bg-rose-600 h-full rounded-full" 
+                  style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.failed / sysStatus.login_attempts.total) * 100 : 0}%` }} 
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Operational Metrics Subpanel */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-[hsl(var(--border))]/60">
+            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+              <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي محاولات الدخول</span>
+              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.login_attempts.total}</span>
+            </div>
+            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+              <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">حسابات محظورة مؤقتاً (Rate-limits)</span>
+              <span className="font-mono font-black text-lg text-amber-600">{sysStatus.login_attempts.active_locks} نشطة</span>
+            </div>
+            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+              <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">محاولات تسجيل المراكز</span>
+              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.public_register_attempts} محاولة</span>
+            </div>
+            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+              <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي سجل النشاط المشفّر</span>
+              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.total_audit_logs} حدث</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Centers Leaderboard & Performance Classification */}
+      {centers.length > 0 && (() => {
+        const calculateCenterScore = (c: CenterData) => {
+          const studentScore = Math.min(40, c.students_count * 2); 
+          const teacherScore = Math.min(30, c.teachers_count * 6); 
+          const halaqahScore = Math.min(30, c.halaqat_count * 5); 
+          return Math.round(studentScore + teacherScore + halaqahScore);
+        };
+
+        const getCommitmentLevel = (score: number) => {
+          if (score >= 80) return { label: 'ممتاز - التزام كامل', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' };
+          if (score >= 50) return { label: 'جيد جداً - نشط', color: 'text-blue-600 bg-blue-50 border-blue-100' };
+          if (score >= 25) return { label: 'مقبول - يحتاج متابعة', color: 'text-amber-600 bg-amber-50 border-amber-100' };
+          return { label: 'ضعيف - غير ملتزم إدارياً', color: 'text-rose-600 bg-rose-50 border-rose-100' };
+        };
+
+        const sortedCenters = [...centers]
+          .map(c => ({ ...c, score: calculateCenterScore(c) }))
+          .sort((a, b) => b.score - a.score);
+
+        return (
+          <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <div>
+                <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
+                  <span className="text-xl">🏆</span>
+                  تصنيف وتقييم المراكز الأكثر التزاماً وتميزاً
+                </h3>
+                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">تقييم تلقائي بناءً على الالتزام الإداري، الحلقات النشطة، وأعداد الطلاب الملتحقين</p>
+              </div>
+              <span className="badge-gold text-xs px-3 py-1 rounded-full font-bold">تقرير جودة المراكز</span>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-right border-collapse">
+                <thead>
+                  <tr className="border-b border-[hsl(var(--border))] text-xs text-[hsl(var(--muted-foreground))] font-bold">
+                    <th className="pb-3 text-center w-16">الترتيب</th>
+                    <th className="pb-3">المركز</th>
+                    <th className="pb-3 text-center">أعداد الطلاب</th>
+                    <th className="pb-3 text-center">المحفظين والحلقات</th>
+                    <th className="pb-3 text-center">درجة الالتزام</th>
+                    <th className="pb-3 text-center">مستوى التقييم</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[hsl(var(--border))]/50">
+                  {sortedCenters.map((center, idx) => {
+                    const level = getCommitmentLevel(center.score);
+                    return (
+                      <tr key={center.id} className="hover:bg-[hsl(var(--muted))]/30 transition-colors">
+                        <td className="py-4 text-center font-bold">
+                          {idx === 0 ? <span className="text-xl">🥇</span> : 
+                           idx === 1 ? <span className="text-xl">🥈</span> : 
+                           idx === 2 ? <span className="text-xl">🥉</span> : 
+                           <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>}
+                        </td>
+                        <td className="py-4">
+                          <span className="font-bold text-gray-800 block">{center.name}</span>
+                          <span className="text-[10px] text-[hsl(var(--muted-foreground))]" dir="ltr">{center.address}</span>
+                        </td>
+                        <td className="py-4 text-center font-bold text-slate-700">{center.students_count} طالب</td>
+                        <td className="py-4 text-center text-xs text-slate-500">
+                          {center.teachers_count} محفظين / {center.halaqat_count} حلقات
+                        </td>
+                        <td className="py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden">
+                              <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${center.score}%` }} />
+                            </div>
+                            <span className="text-xs font-mono font-bold text-emerald-700">{center.score}%</span>
+                          </div>
+                        </td>
+                        <td className="py-4 text-center">
+                          <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full border ${level.color}`}>
+                            {level.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Actions bar */}
       <div className="flex flex-col sm:flex-row gap-3">

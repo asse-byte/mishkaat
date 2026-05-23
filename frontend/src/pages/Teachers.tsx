@@ -54,7 +54,7 @@ export default function Teachers() {
   const [error, setError]               = useState('');
   const [selectedTeacher, setSelectedTeacher] = useState<TeacherData | null>(null);
   const [editMode, setEditMode]         = useState(false);
-  const [editForm, setEditForm]         = useState<Partial<TeacherData & { salary: string }>>({});
+  const [editForm, setEditForm]         = useState<Partial<Omit<TeacherData, 'salary'> & { salary: string }>>({});
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferData, setTransferData] = useState({ from_halaqah_id: '', to_halaqah_id: '' });
 

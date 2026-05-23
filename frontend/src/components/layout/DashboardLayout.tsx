@@ -22,6 +22,9 @@ import {
   Settings,
   BarChart3,
   Trophy,
+  Sun,
+  Moon,
+  MessageSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 
@@ -33,7 +36,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','center_manager','teacher','student','parent'] },
+  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
   { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'] },
   { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'] },
   { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'] },
@@ -44,13 +47,17 @@ const navItems: NavItem[] = [
   { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'] },
   { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'] },
   { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'] },
+  { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'] },
+  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'] },
+  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'] },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'] },
-  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','center_manager','teacher','student','parent'] },
-  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','center_manager','teacher','student','parent'] },
+  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
+  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
 ];
 
 const roleLabels: Record<UserRole, string> = {
   admin: 'مدير النظام',
+  super_admin: 'المدير العام (الأوقاف/الوزارة)',
   center_manager: 'مدير المركز',
   teacher: 'محفظ',
   student: 'طالب',
@@ -62,6 +69,28 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('theme');
+    if (saved === 'dark') {
+      document.documentElement.classList.add('dark');
+      return true;
+    } else {
+      document.documentElement.classList.remove('dark');
+      return false;
+    }
+  });
+
+  const toggleDarkMode = () => {
+    if (darkMode) {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+      setDarkMode(false);
+    } else {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+      setDarkMode(true);
+    }
+  };
 
   const filteredNavItems = navItems.filter(item => item.roles.some(r => hasRole(r)));
   const currentTitle = filteredNavItems.find(item => item.href === location.pathname)?.title || 'لوحة التحكم';
@@ -98,8 +127,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-black text-white text-sm leading-tight">مراكز التحفيظ</h1>
-                <p className="text-white/40 text-xs">نظام الإدارة المتكامل</p>
+                <h1 className="font-black text-white text-sm leading-tight">نظام المشكاة</h1>
+                <p className="text-white/45 text-[10px] font-bold tracking-widest" dir="ltr">MISHKAAT</p>
               </div>
             </div>
             <button
@@ -189,6 +218,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             <div className="flex items-center gap-2">
+              {/* Theme Toggle Button */}
+              <button
+                onClick={toggleDarkMode}
+                aria-label="تغيير المظهر"
+                className="p-2 rounded-xl hover:bg-[hsl(var(--muted))] transition-colors text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
+              >
+                {darkMode ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+              </button>
+
               {user?.role !== 'admin' && (
                 <Link
                   to="/notifications"

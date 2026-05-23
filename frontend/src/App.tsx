@@ -1,3 +1,7 @@
+/*
+English: This project is proprietary and confidential. All rights reserved to Abdoul Malick Cisse (Copyright © 2026).
+Arabic: هذا المشروع ملكية خاصة وسري للغاية. جميع الحقوق محفوظة لـ عبد المالك سيسي (حقوق النشر © 2026).
+*/
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -22,6 +26,9 @@ import AuditLogPage from '@/pages/AuditLogPage';
 import Reports from '@/pages/Reports';
 import Rankings from '@/pages/Rankings';
 import StudentAnalytics from '@/pages/StudentAnalytics';
+import AcademicSchedules from '@/pages/AcademicSchedules';
+import Competitions from '@/pages/Competitions';
+import BulkMessages from '@/pages/BulkMessages';
 import { NotFoundPage, ForbiddenPage } from '@/pages/ErrorPages';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
@@ -157,6 +164,30 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ReviewPlans />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/academic-schedules"
+        element={
+          <ProtectedRoute>
+            <AcademicSchedules />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/competitions"
+        element={
+          <ProtectedRoute>
+            <Competitions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/bulk-messages"
+        element={
+          <ProtectedRoute>
+            <BulkMessages />
           </ProtectedRoute>
         }
       />

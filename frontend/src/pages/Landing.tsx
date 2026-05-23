@@ -1,10 +1,33 @@
-import React from 'react';
+/*
+English: This project is proprietary and confidential. All rights reserved to Abdoul Malick Cisse (Copyright © 2026).
+Arabic: هذا المشروع ملكية خاصة وسري للغاية. جميع الحقوق محفوظة لـ عبد المالك سيسي (حقوق النشر © 2026).
+*/
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { BookOpen, Users, Star, Heart, Shield, ArrowLeft, CheckCircle2, ChevronDown, Award } from 'lucide-react';
+import { 
+  BookOpen, Users, Star, Heart, Shield, ArrowLeft, 
+  CheckCircle2, ChevronDown, Award, Trophy, Building2, 
+  MapPin, TrendingUp 
+} from 'lucide-react';
 
 const Landing = () => {
   const { isAuthenticated } = useAuth();
+  const [bestCenters, setBestCenters] = useState<any[]>([]);
+  const [loadingCenters, setLoadingCenters] = useState(true);
+
+  useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    fetch(`${apiUrl}/api/public/best-centers`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBestCenters(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingCenters(false));
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-800" dir="rtl">
@@ -22,6 +45,7 @@ const Landing = () => {
               </div>
             </div>
             <nav className="hidden md:flex gap-8 font-medium text-slate-600">
+              <a href="#best-centers" className="hover:text-emerald-600 transition-colors">أفضل المراكز</a>
               <a href="#features" className="hover:text-emerald-600 transition-colors">المميزات</a>
               <a href="#about" className="hover:text-emerald-600 transition-colors">عن النظام</a>
               <a href="#impact" className="hover:text-emerald-600 transition-colors">الأثر الخيري</a>
@@ -72,8 +96,8 @@ const Landing = () => {
               <span>سجل مركزك مجاناً</span>
               <BookOpen className="w-5 h-5" />
             </Link>
-            <a href="#features" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 font-bold rounded-xl border-2 border-slate-200 hover:border-emerald-200 hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 text-lg hover:-translate-y-1">
-              <span>استكشف المميزات</span>
+            <a href="#best-centers" className="w-full sm:w-auto px-8 py-4 bg-white text-slate-700 font-bold rounded-xl border-2 border-slate-200 hover:border-emerald-200 hover:bg-emerald-50 transition-all flex items-center justify-center gap-2 text-lg hover:-translate-y-1">
+              <span>استكشف أفضل المراكز</span>
               <ChevronDown className="w-5 h-5" />
             </a>
           </div>
@@ -96,34 +120,119 @@ const Landing = () => {
                    <div className="h-8 bg-slate-100 rounded w-full"></div>
                  </div>
                  <div className="flex-1 flex flex-col gap-4">
-                    <div className="flex gap-4">
-                      <div className="h-24 bg-gradient-to-br from-emerald-500 to-emerald-400 rounded-xl flex-1 p-4 flex flex-col justify-between">
-                         <div className="h-4 bg-white/30 rounded w-1/3"></div>
-                         <div className="h-8 bg-white/40 rounded w-1/2"></div>
-                      </div>
-                      <div className="h-24 bg-white rounded-xl shadow-sm border border-slate-100 flex-1 p-4 space-y-2">
-                         <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                         <div className="h-8 bg-slate-200 rounded w-1/2"></div>
-                      </div>
-                      <div className="hidden sm:block h-24 bg-white rounded-xl shadow-sm border border-slate-100 flex-1 p-4 space-y-2">
-                         <div className="h-4 bg-slate-100 rounded w-1/3"></div>
-                         <div className="h-8 bg-slate-200 rounded w-1/2"></div>
-                      </div>
-                    </div>
-                    <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-4 space-y-4">
-                       <div className="h-6 bg-slate-100 rounded w-1/4 mb-6"></div>
-                       {[...Array(4)].map((_, i) => (
-                         <div key={i} className="h-12 bg-slate-50 rounded flex items-center px-4 space-x-reverse space-x-4">
-                           <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
-                           <div className="h-4 bg-slate-200 rounded w-1/4"></div>
-                           <div className="h-4 bg-slate-100 rounded flex-1"></div>
-                         </div>
-                       ))}
-                    </div>
-                 </div>
+                     <div className="flex gap-4">
+                       <div className="h-24 bg-gradient-to-br from-emerald-500 to-emerald-400 rounded-xl flex-1 p-4 flex flex-col justify-between">
+                          <div className="h-4 bg-white/30 rounded w-1/3"></div>
+                          <div className="h-8 bg-white/40 rounded w-1/2"></div>
+                       </div>
+                       <div className="h-24 bg-white rounded-xl shadow-sm border border-slate-100 flex-1 p-4 space-y-2">
+                          <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                          <div className="h-8 bg-slate-200 rounded w-1/2"></div>
+                       </div>
+                       <div className="hidden sm:block h-24 bg-white rounded-xl shadow-sm border border-slate-100 flex-1 p-4 space-y-2">
+                          <div className="h-4 bg-slate-100 rounded w-1/3"></div>
+                          <div className="h-8 bg-slate-200 rounded w-1/2"></div>
+                       </div>
+                     </div>
+                     <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-100 p-4 space-y-4">
+                        <div className="h-6 bg-slate-100 rounded w-1/4 mb-6"></div>
+                        {[...Array(4)].map((_, i) => (
+                          <div key={i} className="h-12 bg-slate-50 rounded flex items-center px-4 space-x-reverse space-x-4">
+                            <div className="w-8 h-8 rounded-full bg-slate-200 shrink-0"></div>
+                            <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                            <div className="h-4 bg-slate-100 rounded flex-1"></div>
+                          </div>
+                        ))}
+                     </div>
+                  </div>
                </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Public Leaderboard Showcase */}
+      <section id="best-centers" className="py-24 bg-slate-100/60 border-y border-slate-200/50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-amber-100 text-amber-800 font-bold text-sm mb-4">
+              <Trophy className="w-4 h-4 text-amber-500 animate-bounce" />
+              <span>لوحة الشرف الوطنية لمراكز التحفيظ</span>
+            </div>
+            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-800 mb-4">
+              أفضل مراكز تحفيظ القرآن الكريم أداءً وجودة
+            </h2>
+            <p className="text-slate-600 max-w-2xl mx-auto text-base">
+              تقييم وتصنيف المراكز بكل شفافية بناءً على نسبة الطلاب المتفوقين، المحفظين المعتمدين، والالتزام بالبرامج التعليمية والإدارية لتسهيل اختيار المركز الأنسب لتسجيل ابنك.
+            </p>
+          </div>
+
+          {loadingCenters ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600" />
+            </div>
+          ) : bestCenters.length === 0 ? (
+            <div className="text-center py-12 text-slate-500 font-medium">
+              لا توجد مراكز نشطة مصنفة حالياً بالمنظومة
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 stagger">
+              {bestCenters.map((center, idx) => {
+                const getBadgeColor = (rank: number) => {
+                  if (rank === 0) return 'bg-amber-100 text-amber-800 border-amber-200';
+                  if (rank === 1) return 'bg-slate-100 text-slate-800 border-slate-200';
+                  if (rank === 2) return 'bg-orange-100 text-orange-800 border-orange-200';
+                  return 'bg-slate-50 text-slate-600 border-slate-100';
+                };
+                const getRankLabel = (rank: number) => {
+                  if (rank === 0) return '🥇 المركز الأول';
+                  if (rank === 1) return '🥈 المركز الثاني';
+                  if (rank === 2) return '🥉 المركز الثالث';
+                  return `الترتيب #${rank + 1}`;
+                };
+                
+                return (
+                  <div key={center.id} className="bg-white rounded-3xl border border-slate-200/60 p-6 flex flex-col justify-between shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all">
+                    <div>
+                      {/* Top Rank Badge */}
+                      <div className="flex items-center justify-between mb-4">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${getBadgeColor(idx)}`}>
+                          {getRankLabel(idx)}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <TrendingUp className="w-4 h-4 text-emerald-600" />
+                          <span className="text-xs font-mono font-black text-emerald-700">{center.score}% جودة</span>
+                        </div>
+                      </div>
+
+                      {/* Center Info */}
+                      <h3 className="text-xl font-bold text-slate-800 mb-2 leading-snug">{center.name}</h3>
+                      <p className="text-xs text-slate-500 flex items-center gap-1 mb-4">
+                        <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span className="truncate">{center.address}</span>
+                      </p>
+                    </div>
+
+                    {/* Stats details */}
+                    <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
+                      <div className="text-center flex-1 border-l border-slate-100">
+                        <p className="text-lg font-black text-slate-800">{center.students_count}</p>
+                        <p className="text-[10px] text-slate-500 font-bold">طالب نشط</p>
+                      </div>
+                      <div className="text-center flex-1 border-l border-slate-100">
+                        <p className="text-lg font-black text-slate-800">{center.teachers_count}</p>
+                        <p className="text-[10px] text-slate-500 font-bold">محفّظ معتمد</p>
+                      </div>
+                      <div className="text-center flex-1">
+                        <p className="text-lg font-black text-slate-800">{center.halaqat_count}</p>
+                        <p className="text-[10px] text-slate-500 font-bold">حلقة قرآنية</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 
@@ -215,8 +324,8 @@ const Landing = () => {
           <div className="lg:w-[500px] relative">
             <div className="aspect-square rounded-full bg-emerald-800/50 border-4 border-emerald-700/50 flex items-center justify-center relative overflow-hidden backdrop-blur-sm shadow-2xl">
               <div className="text-center p-8">
-                 <h3 className="text-6xl font-black text-amber-400 mb-2">0</h3>
-                 <p className="text-xl text-emerald-200">مركز قرآني معتمد الآن بانتظار الانطلاق</p>
+                 <h3 className="text-6xl font-black text-amber-400 mb-2">{bestCenters.length}</h3>
+                 <p className="text-xl text-emerald-200">مركز قرآني معتمد بالمنظومة</p>
               </div>
             </div>
             {/* Decor elements */}

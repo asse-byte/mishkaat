@@ -1,51 +1,77 @@
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* ========== لوحة ألوان إسلامية (3 ألوان) ========== */
+  /* ========== لوحة ألوان إسلامية فاخرة (Premium Emerald & Gold) ========== */
 
-  /* اللون الأساسي: الأخضر الزمردي الإسلامي */
-  --primary: 152 62% 25%;          /* #1B6B45 */
-  --primary-mid: 152 62% 32%;      /* #24895a */
-  --primary-light: 152 45% 95%;    /* خلفية فاتحة */
+  /* اللون الأساسي: الأخضر الزمردي الإسلامي العميق */
+  --primary: 162 85% 16%;          /* #064e3b */
+  --primary-mid: 162 93% 30%;      /* #059669 */
+  --primary-light: 162 85% 96%;    /* خلفية فاتحة زمردية */
   --primary-foreground: 0 0% 100%;
 
-  /* اللون الثانوي: الذهبي */
-  --gold: 40 55% 50%;              /* #C89B3C */
-  --gold-dark: 38 60% 40%;
-  --gold-light: 40 80% 94%;
+  /* اللون الثانوي: الذهبي الفاخر */
+  --gold: 33 94% 44%;              /* #d97706 */
+  --gold-dark: 35 90% 35%;
+  --gold-light: 43 96% 94%;        /* #fbbf24 bg tint */
 
-  /* اللون الداكن: الكحلي */
-  --navy: 222 42% 18%;             /* #1A2744 */
-  --navy-mid: 222 40% 22%;
-  --navy-light: 222 35% 26%;
+  /* اللون الداكن: الكحلي الداكن للظلال والنصوص */
+  --navy: 222 47% 11%;             /* #0f172a */
+  --navy-mid: 222 40% 15%;
+  --navy-light: 222 35% 20%;
 
   /* ألوان الخلفية والمحتوى */
-  --background: 150 20% 97%;
-  --foreground: 222 42% 15%;
+  --background: 40 20% 97%;        /* Soft warm cream background */
+  --foreground: 222 47% 12%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 42% 15%;
+  --card-foreground: 222 47% 12%;
 
   /* الشريط الجانبي */
-  --sidebar: 222 42% 18%;
-  --sidebar-foreground: 222 20% 85%;
-  --sidebar-active: 152 62% 25%;
-  --sidebar-hover: 222 40% 24%;
+  --sidebar: 222 47% 11%;
+  --sidebar-foreground: 215 20% 75%;
+  --sidebar-active: 162 85% 16%;
+  --sidebar-hover: 222 40% 16%;
 
-  --muted: 150 15% 93%;
+  --muted: 162 25% 94%;
   --muted-foreground: 222 20% 45%;
 
-  --accent: 152 45% 92%;
-  --accent-foreground: 152 62% 20%;
+  --accent: 162 85% 95%;
+  --accent-foreground: 162 85% 16%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 150 15% 88%;
-  --input: 150 15% 88%;
-  --ring: 152 62% 25%;
+  --border: 162 25% 90%;
+  --input: 162 25% 90%;
+  --ring: 162 85% 16%;
   --radius: 0.875rem;
+}
+
+/* ========== نظام الألوان الداكن للإنتاج (Premium Dark Mode) ========== */
+.dark, :root.dark {
+  --background: 222 47% 9%;       /* Rich deep slate */
+  --foreground: 213 27% 85%;       /* Soft silver */
+
+  --card: 222 47% 11%;             /* Solid card dark background */
+  --card-foreground: 213 27% 85%;
+
+  --sidebar: 222 47% 8%;
+  --sidebar-foreground: 215 20% 65%;
+  --sidebar-active: 162 85% 16%;
+  --sidebar-hover: 222 40% 12%;
+
+  --muted: 222 40% 15%;
+  --muted-foreground: 215 20% 60%;
+
+  --accent: 162 85% 12%;
+  --accent-foreground: 162 93% 80%;
+
+  --border: 222 40% 14%;
+  --input: 222 40% 14%;
+  --ring: 162 93% 30%;
+  
+  --primary-light: 162 85% 10%;
 }
 
 * {

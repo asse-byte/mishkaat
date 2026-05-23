@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import AdminDashboard from './dashboards/AdminDashboard';
+import SuperAdminDashboard from './dashboards/SuperAdminDashboard';
 import CenterManagerDashboard from './dashboards/CenterManagerDashboard';
 import TeacherDashboard from './dashboards/TeacherDashboard';
 import StudentDashboard from './dashboards/StudentDashboard';
@@ -14,6 +15,8 @@ export default function Dashboard() {
   switch (user.role) {
     case 'admin':
       return <AdminDashboard />;
+    case 'super_admin':
+      return <SuperAdminDashboard />;
     case 'center_manager':
       return <CenterManagerDashboard />;
     case 'teacher':
