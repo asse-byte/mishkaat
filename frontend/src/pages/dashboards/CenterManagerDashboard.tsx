@@ -8,6 +8,10 @@ import {
 import { Link } from 'react-router-dom';
 import api from '@/services/api';
 import type { Recitation, Attendance, Fee } from '@/types';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import StatCard from '@/components/ui/StatCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { useTranslation } from '@/lib/i18n';
 
 interface Stats {
   students: number;
@@ -31,6 +35,7 @@ const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n))
 
 export default function CenterManagerDashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [stats, setStats]     = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentRecitations, setRecentRecitations] = useState<Recitation[]>([]);
@@ -96,51 +101,46 @@ export default function CenterManagerDashboard() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-fade-in pb-10">
 
       {/* Welcome banner */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-7 text-white shadow-xl">
-        <div className="absolute top-[-50px] left-[-50px] w-56 h-56 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-30px] right-10 w-44 h-44 rounded-full bg-white/5" />
-        <div className="relative z-10">
-          <p className="text-white/60 font-medium mb-1 text-sm">مرحباً،</p>
-          <h1 className="text-3xl font-black mb-1">{user?.name}</h1>
-          <p className="text-white/70 text-sm">
-            {new Date().toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-          {/* Quick overview pills */}
-          <div className="flex gap-3 mt-4 flex-wrap">
-            {stats && [
-              { label: `${stats.students} طالب`, cls: 'bg-white/15' },
-              { label: `${stats.teachers} محفظ`, cls: 'bg-white/15' },
-              { label: `${stats.halaqat} حلقة`, cls: 'bg-white/15' },
-            ].map(p => (
-              <span key={p.label} className={`text-sm font-bold px-3 py-1 rounded-full ${p.cls}`}>{p.label}</span>
-            ))}
-          </div>
-        </div>
-      </div>
+      <WelcomeHero
+        name={user?.name || null}
+        roleTitle={t('role_center_manager')}
+        stats={stats ? [
+          { label: 'الطلاب', value: stats.students },
+          { label: 'المحفظون', value: stats.teachers },
+          { label: 'الحلقات', value: stats.halaqat }
+        ] : undefined}
+      />
 
       {/* Main stats grid */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-          {[
-            { icon: Users,             val: stats.students,  label: 'الطلاب',          cls: 'gradient-primary', to: '/students' },
-            { icon: GraduationCap,     val: stats.teachers,  label: 'المحفظون',         cls: 'gradient-gold',    to: '/teachers' },
-            { icon: BookOpen,          val: stats.halaqat,   label: 'الحلقات',          cls: 'bg-[hsl(222,42%,28%)]', to: '/halaqat' },
-            { icon: FileText,          val: stats.recitations_this_week, label: 'تسميع هذا الأسبوع', cls: 'bg-[hsl(152,45%,38%)]', to: '/recitations' },
-          ].map(s => (
-            <Link key={s.label} to={s.to} className={`stat-card rounded-2xl p-5 text-white shadow-lg ${s.cls} hover:opacity-95`}>
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
-                <s.icon className="w-5 h-5 text-white" />
-              </div>
-              <p className="text-3xl font-black">{s.val}</p>
-              <p className="text-white/75 text-sm mt-1">{s.label}</p>
-              <div className="flex items-center gap-1 mt-2 text-white/60 text-xs">
-                <ChevronRight className="w-3 h-3" /><span>عرض التفاصيل</span>
-              </div>
-            </Link>
-          ))}
+          <StatCard
+            title="الطلاب"
+            value={stats.students}
+            icon={Users}
+            gradientClass="stat-card-blue"
+          />
+          <StatCard
+            title="المحفظون"
+            value={stats.teachers}
+            icon={GraduationCap}
+            gradientClass="stat-card-amber"
+          />
+          <StatCard
+            title="الحلقات"
+            value={stats.halaqat}
+            icon={BookOpen}
+            gradientClass="stat-card-purple"
+          />
+          <StatCard
+            title="تسميع هذا الأسبوع"
+            value={stats.recitations_this_week}
+            icon={FileText}
+            gradientClass="stat-card-green"
+          />
         </div>
       )}
 
@@ -159,7 +159,7 @@ export default function CenterManagerDashboard() {
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4">
             {honorRoll.map((student, idx) => (
-              <div key={student.id} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-amber-100 hover:-translate-y-1 transition-transform relative">
+              <div key={student.id} className="bg-white rounded-2xl p-4 text-center shadow-sm border border-amber-100 hoverable-card relative">
                 {idx === 0 && <div className="absolute -top-3 -right-3 w-8 h-8 bg-yellow-400 rounded-full flex items-center justify-center shadow-md animate-bounce"><Star className="w-4 h-4 text-white fill-white" /></div>}
                 {idx === 1 && <div className="absolute -top-3 -right-3 w-8 h-8 bg-slate-300 rounded-full flex items-center justify-center shadow-md"><Medal className="w-4 h-4 text-white fill-white" /></div>}
                 {idx === 2 && <div className="absolute -top-3 -right-3 w-8 h-8 bg-orange-400 rounded-full flex items-center justify-center shadow-md"><Medal className="w-4 h-4 text-white fill-white" /></div>}
@@ -243,14 +243,14 @@ export default function CenterManagerDashboard() {
                   <TrendingUp className="w-4 h-4 text-emerald-600" />
                   <span className="text-sm font-semibold text-emerald-700">الرسوم المحصَّلة</span>
                 </div>
-                <span className="font-black text-emerald-700 text-sm" dir="ltr">{FCFA(stats.fees_collected)}</span>
+                <span className="font-black text-emerald-700 text-sm amount" dir="ltr">{FCFA(stats.fees_collected)}</span>
               </div>
               <div className="flex items-center justify-between p-3 rounded-2xl bg-amber-50">
                 <div className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-amber-600" />
                   <span className="text-sm font-semibold text-amber-700">الرسوم المعلقة</span>
                 </div>
-                <span className="font-black text-amber-700 text-sm" dir="ltr">{FCFA(stats.fees_pending)}</span>
+                <span className="font-black text-amber-700 text-sm amount" dir="ltr">{FCFA(stats.fees_pending)}</span>
               </div>
             </div>
           </div>
@@ -268,14 +268,17 @@ export default function CenterManagerDashboard() {
           </Link>
         </div>
         {recentRecitations.length === 0 ? (
-          <div className="text-center py-8 text-[hsl(var(--muted-foreground))]">
-            <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">لا توجد تسميعات مسجَّلة</p>
+          <div className="p-6">
+            <EmptyState
+              icon={FileText}
+              title="لا توجد تسميعات مسجَّلة"
+              description={t('empty_no_recitations')}
+            />
           </div>
         ) : (
           <div className="space-y-2">
             {recentRecitations.map((r) => (
-              <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-[hsl(var(--muted))] text-sm">
+              <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-[hsl(var(--muted))] text-sm hover:bg-[hsl(var(--border))] transition-colors">
                 <div className="flex items-center gap-3">
                   <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-xs">
                     {(r.student_name || 'ط').charAt(0)}
@@ -310,7 +313,7 @@ export default function CenterManagerDashboard() {
           </div>
           <div className="space-y-1.5">
             {recentAttendance.slice(0, 6).map((a, idx) => (
-              <div key={a.id || idx} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[hsl(var(--muted))] text-sm">
+              <div key={a.id || idx} className="flex items-center justify-between px-3 py-2 rounded-xl bg-[hsl(var(--muted))] text-sm hover:bg-[hsl(var(--border))] transition-colors">
                 <div className="flex items-center gap-2">
                   <div className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-black ${
                     a.status === 'present' ? 'bg-emerald-100 text-emerald-700' :
@@ -331,14 +334,14 @@ export default function CenterManagerDashboard() {
       {/* Quick links */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
         {[
-          { label: 'إضافة محفظ',   icon: GraduationCap, to: '/teachers',     cls: 'bg-[hsl(var(--primary-light))] text-[hsl(var(--primary))]' },
-          { label: 'تسجيل طالب',   icon: Users,          to: '/students',     cls: 'bg-amber-50 text-amber-700' },
-          { label: 'إدارة الحضور', icon: Calendar,       to: '/attendance',   cls: 'bg-blue-50 text-blue-700' },
-          { label: 'خطط المراجعة', icon: RefreshCw,      to: '/review-plans', cls: 'bg-purple-50 text-purple-700' },
+          { label: 'إضافة محفظ',   icon: GraduationCap, to: '/teachers',     cls: 'btn-gradient-teal text-white' },
+          { label: 'تسجيل طالب',   icon: Users,          to: '/students',     cls: 'badge-gold text-white' },
+          { label: 'إدارة الحضور', icon: Calendar,       to: '/attendance',   cls: 'btn-outline-teal' },
+          { label: 'خطط المراجعة', icon: RefreshCw,      to: '/review-plans', cls: 'btn-outline-teal' },
         ].map(link => (
           <Link key={link.label} to={link.to}
-            className={`rounded-2xl p-4 flex flex-col items-center gap-2 text-center font-bold text-sm hover:opacity-80 transition-all stat-card ${link.cls}`}>
-            <link.icon className="w-6 h-6" />
+            className={`rounded-2xl p-4 flex flex-col items-center gap-2 text-center font-bold text-sm hoverable-card shadow-sm border ${link.cls}`}>
+            <link.icon className="w-6 h-6 animate-float" />
             <span>{link.label}</span>
           </Link>
         ))}

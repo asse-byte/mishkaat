@@ -1,8 +1,11 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { BookOpen, Calendar, TrendingUp, Trophy, CheckCircle2, Star, FileText } from 'lucide-react';
-
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import StatCard from '@/components/ui/StatCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { useTranslation } from '@/lib/i18n';
 
 interface StudentInfo {
   id: string;
@@ -33,6 +36,7 @@ const evalMap: Record<string, { text: string; cls: string }> = {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [studentInfo, setStudentInfo]     = useState<StudentInfo | null>(null);
   const [recitations, setRecitations]     = useState<RecitationData[]>([]);
   const [attendedDays, setAttendedDays]   = useState(0);
@@ -98,49 +102,35 @@ export default function StudentDashboard() {
   ];
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-fade-in pb-10">
 
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl p-7 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-40px] left-[-40px] w-52 h-52 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-30px] right-20 w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <p className="text-white/60 text-sm mb-1">مرحباً،</p>
-            <h1 className="text-3xl font-black mb-2">{studentInfo?.name || user?.name}</h1>
-            {studentInfo?.current_surah && (
-              <div className="inline-flex items-center gap-2 bg-white/20 rounded-xl px-4 py-2 text-sm font-semibold">
-                <BookOpen className="w-4 h-4" />
-                <span>{studentInfo.current_surah} · آية {studentInfo.current_ayah}</span>
-              </div>
-            )}
-            {studentInfo?.halaqah_name && (
-              <p className="text-white/60 text-sm mt-2">{studentInfo.halaqah_name}</p>
-            )}
-          </div>
-          <div className="hidden md:flex flex-col items-center justify-center w-24 h-24 bg-white/15 rounded-2xl animate-float">
-            <span className="text-4xl font-black">{progress}%</span>
-            <span className="text-white/70 text-xs">مكتمل</span>
-          </div>
-        </div>
-      </div>
+      <WelcomeHero
+        name={studentInfo?.name || user?.name || null}
+        roleTitle={t('role_student')}
+        subtext={studentInfo?.current_surah ? `${studentInfo.current_surah} · آية ${studentInfo.current_ayah} · ${studentInfo?.halaqah_name || ''}` : undefined}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">
-        {[
-          { label: 'أجزاء محفوظة', value: memorizedJuz, sub: 'من 30',  icon: BookOpen,   cls: 'gradient-primary' },
-          { label: 'نسبة الحفظ',   value: `${progress}%`, sub: '',      icon: TrendingUp, cls: 'gradient-gold' },
-          { label: 'أيام الحضور',  value: attendedDays, sub: `من ${totalAttDays}`, icon: Calendar, cls: 'bg-[hsl(222,42%,28%)]' },
-        ].map(s => (
-          <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
-              <s.icon className="w-5 h-5 text-white" />
-            </div>
-            <p className="text-2xl font-black">{s.value}</p>
-            {s.sub && <p className="text-white/60 text-xs">{s.sub}</p>}
-            <p className="text-white/80 text-sm font-medium mt-0.5">{s.label}</p>
-          </div>
-        ))}
+        <StatCard
+          title="أجزاء محفوظة"
+          value={`${memorizedJuz} / 30`}
+          icon={BookOpen}
+          gradientClass="stat-card-blue"
+        />
+        <StatCard
+          title="نسبة الحفظ"
+          value={`${progress}%`}
+          icon={TrendingUp}
+          gradientClass="stat-card-teal"
+        />
+        <StatCard
+          title="أيام الحضور"
+          value={`${attendedDays} / ${totalAttDays}`}
+          icon={Calendar}
+          gradientClass="stat-card-amber"
+        />
       </div>
 
       {/* Progress map */}
@@ -179,12 +169,15 @@ export default function StudentDashboard() {
           </div>
           <div className="divide-y divide-[hsl(var(--border))]">
             {recitations.length === 0 ? (
-              <div className="py-10 text-center text-[hsl(var(--muted-foreground))]">
-                <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">لا توجد تسميعات مسجَّلة</p>
+              <div className="p-6">
+                <EmptyState
+                  icon={BookOpen}
+                  title="لا توجد تسميعات مسجَّلة"
+                  description={t('empty_no_recitations')}
+                />
               </div>
             ) : recitations.slice(0, 5).map((r, i) => (
-              <div key={r.id || i} className="flex items-center gap-4 px-5 py-4">
+              <div key={r.id || i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className="text-center w-14 shrink-0">
                   <p className="text-xs text-[hsl(var(--muted-foreground))] font-medium">
                     {new Date(r.date).toLocaleDateString('ar-SA', { day: 'numeric', month: 'short' })}

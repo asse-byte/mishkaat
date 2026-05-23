@@ -1,8 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Calendar, Bell, TrendingUp, CheckCircle2, DollarSign, AlertCircle } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/loading';
+import { BookOpen, Calendar, TrendingUp, CheckCircle2, DollarSign, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import EmptyState from '@/components/ui/EmptyState';
+import { useTranslation } from '@/lib/i18n';
 
 interface ChildInfo {
   id: string;
@@ -39,6 +41,7 @@ const evalMap: Record<string, string> = {
 
 export default function ParentDashboard() {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [children, setChildren]       = useState<ChildInfo[]>([]);
   const [fees, setFees]               = useState<FeeInfo[]>([]);
   const [recentRecs, setRecentRecs]   = useState<RecentRec[]>([]);
@@ -110,27 +113,15 @@ export default function ParentDashboard() {
     </div>
   );
 
-  const pendingFees = fees.filter(f => f.status === 'pending');
-  const paidFees    = fees.filter(f => f.status === 'paid');
-
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-fade-in pb-10">
 
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl p-7 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-40px] left-[-40px] w-52 h-52 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-30px] right-20 w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <p className="text-white/60 text-sm mb-1">مرحباً،</p>
-            <h1 className="text-3xl font-black mb-2">{user?.name}</h1>
-            <p className="text-white/70 text-sm">تابع تقدم {children.length > 1 ? 'أبنائك' : 'ابنك'} في حفظ القرآن الكريم</p>
-          </div>
-          <div className="hidden md:flex w-20 h-20 bg-white/15 rounded-2xl items-center justify-center animate-float">
-            <BookOpen className="w-10 h-10 text-white" />
-          </div>
-        </div>
-      </div>
+      <WelcomeHero
+        name={user?.name || null}
+        roleTitle={t('role_parent')}
+        subtext={`تابع تقدم ${children.length > 1 ? 'أبنائك' : 'ابنك'} في حفظ القرآن الكريم اليوم.`}
+      />
 
       {/* Children cards */}
       <div>
@@ -139,14 +130,15 @@ export default function ParentDashboard() {
           <span className="badge-gold text-xs px-2.5 py-1 rounded-full">{children.length}</span>
         </h3>
         {children.length === 0 ? (
-          <div className="text-center py-10 text-[hsl(var(--muted-foreground))] bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
-            <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-30" />
-            <p>لم يتم ربط حساب بأبنائك بعد</p>
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            title="لا يوجد أبناء مسجلين"
+            description="لم يتم ربط حساب بأبنائك بعد في مركز تحفيظ القرآن الكريم."
+          />
         ) : (
           <div className="grid md:grid-cols-2 gap-5 stagger">
             {children.map(child => (
-              <div key={child.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
+              <div key={child.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card hoverable-card">
                 {/* card header */}
                 <div className="gradient-primary p-5">
                   <div className="flex items-center gap-4">
@@ -156,7 +148,7 @@ export default function ParentDashboard() {
                     <div>
                       <h4 className="text-xl font-black text-white">{child.name}</h4>
                       <p className="text-white/70 text-sm">
-                        {child.halaqah_name || 'لم تُحدَّد الحلقة'} ·
+                        {child.halaqah_name || 'لم تُحدَّد الحلقة'} · 
                         {child.student_type === 'reviewing' ? ' مراجعة' : ' حفظ'}
                       </p>
                     </div>
@@ -172,7 +164,7 @@ export default function ParentDashboard() {
                   ].map(s => (
                     <div key={s.label} className="p-4 text-center">
                       <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
-                      <p className="font-black text-[hsl(var(--foreground))] text-base">{s.val}</p>
+                      <p className="font-black text-[hsl(var(--foreground))] text-base amount">{s.val}</p>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.label}</p>
                     </div>
                   ))}
@@ -203,12 +195,15 @@ export default function ParentDashboard() {
           </div>
           <div className="divide-y divide-[hsl(var(--border))]">
             {recentRecs.length === 0 ? (
-              <div className="py-10 text-center text-[hsl(var(--muted-foreground))]">
-                <BookOpen className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">لا توجد تسميعات مسجَّلة</p>
+              <div className="p-6">
+                <EmptyState
+                  icon={BookOpen}
+                  title="لا توجد تسميعات مسجَّلة"
+                  description={t('empty_no_recitations')}
+                />
               </div>
             ) : recentRecs.map((r, i) => (
-              <div key={i} className="flex items-center gap-4 px-5 py-4">
+              <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
                   {(r.student_name || 'ط').charAt(0)}
                 </div>
@@ -239,9 +234,13 @@ export default function ParentDashboard() {
           </div>
           <div className="p-5 space-y-3">
             {fees.length === 0 ? (
-              <p className="text-center text-[hsl(var(--muted-foreground))] text-sm py-6">لا توجد رسوم مسجَّلة</p>
+              <EmptyState
+                icon={DollarSign}
+                title="لا توجد مدفوعات مسجَّلة"
+                description="لا توجد رسوم دراسية معلقة أو مسجلة لهذا الحساب حالياً."
+              />
             ) : fees.map(fee => (
-              <div key={fee.id} className="flex items-center justify-between p-4 rounded-2xl bg-[hsl(var(--muted))]">
+              <div key={fee.id} className="flex items-center justify-between p-4 rounded-2xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                     fee.status === 'paid' ? 'bg-emerald-100' : 'bg-amber-100'}`}>
@@ -258,7 +257,7 @@ export default function ParentDashboard() {
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-[hsl(var(--foreground))] text-sm" dir="ltr">{FCFA(fee.amount)}</p>
+                  <p className="font-black text-[hsl(var(--foreground))] text-sm amount" dir="ltr">{FCFA(fee.amount)}</p>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     fee.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {fee.status === 'paid' ? '✅ مدفوع' : '⏳ معلق'}

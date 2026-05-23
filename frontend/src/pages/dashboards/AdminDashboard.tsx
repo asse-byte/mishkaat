@@ -2,11 +2,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   Building2, Plus, Search, MapPin, Phone, User,
-  CheckCircle2, XCircle, Edit, Users, GraduationCap,
+  CheckCircle2, Edit, Users, GraduationCap,
   BookOpen, AlertCircle, X, Eye, Calendar, Hash,
   ChevronRight, Trash2, Save,
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import StatCard from '@/components/ui/StatCard';
 
 interface CenterData {
   id: string;
@@ -32,17 +34,6 @@ const emptyForm = {
 };
 
 const emptyEditForm = { name: '', address: '', phone: '', manager_name: '' };
-
-// مكوّن بطاقة إحصاء
-const StatCard = ({ icon: Icon, value, label, color }: { icon: React.ElementType; value: number | string; label: string; color: string }) => (
-  <div className={`stat-card rounded-2xl p-5 text-white shadow-lg animate-fade-in ${color}`}>
-    <div className="w-11 h-11 bg-white/20 rounded-xl flex items-center justify-center mb-4">
-      <Icon className="w-6 h-6 text-white" />
-    </div>
-    <p className="text-4xl font-black mb-1">{value}</p>
-    <p className="text-white/80 text-sm font-medium">{label}</p>
-  </div>
-);
 
 // مكوّن شارة الرقم التسلسلي
 const SeqBadge = ({ id }: { id: string }) => (
@@ -152,35 +143,41 @@ export default function AdminDashboard() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-fade-in pb-10 text-[hsl(var(--foreground))]">
 
       {/* Hero banner */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-7 text-white shadow-xl">
-        <div className="absolute top-[-40px] left-[-40px] w-52 h-52 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-30px] right-20 w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <p className="text-white/60 font-medium mb-1 text-sm">لوحة التحكم ·</p>
-            <h1 className="text-3xl font-black mb-2">مدير النظام</h1>
-            <p className="text-white/75 text-sm">إدارة وتسجيل مراكز تحفيظ القرآن الكريم</p>
-          </div>
-          <div className="hidden md:flex w-20 h-20 bg-white/15 rounded-2xl items-center justify-center animate-float">
-            <Building2 className="w-10 h-10 text-white" />
-          </div>
-        </div>
+      <WelcomeHero
+        name={null}
+        roleTitle="مدير النظام"
+        subtext="إدارة وتسجيل مراكز تحفيظ القرآن الكريم"
+        stats={[
+          { label: 'إجمالي المراكز', value: centers.length },
+          { label: 'إجمالي الطلاب', value: totals.students },
+        ]}
+      />
+
+      {/* Add center action */}
+      <div className="flex justify-end">
+        <button
+          onClick={() => setShowAddForm(!showAddForm)}
+          className="btn-gradient-teal text-white font-bold px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:opacity-90 transition-all text-sm cursor-pointer"
+        >
+          <Plus className="w-4 h-4" />
+          تسجيل مركز جديد
+        </button>
       </div>
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-        <StatCard icon={Building2}     value={centers.length}    label="إجمالي المراكز" color="gradient-primary" />
-        <StatCard icon={Users}         value={totals.students}   label="إجمالي الطلاب"  color="gradient-gold" />
-        <StatCard icon={GraduationCap} value={totals.teachers}   label="المحفظون"        color="bg-[hsl(222,42%,28%)]" />
-        <StatCard icon={BookOpen}      value={totals.halaqat}    label="الحلقات"          color="bg-[hsl(152,45%,38%)]" />
+        <StatCard icon={Building2}     value={centers.length}    title="إجمالي المراكز"  gradientClass="stat-card-blue" />
+        <StatCard icon={Users}         value={totals.students}   title="إجمالي الطلاب"   gradientClass="stat-card-teal" />
+        <StatCard icon={GraduationCap} value={totals.teachers}   title="المحفظون"         gradientClass="stat-card-purple" />
+        <StatCard icon={BookOpen}      value={totals.halaqat}    title="الحلقات"           gradientClass="stat-card-green" />
       </div>
 
       {/* System Health & Security Monitor */}
       {sysStatus && (
-        <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-6">
+        <div className="bg-[hsl(var(--card))] rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-6">
           <div className="flex items-center justify-between border-b pb-3">
             <div>
               <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
@@ -194,33 +191,33 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Connection Status Card */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex items-center gap-4">
+            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex items-center gap-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${sysStatus.db_connected ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                 <div className={`w-3.5 h-3.5 rounded-full ${sysStatus.db_connected ? 'bg-emerald-600 animate-pulse' : 'bg-rose-600'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block">قاعدة البيانات الموحدة</span>
-                <span className="font-bold text-sm text-gray-800 block truncate">
+                <span className="font-bold text-sm text-[hsl(var(--foreground))] block truncate">
                   {sysStatus.db_connected ? '🟢 متصل بنجاح' : '🔴 غير متصل'}
                 </span>
-                <span className="text-[10px] text-gray-400 font-mono" dir="ltr">{sysStatus.db_type}</span>
+                <span className="text-[10px] text-[hsl(var(--muted-foreground))] font-mono" dir="ltr">{sysStatus.db_type}</span>
               </div>
             </div>
 
             {/* Login successes progress */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex flex-col justify-between">
+            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
               <div>
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الناجحة</span>
                 <div className="flex items-center justify-between font-mono font-black text-emerald-600 text-lg">
                   <span>{sysStatus.login_attempts.success} عملية</span>
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
                     {sysStatus.login_attempts.total > 0 
                       ? `${Math.round((sysStatus.login_attempts.success / sysStatus.login_attempts.total) * 100)}%` 
                       : '0%'}
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3">
+              <div className="w-full bg-[hsl(var(--border))] h-2 rounded-full overflow-hidden mt-3">
                 <div 
                   className="bg-emerald-600 h-full rounded-full" 
                   style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.success / sysStatus.login_attempts.total) * 100 : 0}%` }} 
@@ -229,19 +226,19 @@ export default function AdminDashboard() {
             </div>
 
             {/* Login failures progress */}
-            <div className="p-5 rounded-2xl bg-slate-50 border border-[hsl(var(--border))] flex flex-col justify-between">
+            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
               <div>
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الفاشلة</span>
                 <div className="flex items-center justify-between font-mono font-black text-rose-600 text-lg">
                   <span>{sysStatus.login_attempts.failed} محاولة</span>
-                  <span className="text-xs font-bold text-slate-500">
+                  <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
                     {sysStatus.login_attempts.total > 0 
                       ? `${Math.round((sysStatus.login_attempts.failed / sysStatus.login_attempts.total) * 100)}%` 
                       : '0%'}
                   </span>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 h-2 rounded-full overflow-hidden mt-3">
+              <div className="w-full bg-[hsl(var(--border))] h-2 rounded-full overflow-hidden mt-3">
                 <div 
                   className="bg-rose-600 h-full rounded-full" 
                   style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.failed / sysStatus.login_attempts.total) * 100 : 0}%` }} 
@@ -252,21 +249,21 @@ export default function AdminDashboard() {
 
           {/* Operational Metrics Subpanel */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-[hsl(var(--border))]/60">
-            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+            <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي محاولات الدخول</span>
-              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.login_attempts.total}</span>
+              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.login_attempts.total}</span>
             </div>
-            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+            <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">حسابات محظورة مؤقتاً (Rate-limits)</span>
               <span className="font-mono font-black text-lg text-amber-600">{sysStatus.login_attempts.active_locks} نشطة</span>
             </div>
-            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+            <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">محاولات تسجيل المراكز</span>
-              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.public_register_attempts} محاولة</span>
+              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.public_register_attempts} محاولة</span>
             </div>
-            <div className="text-center p-3 bg-slate-50/50 rounded-xl">
+            <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي سجل النشاط المشفّر</span>
-              <span className="font-mono font-black text-lg text-slate-700">{sysStatus.total_audit_logs} حدث</span>
+              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.total_audit_logs} حدث</span>
             </div>
           </div>
         </div>
@@ -293,7 +290,7 @@ export default function AdminDashboard() {
           .sort((a, b) => b.score - a.score);
 
         return (
-          <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
+          <div className="bg-[hsl(var(--card))] rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
                 <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
@@ -329,11 +326,11 @@ export default function AdminDashboard() {
                            <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>}
                         </td>
                         <td className="py-4">
-                          <span className="font-bold text-gray-800 block">{center.name}</span>
+                          <span className="font-bold text-[hsl(var(--foreground))] block">{center.name}</span>
                           <span className="text-[10px] text-[hsl(var(--muted-foreground))]" dir="ltr">{center.address}</span>
                         </td>
-                        <td className="py-4 text-center font-bold text-slate-700">{center.students_count} طالب</td>
-                        <td className="py-4 text-center text-xs text-slate-500">
+                        <td className="py-4 text-center font-bold text-[hsl(var(--foreground))]">{center.students_count} طالب</td>
+                        <td className="py-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
                           {center.teachers_count} محفظين / {center.halaqat_count} حلقات
                         </td>
                         <td className="py-4 text-center">
@@ -361,20 +358,13 @@ export default function AdminDashboard() {
 
       {/* Actions bar */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all"
-        >
-          <Plus className="w-5 h-5" />
-          تسجيل مركز جديد
-        </button>
         <div className="relative flex-1">
           <Search className="absolute right-4 top-3.5 h-5 w-5 text-[hsl(var(--muted-foreground))]" />
           <input
             placeholder="البحث بالاسم أو العنوان أو الرقم التسلسلي..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full h-12 pr-12 pl-4 rounded-xl border-2 border-[hsl(var(--border))] bg-white
+            className="w-full h-12 pr-12 pl-4 rounded-xl border-2 border-[hsl(var(--border))] bg-[hsl(var(--background))]
                        focus:outline-none focus:border-[hsl(var(--primary))] transition-all text-[hsl(var(--foreground))]"
           />
         </div>
@@ -382,8 +372,8 @@ export default function AdminDashboard() {
 
       {/* Add form */}
       {showAddForm && (
-        <div className="glass rounded-3xl border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 animate-slide-in-up">
-          <div className="flex items-center justify-between mb-5">
+        <div className="bg-[hsl(var(--card))] rounded-3xl border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 animate-slide-in-up">
+          <div className="flex items-center justify-between mb-5 border-b border-[hsl(var(--border))] pb-3">
             <h3 className="text-lg font-black text-[hsl(var(--foreground))] flex items-center gap-2">
               <Plus className="w-5 h-5 text-[hsl(var(--primary))]" />
               تسجيل مركز جديد
@@ -409,18 +399,18 @@ export default function AdminDashboard() {
                   dir={f.dir}
                   value={(formData as any)[f.key]}
                   onChange={e => setFormData({ ...formData, [f.key]: e.target.value })}
-                  className="w-full h-11 px-4 rounded-xl border-2 border-[hsl(var(--border))] bg-white
+                  className="w-full h-11 px-4 rounded-xl border-2 border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]
                              focus:outline-none focus:border-[hsl(var(--primary))] transition-all"
                 />
               </div>
             ))}
           </div>
           {error && (
-            <div className="mt-4 p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-sm flex items-center gap-2">
+            <div className="mt-4 p-3 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0" />{error}
             </div>
           )}
-          <div className="flex gap-3 mt-6">
+          <div className="flex gap-3 mt-6 pt-4 border-t border-[hsl(var(--border))]">
             <button onClick={handleSubmit} disabled={submitting}
               className="flex-1 gradient-primary text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
               {submitting ? <><LoadingSpinner size="sm" /><span>جاري الحفظ...</span></> : <><CheckCircle2 className="w-4 h-4" />حفظ المركز</>}
@@ -451,7 +441,7 @@ export default function AdminDashboard() {
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger">
             {filtered.map(center => (
-              <div key={center.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden hover:shadow-xl transition-all stat-card">
+              <div key={center.id} className="bg-[hsl(var(--card))] rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden hover:shadow-xl transition-all stat-card">
                 {/* Card header */}
                 <div className="gradient-primary p-4">
                   <div className="flex items-start justify-between">
@@ -527,7 +517,7 @@ export default function AdminDashboard() {
       {/* Center Details Modal */}
       {selectedCenter && (
         <div className="modal-overlay" onClick={() => setSelectedCenter(null)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[hsl(var(--card))] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Modal header */}
             <div className="gradient-primary p-6 rounded-t-3xl">
               <div className="flex items-start justify-between">

@@ -1,20 +1,22 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import { LoadingSpinner } from '@/components/ui/loading';
 import {
-  Users, BookOpen, Calendar, Clock,
-  CheckCircle2, Star, FileText, TrendingUp,
+  Users, BookOpen, Calendar, FileText, TrendingUp,
   ChevronRight, Award, GraduationCap,
 } from 'lucide-react';
 import api from '@/services/api';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import StatCard from '@/components/ui/StatCard';
+import EmptyState from '@/components/ui/EmptyState';
+import { useTranslation } from '@/lib/i18n';
 
 interface TeacherStats {
   students_count: number;
   halaqat: string[];
   recitations_today: number;
   attendance_rate: number;
-  teacher_name: string | null;
+  teacher_name: string | null | undefined;
 }
 
 interface RecitationData {
@@ -44,6 +46,7 @@ const evalLabel: Record<string, { text: string; cls: string }> = {
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [stats, setStats]             = useState<TeacherStats | null>(null);
   const [recentRecitations, setRecent] = useState<RecitationData[]>([]);
   const [topStudents, setTopStudents] = useState<StudentData[]>([]);
@@ -112,42 +115,41 @@ export default function TeacherDashboard() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 page-fade-in pb-10">
 
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-3xl p-7 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-40px] left-[-40px] w-52 h-52 rounded-full bg-white/5" />
-        <div className="absolute bottom-[-30px] right-20 w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
-          <div>
-            <p className="text-white/60 text-sm mb-1">مرحباً،</p>
-            <h1 className="text-3xl font-black mb-1">{stats?.teacher_name || user?.name}</h1>
-            {stats?.halaqat && stats.halaqat.length > 0 && (
-              <p className="text-white/70 text-sm">{stats.halaqat.join(' · ')}</p>
-            )}
-          </div>
-          <div className="hidden md:flex w-20 h-20 bg-white/15 rounded-2xl items-center justify-center animate-float">
-            <GraduationCap className="w-10 h-10 text-white" />
-          </div>
-        </div>
-      </div>
+      <WelcomeHero
+        name={stats?.teacher_name || user?.name || null}
+        roleTitle={t('role_teacher')}
+        subtext={stats?.halaqat && stats.halaqat.length > 0 ? stats.halaqat.join(' · ') : undefined}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 stagger">
-        {[
-          { title: 'طلابي',          value: stats?.students_count ?? '-',   icon: Users,       cls: 'gradient-primary' },
-          { title: 'تسميعات اليوم',  value: stats?.recitations_today ?? 0,  icon: BookOpen,    cls: 'gradient-gold' },
-          { title: 'نسبة الحضور',    value: `${stats?.attendance_rate ?? 0}%`, icon: Calendar, cls: 'bg-[hsl(222,42%,28%)]' },
-          { title: 'الحلقات',         value: stats?.halaqat.length ?? 0,    icon: BookOpen,    cls: 'bg-[hsl(152,45%,38%)]' },
-        ].map(s => (
-          <div key={s.title} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
-              <s.icon className="w-5 h-5 text-white" />
-            </div>
-            <p className="text-3xl font-black">{s.value}</p>
-            <p className="text-white/70 text-sm mt-1 font-medium">{s.title}</p>
-          </div>
-        ))}
+        <StatCard
+          title="طلابي"
+          value={stats?.students_count ?? '-'}
+          icon={Users}
+          gradientClass="stat-card-blue"
+        />
+        <StatCard
+          title={t('recitations_today')}
+          value={stats?.recitations_today ?? 0}
+          icon={BookOpen}
+          gradientClass="stat-card-green"
+        />
+        <StatCard
+          title={t('rate_attendance')}
+          value={`${stats?.attendance_rate ?? 0}%`}
+          icon={Calendar}
+          gradientClass="stat-card-amber"
+        />
+        <StatCard
+          title={t('term_halaqat')}
+          value={stats?.halaqat.length ?? 0}
+          icon={BookOpen}
+          gradientClass="stat-card-purple"
+        />
       </div>
 
       <div className="grid lg:grid-cols-5 gap-5">
@@ -164,12 +166,15 @@ export default function TeacherDashboard() {
           </div>
           <div className="divide-y divide-[hsl(var(--border))]">
             {recentRecitations.length === 0 ? (
-              <div className="py-10 text-center text-[hsl(var(--muted-foreground))]">
-                <FileText className="w-10 h-10 mx-auto mb-2 opacity-30" />
-                <p className="text-sm">لا توجد تسميعات مسجَّلة</p>
+              <div className="p-6">
+                <EmptyState
+                  icon={FileText}
+                  title="لا توجد تسميعات مسجَّلة"
+                  description={t('empty_no_recitations')}
+                />
               </div>
             ) : recentRecitations.map((r, i) => (
-              <div key={r.id || i} className="flex items-center gap-4 px-5 py-3.5">
+              <div key={r.id || i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
                 <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
                   {(r.student_name || 'ط').charAt(0)}
                 </div>
@@ -203,7 +208,11 @@ export default function TeacherDashboard() {
           </div>
           <div className="p-5 space-y-4">
             {topStudents.length === 0 ? (
-              <p className="text-center text-[hsl(var(--muted-foreground))] text-sm py-6">لا يوجد طلاب</p>
+              <EmptyState
+                icon={Award}
+                title="لا يوجد طلاب"
+                description={t('empty_no_students')}
+              />
             ) : topStudents.map((s, i) => (
               <div key={s.id} className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${
@@ -229,14 +238,14 @@ export default function TeacherDashboard() {
       {/* Quick actions */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: 'تسميع جديد',   icon: BookOpen,  href: '/recitations',   cls: 'gradient-primary' },
-          { label: 'تسجيل حضور',   icon: Calendar,  href: '/attendance',    cls: 'gradient-gold' },
-          { label: 'قائمة الطلاب', icon: Users,     href: '/students',      cls: 'bg-[hsl(222,42%,28%)]' },
-          { label: 'خطط مراجعة',   icon: TrendingUp, href: '/review-plans', cls: 'bg-[hsl(152,45%,38%)]' },
+          { label: 'تسميع جديد',   icon: BookOpen,  href: '/recitations',   cls: 'btn-gradient-teal' },
+          { label: 'تسجيل حضور',   icon: Calendar,  href: '/attendance',    cls: 'badge-gold' },
+          { label: 'قائمة الطلاب', icon: Users,     href: '/students',      cls: 'btn-outline-teal' },
+          { label: 'خطط مراجعة',   icon: TrendingUp, href: '/review-plans', cls: 'btn-outline-teal' },
         ].map(a => (
           <button key={a.href} onClick={() => navigate(a.href)}
-            className={`${a.cls} rounded-2xl p-5 text-white text-center hover:opacity-90 active:scale-[0.97] transition-all shadow-md stat-card`}>
-            <a.icon className="w-7 h-7 mx-auto mb-2" />
+            className={`${a.cls} rounded-2xl p-5 text-center hoverable-card flex flex-col items-center justify-center transition-all shadow-md min-h-[100px]`}>
+            <a.icon className="w-6 h-6 mb-2" />
             <span className="text-sm font-bold">{a.label}</span>
           </button>
         ))}

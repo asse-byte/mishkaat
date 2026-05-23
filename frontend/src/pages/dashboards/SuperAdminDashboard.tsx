@@ -12,6 +12,9 @@ import {
   TrendingUp, CircleDot, RefreshCw, Key,
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
+import WelcomeHero from '@/components/ui/WelcomeHero';
+import StatCard from '@/components/ui/StatCard';
+import { useTranslation } from '@/lib/i18n';
 
 interface CenterData {
   id: string;
@@ -43,6 +46,7 @@ const emptyForm = {
 };
 
 export default function SuperAdminDashboard() {
+  const { t } = useTranslation();
   const [showAddForm, setShowAddForm]     = useState(false);
   const [searchTerm, setSearchTerm]       = useState('');
   const [centers, setCenters]             = useState<CenterData[]>([]);
@@ -140,7 +144,7 @@ export default function SuperAdminDashboard() {
   );
 
   return (
-    <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
+    <div className="space-y-6 page-fade-in pb-10 text-[hsl(var(--foreground))]">
       
       {/* Super Admin Top Header Banner */}
       <div className="relative overflow-hidden rounded-3xl gradient-sidebar border-2 border-[hsl(var(--gold))/20] p-6 lg:p-8 text-white shadow-xl">
@@ -159,7 +163,7 @@ export default function SuperAdminDashboard() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10 flex items-center gap-2 text-sm font-semibold"
+              className="p-3 rounded-xl bg-white/10 hover:bg-white/20 transition-all border border-white/10 flex items-center gap-2 text-sm font-semibold cursor-pointer"
               title="تحديث البيانات"
             >
               <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
@@ -167,7 +171,7 @@ export default function SuperAdminDashboard() {
             </button>
             <button
               onClick={() => setShowAddForm(!showAddForm)}
-              className="gradient-primary text-white border border-[hsl(var(--primary-light))/40] font-bold px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:opacity-90 transition-all text-sm"
+              className="btn-gradient-teal text-white font-bold px-5 py-3 rounded-xl flex items-center gap-2 shadow-lg hover:opacity-90 transition-all text-sm cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               إضافة مركز معتمد
@@ -179,73 +183,30 @@ export default function SuperAdminDashboard() {
       {/* Global SaaS Financial & Enrollment Metrics */}
       {stats && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 stagger">
-          
-          {/* Active Centers */}
-          <div className="stat-card bg-white rounded-2xl p-5 border border-[hsl(var(--border))] shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] font-bold mb-1">المراكز المعتمدة</p>
-              <p className="text-3xl font-black text-[hsl(var(--primary))]">{stats.total_active_centers}</p>
-              <p className="text-[10px] text-emerald-600 font-bold mt-1.5 flex items-center gap-1">
-                <CircleDot className="w-3 h-3 fill-emerald-500 animate-pulse" />
-                نشطة وتعمل حالياً
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-[hsl(var(--primary-light))] rounded-xl flex items-center justify-center">
-              <Building2 className="w-6 h-6 text-[hsl(var(--primary))]" />
-            </div>
-          </div>
-
-          {/* Active Students */}
-          <div className="stat-card bg-white rounded-2xl p-5 border border-[hsl(var(--border))] shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] font-bold mb-1">إجمالي الطلاب النشطين</p>
-              <p className="text-3xl font-black text-[hsl(var(--gold-dark))]">{stats.total_active_students}</p>
-              <p className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold mt-1.5 flex items-center gap-1">
-                <Users className="w-3.5 h-3.5" />
-                تحت الإشراف المباشر
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-[hsl(var(--gold-dark))]" />
-            </div>
-          </div>
-
-          {/* Treasury Outflow (Salaries + Expenses) */}
-          <div className="stat-card bg-white rounded-2xl p-5 border border-[hsl(var(--border))] shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] font-bold mb-1">إجمالي المصروفات والرواتب</p>
-              <p className="text-2xl font-black text-rose-600">
-                {(stats.total_salaries_paid_fcfa + stats.total_expenses_fcfa).toLocaleString()}
-                <span className="text-xs font-bold mr-1">FCFA</span>
-              </p>
-              <p className="text-[10px] text-rose-500 font-semibold mt-1.5 flex items-center gap-0.5">
-                <ArrowDownRight className="w-3.5 h-3.5" />
-                رواتب: {stats.total_salaries_paid_fcfa.toLocaleString()} FCFA
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center">
-              <Landmark className="w-6 h-6 text-rose-500" />
-            </div>
-          </div>
-
-          {/* Global Net Balance */}
-          <div className={`stat-card rounded-2xl p-5 border shadow-md flex items-center justify-between transition-colors ${stats.global_balance_fcfa >= 0 ? 'bg-emerald-50/50 border-emerald-100' : 'bg-rose-50/50 border-rose-100'}`}>
-            <div>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] font-bold mb-1">صافي الرصيد الإجمالي العام</p>
-              <p className={`text-2xl font-black ${stats.global_balance_fcfa >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                {stats.global_balance_fcfa.toLocaleString()}
-                <span className="text-xs font-bold mr-1">FCFA</span>
-              </p>
-              <p className={`text-[10px] font-bold mt-1.5 flex items-center gap-0.5 ${stats.global_balance_fcfa >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
-                {stats.global_balance_fcfa >= 0 ? <ArrowUpRight className="w-3.5 h-3.5" /> : <ArrowDownRight className="w-3.5 h-3.5" />}
-                رصيد إيجابي للخزينة العامة
-              </p>
-            </div>
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${stats.global_balance_fcfa >= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-              <TrendingUp className="w-6 h-6" />
-            </div>
-          </div>
-
+          <StatCard
+            title="المراكز المعتمدة"
+            value={stats.total_active_centers}
+            icon={Building2}
+            gradientClass="stat-card-blue"
+          />
+          <StatCard
+            title="إجمالي الطلاب النشطين"
+            value={stats.total_active_students}
+            icon={Users}
+            gradientClass="stat-card-teal"
+          />
+          <StatCard
+            title="إجمالي المصروفات والرواتب"
+            value={`${(stats.total_salaries_paid_fcfa + stats.total_expenses_fcfa).toLocaleString()} FCFA`}
+            icon={Landmark}
+            gradientClass="stat-card-rose"
+          />
+          <StatCard
+            title="صافي الرصيد الإجمالي العام"
+            value={`${stats.global_balance_fcfa.toLocaleString()} FCFA`}
+            icon={TrendingUp}
+            gradientClass={stats.global_balance_fcfa >= 0 ? "stat-card-green" : "stat-card-rose"}
+          />
         </div>
       )}
 
