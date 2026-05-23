@@ -1,77 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Tajawal:wght@300;400;500;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Amiri:wght@400;700&display=swap');
 @import "tailwindcss";
 
 :root {
-  /* ========== لوحة ألوان إسلامية فاخرة (Premium Emerald & Gold) ========== */
-
-  /* اللون الأساسي: الأخضر الزمردي الإسلامي العميق */
-  --primary: 162 85% 16%;          /* #064e3b */
-  --primary-mid: 162 93% 30%;      /* #059669 */
-  --primary-light: 162 85% 96%;    /* خلفية فاتحة زمردية */
+  /* ========== لوحة ألوان إسلامية هادئة وفاخرة (Spiritual Emerald & Warm Gold) ========== */
+  
+  /* اللون الأساسي: الأخضر الزمردي الهادئ والوقور */
+  --primary: 162 85% 14%;            /* #043e2f - أخضر إسلامي عميق وقور */
+  --primary-mid: 162 80% 24%;        /* #0f5c47 */
+  --primary-light: 162 55% 94.5%;     /* خلفية كريمية مخضرة مريحة جداً */
   --primary-foreground: 0 0% 100%;
 
-  /* اللون الثانوي: الذهبي الفاخر */
-  --gold: 33 94% 44%;              /* #d97706 */
-  --gold-dark: 35 90% 35%;
-  --gold-light: 43 96% 94%;        /* #fbbf24 bg tint */
-
-  /* اللون الداكن: الكحلي الداكن للظلال والنصوص */
-  --navy: 222 47% 11%;             /* #0f172a */
-  --navy-mid: 222 40% 15%;
-  --navy-light: 222 35% 20%;
+  /* اللون الثانوي: الذهبي الروحاني الدافئ */
+  --gold: 38 75% 36%;                /* ذهبي مطفأ يوحي بالوقار والهدوء */
+  --gold-dark: 38 70% 28%;
+  --gold-light: 43 85% 93%;          /* ذهبي فاتح للخلفيات والتنبيهات */
 
   /* ألوان الخلفية والمحتوى */
-  --background: 40 20% 97%;        /* Soft warm cream background */
-  --foreground: 222 47% 12%;
+  --background: 40 25% 97.5%;        /* كريمي دافئ مريح جداً للعين كصفحات المصاحف العتيقة */
+  --foreground: 222 47% 12%;         /* كحلي داكن مقارب للحبر */
 
-  --card: 0 0% 100%;
+  /* البطاقات والعناصر */
+  --card: 0 0% 100%;                 /* ألوان صلبة غير شفافة لأناقة وبساطة مثالية */
   --card-foreground: 222 47% 12%;
 
   /* الشريط الجانبي */
-  --sidebar: 222 47% 11%;
+  --sidebar: 222 47% 10%;            /* كحلي مسجدي عميق وقور */
   --sidebar-foreground: 215 20% 75%;
-  --sidebar-active: 162 85% 16%;
-  --sidebar-hover: 222 40% 16%;
+  --sidebar-active: 162 85% 14%;
+  --sidebar-hover: 222 40% 14%;
 
-  --muted: 162 25% 94%;
-  --muted-foreground: 222 20% 45%;
+  --muted: 162 25% 93%;              /* درجات هادئة ومطفأة */
+  --muted-foreground: 222 18% 42%;
 
-  --accent: 162 85% 95%;
-  --accent-foreground: 162 85% 16%;
+  --accent: 162 60% 93%;
+  --accent-foreground: 162 85% 14%;
 
   --destructive: 0 72% 51%;
   --destructive-foreground: 0 0% 98%;
 
-  --border: 162 25% 90%;
-  --input: 162 25% 90%;
-  --ring: 162 85% 16%;
+  --border: 162 22% 87%;             /* حدود مريحة ومنسجمة */
+  --input: 162 22% 87%;
+  --ring: 162 85% 14%;
   --radius: 0.875rem;
 }
 
-/* ========== نظام الألوان الداكن للإنتاج (Premium Dark Mode) ========== */
+/* ========== نظام الألوان الداكن الروحاني (Spiritual Emerald Night) ========== */
+/* تصميم معتم بالكامل يوحي بالسكون والهدوء والوقار القرآني بمستويات تباين ممتازة */
 .dark, :root.dark {
-  --background: 222 47% 9%;       /* Rich deep slate */
-  --foreground: 213 27% 85%;       /* Soft silver */
+  --background: 165 35% 7.5%;        /* ليل زمردي داكن جداً وساكن */
+  --foreground: 45 25% 88%;          /* فضي كريمي ناعم ومريح للقراءة الليلية */
 
-  --card: 222 47% 11%;             /* Solid card dark background */
-  --card-foreground: 213 27% 85%;
+  --card: 165 25% 10.5%;             /* بطاقات صلبة غير شفافة بلون الليل الزمردي */
+  --card-foreground: 45 25% 88%;
 
-  --sidebar: 222 47% 8%;
-  --sidebar-foreground: 215 20% 65%;
-  --sidebar-active: 162 85% 16%;
-  --sidebar-hover: 222 40% 12%;
+  --sidebar: 165 35% 6%;             /* أكثر عتمة لراحة كاملة للعين */
+  --sidebar-foreground: 165 10% 68%;
+  --sidebar-active: 162 70% 20%;
+  --sidebar-hover: 165 25% 9%;
 
-  --muted: 222 40% 15%;
-  --muted-foreground: 215 20% 60%;
+  --muted: 165 20% 12.5%;            /* خلفيات مطفأة ناعمة */
+  --muted-foreground: 165 10% 62%;
 
-  --accent: 162 85% 12%;
-  --accent-foreground: 162 93% 80%;
+  --accent: 162 65% 14%;
+  --accent-foreground: 162 90% 88%;
 
-  --border: 222 40% 14%;
-  --input: 222 40% 14%;
-  --ring: 162 93% 30%;
+  --border: 165 16% 15%;             /* حدود ليلية متناسقة */
+  --input: 165 16% 15%;
+  --ring: 162 70% 32%;
   
-  --primary-light: 162 85% 10%;
+  --primary-light: 162 60% 11%;      /* خلفية خضراء داكنة مريحة جداً */
+  --gold-light: 40 50% 13%;
 }
 
 * {
@@ -85,149 +83,155 @@ body {
   color: hsl(var(--foreground));
   direction: rtl;
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-/* ===== Scrollbar ===== */
+/* ===== تخصيص الخطوط الفاخرة للروحانية والجمال ===== */
+h1, h2, h3, h4, h5, h6, .spiritual-title {
+  font-family: 'Tajawal', 'Amiri', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+/* ===== التباعد المتناسق والأحجام المتوازنة (لا كبيرة ولا صغيرة) ===== */
+.container-custom {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+/* ===== Scrollbar الروحاني الفاخر ===== */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 10px; }
-::-webkit-scrollbar-thumb { background: hsl(var(--primary) / 0.35); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary)); }
+::-webkit-scrollbar-thumb { background: hsl(var(--primary-mid) / 0.45); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary-mid)); }
 
 /* ===== RTL input ===== */
 input[dir="ltr"], textarea[dir="ltr"] { text-align: left; }
 input:not([dir]), textarea:not([dir]) { text-align: right; }
 
-/* ===== Animations ===== */
+/* ===== الحركات التفاعلية والميكرو-أنيميشن التفاعلي الهادئ ===== */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes slideInRight {
-  from { transform: translateX(100%); opacity: 0; }
-  to   { transform: translateX(0);   opacity: 1; }
-}
-
 @keyframes slideInUp {
-  from { transform: translateY(20px); opacity: 0; }
+  from { transform: translateY(12px); opacity: 0; }
   to   { transform: translateY(0);    opacity: 1; }
 }
-
 @keyframes pulse-soft {
   0%, 100% { opacity: 1; }
-  50%       { opacity: 0.6; }
+  50%       { opacity: 0.75; }
 }
-
-@keyframes float {
+@keyframes float-gentle {
   0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-6px); }
+  50%       { transform: translateY(-4px); }
 }
 
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
+.animate-fade-in        { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-slide-in-up    { animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-float          { animation: float-gentle 4s ease-in-out infinite; }
+.animate-pulse-soft     { animation: pulse-soft 3s ease-in-out infinite; }
+
+/* تأثير الظهور المتتابع */
+.stagger > *:nth-child(1) { animation: fadeIn 0.35s ease-out 0.04s both; }
+.stagger > *:nth-child(2) { animation: fadeIn 0.35s ease-out 0.08s both; }
+.stagger > *:nth-child(3) { animation: fadeIn 0.35s ease-out 0.12s both; }
+.stagger > *:nth-child(4) { animation: fadeIn 0.35s ease-out 0.16s both; }
+.stagger > *:nth-child(5) { animation: fadeIn 0.35s ease-out 0.20s both; }
+
+/* ===== بطاقات كلاسيكية فاخرة تناسب أنظمة المدارس والهدوء ===== */
+.card {
+  background-color: hsl(var(--card));
+  border-radius: var(--radius);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 4px 12px rgba(4, 62, 47, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(4, 62, 47, 0.06);
+  border-color: hsl(var(--primary-mid) / 0.25);
 }
 
-.animate-fade-in        { animation: fadeIn 0.4s ease-out; }
-.animate-slide-in-right { animation: slideInRight 0.35s ease-out; }
-.animate-slide-in-up    { animation: slideInUp 0.4s ease-out; }
-.animate-float          { animation: float 3s ease-in-out infinite; }
-.animate-pulse-soft     { animation: pulse-soft 2s ease-in-out infinite; }
-
-/* Stagger children */
-.stagger > *:nth-child(1) { animation: fadeIn 0.4s ease-out 0.05s both; }
-.stagger > *:nth-child(2) { animation: fadeIn 0.4s ease-out 0.10s both; }
-.stagger > *:nth-child(3) { animation: fadeIn 0.4s ease-out 0.15s both; }
-.stagger > *:nth-child(4) { animation: fadeIn 0.4s ease-out 0.20s both; }
-.stagger > *:nth-child(5) { animation: fadeIn 0.4s ease-out 0.25s both; }
-
-/* ===== Glass card ===== */
-.glass {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255,255,255,0.90);
-}
-
-/* ===== Gradient utilities ===== */
-.gradient-primary {
-  background: linear-gradient(135deg, hsl(152,62%,22%) 0%, hsl(152,62%,30%) 100%);
-}
-.gradient-gold {
-  background: linear-gradient(135deg, hsl(40,55%,45%) 0%, hsl(40,65%,55%) 100%);
-}
-.gradient-sidebar {
-  background: linear-gradient(180deg, hsl(222,42%,16%) 0%, hsl(222,40%,20%) 100%);
-}
-.gradient-page-bg {
-  background: linear-gradient(135deg, hsl(150,25%,96%) 0%, hsl(150,20%,98%) 50%, hsl(40,20%,97%) 100%);
-}
-
-/* ===== Stat card hover ===== */
 .stat-card {
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 .stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(27, 107, 69, 0.18);
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(4, 62, 47, 0.12);
 }
 
-/* ===== Nav item ===== */
+/* ===== التدرجات المنسجمة الروحانية ===== */
+.gradient-primary {
+  background: linear-gradient(135deg, hsl(162, 85%, 14%) 0%, hsl(162, 75%, 22%) 100%);
+}
+.gradient-gold {
+  background: linear-gradient(135deg, hsl(38, 75%, 36%) 0%, hsl(38, 65%, 44%) 100%);
+}
+.gradient-sidebar {
+  background: linear-gradient(180deg, hsl(222, 47% 9%) 0%, hsl(222, 40%, 13%) 100%);
+}
+
+/* ===== عناصر التنقل بالشريط الجانبي ===== */
 .nav-item {
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border-radius: 10px;
 }
 .nav-item:hover {
-  background: hsl(222, 40%, 24%);
-  padding-right: calc(1rem + 3px);
+  background-color: hsl(var(--sidebar-hover));
+  padding-right: calc(1rem + 4px);
 }
 .nav-item.active {
-  background: linear-gradient(90deg, hsl(152,62%,22%), hsl(152,55%,30%));
-  box-shadow: 0 4px 16px hsl(152 62% 25% / 0.40);
+  background: linear-gradient(90deg, hsl(162, 85%, 14%), hsl(162, 75%, 22%));
+  box-shadow: 0 4px 12px hsl(162 85% 14% / 0.35);
 }
 
-/* ===== Button glow ===== */
+/* ===== الأزرار التفاعلية الموقرة ===== */
 .btn-primary {
-  background: linear-gradient(135deg, hsl(152,62%,22%), hsl(152,55%,30%));
+  background: linear-gradient(135deg, hsl(162, 85%, 14%), hsl(162, 75%, 22%));
   color: white;
   font-weight: 700;
-  border-radius: 12px;
-  transition: all 0.25s ease;
-  box-shadow: 0 4px 15px hsl(152 62% 25% / 0.30);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px hsl(162 85% 14% / 0.20);
 }
 .btn-primary:hover {
-  opacity: 0.92;
+  opacity: 0.95;
   transform: translateY(-1px);
-  box-shadow: 0 6px 24px hsl(152 62% 25% / 0.45);
+  box-shadow: 0 5px 16px hsl(162 85% 14% / 0.30);
 }
 .btn-primary:active {
   transform: scale(0.98);
 }
 
-/* ===== Badge gold ===== */
+/* ===== شارة الرتبة الذهبية الوقورة ===== */
 .badge-gold {
-  background: linear-gradient(135deg, hsl(40,55%,45%), hsl(40,65%,55%));
+  background: linear-gradient(135deg, hsl(38, 75%, 36%), hsl(38, 65%, 44%));
   color: white;
   font-weight: 700;
 }
 
-/* ===== Role quick-login badges ===== */
+/* ===== بطاقات الدخول السريع وسجلات الدخول ===== */
 .role-badge {
-  border: 2px solid;
+  border: 1.5px solid hsl(var(--border));
   border-radius: 9999px;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  background: white;
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
 }
-.role-badge:hover { filter: brightness(0.95); transform: translateY(-1px); }
-.role-badge:active { transform: scale(0.96); }
+.role-badge:hover { 
+  background-color: hsl(var(--muted)); 
+  transform: translateY(-1px); 
+  border-color: hsl(var(--primary-mid) / 0.4);
+}
 
-/* ===== Login card background ===== */
 .login-bg {
-  background: linear-gradient(135deg, hsl(222,42%,16%) 0%, hsl(152,62%,20%) 100%);
+  background: linear-gradient(135deg, hsl(222, 47%, 9%) 0%, hsl(162, 85%, 12%) 100%);
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -235,35 +239,34 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   padding: 1.5rem;
 }
 
-/* ===== Form input ===== */
+/* ===== حقول الإدخال والـ Forms المتوازنة ===== */
 .form-input {
   width: 100%;
-  height: 48px;
-  padding: 0 16px;
-  border: 2px solid hsl(var(--border));
-  border-radius: 12px;
-  background: white;
-  font-size: 0.95rem;
+  height: 44px;
+  padding: 0 14px;
+  border: 1.5px solid hsl(var(--border));
+  border-radius: 10px;
+  background-color: hsl(var(--card));
+  font-size: 0.9rem;
   color: hsl(var(--foreground));
   outline: none;
   transition: border-color 0.2s, box-shadow 0.2s;
   font-family: 'Tajawal', sans-serif;
 }
 .form-input:focus {
-  border-color: hsl(var(--primary));
-  box-shadow: 0 0 0 3px hsl(152 62% 25% / 0.12);
+  border-color: hsl(var(--primary-mid));
+  box-shadow: 0 0 0 3px hsl(162 80% 24% / 0.12);
 }
 .form-input::placeholder {
   color: hsl(var(--muted-foreground));
 }
 
-/* ===== Modal overlay ===== */
+/* ===== النوافذ المنبثقة ===== */
 .modal-overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0,0,0,0.55);
-  -webkit-backdrop-filter: blur(4px);
+  background: rgba(4, 30, 24, 0.65);
   backdrop-filter: blur(4px);
   display: flex;
   align-items: center;
@@ -271,28 +274,148 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
   padding: 1rem;
 }
 
-/* ===== بطاقة (card) أساسية ===== */
-.card {
-  background: white;
-  border-radius: 1.25rem;
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 2px 8px rgba(27,107,69,0.06);
+/* ===== تحسينات الجداول التفاعلية المريحة للعين ===== */
+.table-row:hover { background-color: hsl(var(--primary-light)) !important; }
+
+/* ===== حالات الطلاب وتسميعهم بحس روحي هادئ ===== */
+.status-present  { background-color: hsl(162 70% 93%); color: hsl(162 85% 15%); border: 1px solid hsl(162 70% 88%); }
+.status-absent   { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); border: 1px solid hsl(0 80% 92%); }
+.status-late     { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); border: 1px solid hsl(38 85% 90%); }
+.status-excused  { background-color: hsl(210 80% 94%); color: hsl(210 75% 35%); border: 1px solid hsl(210 80% 90%); }
+
+.eval-excellent  { background-color: hsl(162 70% 93%); color: hsl(162 85% 15%); font-weight: bold; }
+.eval-good       { background-color: hsl(210 80% 94%); color: hsl(210 75% 35%); }
+.eval-acceptable { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); }
+.eval-needs_improvement { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); }
+
+
+/* ==================== 🛡️ تغطية شاملة وقوية للوضع المعتم (Global Dark Mode Overrides) ==================== */
+/* لمنع ظهور أي مساحات بيضاء أو نصوص باهتة وضمان الأناقة الكاملة دون استثناءات */
+.dark {
+  background-color: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
 }
 
-/* ===== جدول ===== */
-.table-row:hover { background: hsl(var(--primary-light)); }
+.dark .bg-white {
+  background-color: hsl(var(--card)) !important;
+  color: hsl(var(--foreground)) !important;
+}
 
-/* ===== تلوين حالة ===== */
-.status-present  { background: #d1fae5; color: #065f46; }
-.status-absent   { background: #fee2e2; color: #991b1b; }
-.status-late     { background: #fef3c7; color: #92400e; }
-.status-excused  { background: #dbeafe; color: #1e40af; }
+.dark .bg-slate-50,
+.dark .bg-slate-100/60,
+.dark .bg-slate-100 {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+}
 
-.eval-excellent  { background: #d1fae5; color: #065f46; }
-.eval-good       { background: #dbeafe; color: #1e40af; }
-.eval-acceptable { background: #fef3c7; color: #92400e; }
-.eval-needs_improvement { background: #fee2e2; color: #991b1b; }
+.dark .text-slate-800,
+.dark .text-slate-700,
+.dark .text-slate-600,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-gray-600 {
+  color: hsl(var(--foreground)) !important;
+}
 
-/* ===== تحسين الأداء ===== */
-.will-change-transform { will-change: transform; }
-img { content-visibility: auto; }
+.dark .text-slate-500,
+.dark .text-slate-400,
+.dark .text-gray-500,
+.dark .text-gray-400 {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-200\/50,
+.dark .border-slate-200\/60,
+.dark .border-gray-100,
+.dark .border-gray-200 {
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .modal-overlay {
+  background-color: rgba(0, 0, 0, 0.78) !important;
+}
+
+.dark header.sticky,
+.dark header {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.dark .glass {
+  background-color: hsl(var(--card)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+
+/* ==================== 📱 تحسينات استثنائية للاستخدام بالهاتف (Ultra-Responsive Mobile UX) ==================== */
+@media (max-width: 768px) {
+  /* تكييف التباعد والمقاسات */
+  body {
+    font-size: 0.9rem;
+  }
+  
+  .container-custom {
+    padding: 0.75rem;
+  }
+
+  /* تحسين عرض الجداول وجعلها منزلقة أفقياً بسلاسة مع مؤشر سحب */
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    border-radius: 8px;
+    border: 1.5px solid hsl(var(--border));
+    background-color: hsl(var(--card));
+    margin-bottom: 1rem;
+  }
+  
+  table {
+    min-width: 600px; /* لضمان عدم انضغاط النصوص والبيانات داخل الخلايا */
+  }
+
+  th, td {
+    padding: 0.75rem 0.5rem !important;
+    font-size: 0.825rem !important;
+  }
+
+  /* جعل الأزرار والـ Actions سهلة اللمس وسريعة الوصول */
+  button, a.btn-primary {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem !important;
+  }
+
+  /* بطاقات الإحصاءات على الهاتف: 2 في السطر بمظهر متناسق للغاية */
+  .grid-cols-2 {
+    gap: 0.6rem !important;
+  }
+
+  .stat-card {
+    padding: 1rem !important;
+  }
+
+  .stat-card p.text-4xl {
+    font-size: 1.85rem !important;
+  }
+
+  /* الشريط العلوي على الجوال */
+  header {
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* منع المشاكل الشائعة لبطاقات البيانات على الموبايل */
+  .card, .glass {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+  }
+}
