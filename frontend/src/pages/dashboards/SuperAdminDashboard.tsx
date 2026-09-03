@@ -110,7 +110,9 @@ export default function SuperAdminDashboard() {
       const nextActive = !center.is_active;
       const nextStatus = nextActive ? 'approved' : 'suspended';
       
-      await api.post(`/api/super/centers/${center.id}/status`, {
+      // ملاحظة إصلاح 2026-09-03: عميل axios يحمل baseURL = '/api'، فكتابة المسار مسبوقاً بـ
+      // /api كانت تنتج /api/api/super/... أي 404 دائماً — تفعيل المركز وإيقافه لم يعملا قط.
+      await api.post(`/super/centers/${center.id}/status`, {
         is_active: nextActive,
         approval_status: nextStatus
       });

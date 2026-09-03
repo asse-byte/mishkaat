@@ -1,5 +1,5 @@
 // Service Worker for Quran Memorization Center Management System PWA
-const CACHE_NAME = 'quran-center-v1';
+const CACHE_NAME = 'quran-center-v2';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
@@ -33,6 +33,9 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
+
+  // Skip non-http/https requests (e.g., chrome-extension://, data:, etc.)
+  if (!event.request.url.startsWith('http:') && !event.request.url.startsWith('https:')) return;
   
   // Skip API requests (always go to network)
   if (event.request.url.includes('/api/')) return;

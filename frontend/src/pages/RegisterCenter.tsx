@@ -4,7 +4,7 @@ import { BookOpen, User, Building, MapPin, Phone, ArrowRight, CheckCircle2 } fro
 import axios, { AxiosError } from 'axios';
 
 // Get API URL from env or use relative path (assuming proxy is setup in vite.config.ts)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const RegisterCenter = () => {
   const navigate = useNavigate();

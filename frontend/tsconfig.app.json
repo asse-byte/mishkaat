@@ -16,6 +16,14 @@
     "noEmit": true,
     "jsx": "react-jsx",
 
+    /* [إصلاح 2026-09-03] هذا الملف كان بلا baseUrl/paths، فكل استيراد بـ "@/..." يفشل فيه.
+       النتيجة: `tsc -p tsconfig.app.json` يعجز عن فحص المشروع (٤٠+ خطأ وهمي)، فلا يكشف
+       أي خطأ أنواع حقيقي. الأسماء المستعارة صارت مطابقة لما في vite.config.ts. */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
     /* Linting */
     "strict": true,
     "noUnusedLocals": false,

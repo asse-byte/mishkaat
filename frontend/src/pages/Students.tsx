@@ -11,15 +11,15 @@ import { studentsApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
 
 const memorizationPlans = [
-  { id: 'plan_2_years', name: 'Ø®Ø·Ø© Ø³Ù†ØªÙŠÙ†',   years: 2, description: 'Ù„Ù„Ù…ØªÙØ±ØºÙŠÙ†'   },
-  { id: 'plan_3_years', name: 'Ø®Ø·Ø© 3 Ø³Ù†ÙˆØ§Øª', years: 3, description: 'Ù„Ù„Ù…Ù†ØªØ¸Ù…ÙŠÙ†'   },
-  { id: 'plan_4_years', name: 'Ø®Ø·Ø© 4 Ø³Ù†ÙˆØ§Øª', years: 4, description: 'Ù„Ù„Ø¯Ø§Ø±Ø³ÙŠÙ†'    },
-  { id: 'plan_5_years', name: 'Ø®Ø·Ø© 5 Ø³Ù†ÙˆØ§Øª', years: 5, description: 'Ù„Ù„Ù…Ø¨ØªØ¯Ø¦ÙŠÙ†'   },
+  { id: 'plan_2_years', name: 'خطة سنتين',   years: 2, description: 'للمتفرغين'   },
+  { id: 'plan_3_years', name: 'خطة 3 سنوات', years: 3, description: 'للمنتظمين'   },
+  { id: 'plan_4_years', name: 'خطة 4 سنوات', years: 4, description: 'للدارسين'    },
+  { id: 'plan_5_years', name: 'خطة 5 سنوات', years: 5, description: 'للمبتدئين'   },
 ];
 
 const planLabels: Record<string, string> = {
-  plan_2_years: 'Ø®Ø·Ø© Ø³Ù†ØªÙŠÙ†', plan_3_years: 'Ø®Ø·Ø© 3 Ø³Ù†ÙˆØ§Øª',
-  plan_4_years: 'Ø®Ø·Ø© 4 Ø³Ù†ÙˆØ§Øª', plan_5_years: 'Ø®Ø·Ø© 5 Ø³Ù†ÙˆØ§Øª', plan_review: 'Ø®Ø·Ø© Ù…Ø±Ø§Ø¬Ø¹Ø©',
+  plan_2_years: 'خطة سنتين', plan_3_years: 'خطة 3 سنوات',
+  plan_4_years: 'خطة 4 سنوات', plan_5_years: 'خطة 5 سنوات', plan_review: 'خطة مراجعة',
 };
 
 interface StudentData {
@@ -79,7 +79,7 @@ export default function Students() {
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleSubmit = async () => {
-    if (!formData.name) { setError('Ø§Ù„Ø±Ø¬Ø§Ø¡ Ø¥Ø¯Ø®Ø§Ù„ Ø§Ø³Ù… Ø§Ù„Ø·Ø§Ù„Ø¨'); return; }
+    if (!formData.name) { setError('الرجاء إدخال اسم الطالب'); return; }
     const halaqahObj = halaqat.find(h => h.id === formData.halaqah_id);
     try {
       setSubmitting(true); setError('');
@@ -103,12 +103,12 @@ export default function Students() {
       await loadData();
     } catch (err) {
       const errorObj = err as { response?: { data?: { detail?: string } } };
-      setError(errorObj.response?.data?.detail || 'Ø­Ø¯Ø« Ø®Ø·Ø£');
+      setError(errorObj.response?.data?.detail || 'حدث خطأ');
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ø·Ø§Ù„Ø¨ØŸ')) return;
+    if (!confirm('هل أنت متأكد من حذف هذا الطالب؟')) return;
     try {
       await studentsApi.delete(id);
       setSelectedStudent(null);
@@ -125,7 +125,7 @@ export default function Students() {
       await loadData();
     } catch (err) {
       const errorObj = err as { response?: { data?: { detail?: string } } };
-      alert(errorObj.response?.data?.detail || 'Ø­Ø¯Ø« Ø®Ø·Ø£');
+      alert(errorObj.response?.data?.detail || 'حدث خطأ');
     } finally { setSubmitting(false); }
   };
 
@@ -163,8 +163,8 @@ export default function Students() {
         <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø·Ù„Ø§Ø¨</h1>
-            <p className="text-white/70 text-sm">Ø¥Ø¬Ù…Ø§Ù„ÙŠ: {students.length} Ø·Ø§Ù„Ø¨</p>
+            <h1 className="text-2xl font-black mb-1">إدارة الطلاب</h1>
+            <p className="text-white/70 text-sm">إجمالي: {students.length} طالب</p>
           </div>
           <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
             <Users className="w-7 h-7 text-white" />
@@ -175,10 +175,10 @@ export default function Students() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
         {[
-          { icon: BookOpen,    val: stats.memorizing,   label: 'Ø·Ù„Ø§Ø¨ Ø§Ù„Ø­ÙØ¸',    bg: 'gradient-primary' },
-          { icon: RefreshCw,   val: stats.reviewing,    label: 'Ø·Ù„Ø§Ø¨ Ø§Ù„Ù…Ø±Ø§Ø¬Ø¹Ø©', bg: 'gradient-gold' },
-          { icon: TrendingUp,  val: `${stats.avgProgress}%`, label: 'Ù…ØªÙˆØ³Ø· Ø§Ù„ØªÙ‚Ø¯Ù…', bg: 'stat-card-teal' },
-          { icon: CheckCircle2,val: stats.completed,    label: 'Ø£ØªÙ…ÙˆØ§ Ø§Ù„Ø­ÙØ¸',   bg: 'bg-[hsl(152,45%,38%)]' },
+          { icon: BookOpen,    val: stats.memorizing,   label: 'طلاب الحفظ',    bg: 'gradient-primary' },
+          { icon: RefreshCw,   val: stats.reviewing,    label: 'طلاب المراجعة', bg: 'gradient-gold' },
+          { icon: TrendingUp,  val: `${stats.avgProgress}%`, label: 'متوسط التقدم', bg: 'stat-card-teal' },
+          { icon: CheckCircle2,val: stats.completed,    label: 'أتموا الحفظ',   bg: 'bg-[hsl(152,45%,38%)]' },
         ].map(s => (
           <div key={s.label} className={`rounded-2xl p-4 text-white ${s.bg} shadow-sm`}>
             <s.icon className="w-5 h-5 mb-2 opacity-80" />
@@ -192,12 +192,12 @@ export default function Students() {
       <div className="flex flex-col sm:flex-row gap-3">
         <button onClick={() => setShowAddForm(true)}
           className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all">
-          <Plus className="w-5 h-5" /> ØªØ³Ø¬ÙŠÙ„ Ø·Ø§Ù„Ø¨ Ø¬Ø¯ÙŠØ¯
+          <Plus className="w-5 h-5" /> تسجيل طالب جديد
         </button>
         <div className="relative flex-1">
           <Search className="absolute right-4 top-3.5 h-5 w-5 text-[hsl(var(--muted-foreground))]" />
           <input
-            placeholder="Ø§Ù„Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ø§Ù„Ø­Ù„Ù‚Ø© Ø£Ùˆ Ø§Ø³Ù… ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±..."
+            placeholder="البحث بالاسم أو الحلقة أو اسم ولي الأمر..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             className="w-full h-12 pr-12 pl-4 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] transition-all"
@@ -211,9 +211,9 @@ export default function Students() {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between sticky top-0">
               <h3 className="text-lg font-black text-white flex items-center gap-2">
-                <Plus className="w-5 h-5" /> ØªØ³Ø¬ÙŠÙ„ Ø·Ø§Ù„Ø¨ Ø¬Ø¯ÙŠØ¯
+                <Plus className="w-5 h-5" /> تسجيل طالب جديد
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-white/70 hover:text-white" aria-label="Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù†Ø§ÙØ°Ø©"><X className="w-5 h-5" aria-hidden="true" /></button>
+              <button onClick={() => setShowAddForm(false)} className="text-white/70 hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
             <div className="p-5 space-y-5">
               {/* Student type */}
@@ -223,7 +223,7 @@ export default function Students() {
                     className={`p-4 rounded-2xl border-2 text-center transition-all ${
                       studentType === type ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary-light))]' : 'border-[hsl(var(--border))]'}`}>
                     {type === 'memorizing' ? <BookOpen className="w-7 h-7 mx-auto mb-2 text-[hsl(var(--primary))]" /> : <RefreshCw className="w-7 h-7 mx-auto mb-2 text-[hsl(var(--primary))]" />}
-                    <p className="font-bold text-sm">{type === 'memorizing' ? 'Ø·Ø§Ù„Ø¨ Ø­ÙØ¸' : 'Ø·Ø§Ù„Ø¨ Ù…Ø±Ø§Ø¬Ø¹Ø©'}</p>
+                    <p className="font-bold text-sm">{type === 'memorizing' ? 'طالب حفظ' : 'طالب مراجعة'}</p>
                   </button>
                 ))}
               </div>
@@ -231,47 +231,47 @@ export default function Students() {
               {/* Basic info */}
               <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2">
-                  <label className="text-sm font-semibold block mb-1">Ø§Ø³Ù… Ø§Ù„Ø·Ø§Ù„Ø¨ *</label>
-                  <input placeholder="Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„" value={formData.name}
+                  <label className="text-sm font-semibold block mb-1">اسم الطالب *</label>
+                  <input placeholder="الاسم الكامل" value={formData.name}
                     onChange={e => setFormData({...formData, name: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold block mb-1">ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯</label>
-                  <input type="date" title="ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯" value={formData.date_of_birth}
+                  <label className="text-sm font-semibold block mb-1">تاريخ الميلاد</label>
+                  <input type="date" title="تاريخ الميلاد" value={formData.date_of_birth}
                     onChange={e => setFormData({...formData, date_of_birth: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold block mb-1">Ù‡Ø§ØªÙ Ø§Ù„Ø·Ø§Ù„Ø¨</label>
+                  <label className="text-sm font-semibold block mb-1">هاتف الطالب</label>
                   <input placeholder="+223 XX XX XX" dir="ltr" value={formData.phone}
                     onChange={e => setFormData({...formData, phone: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold block mb-1">Ø§Ø³Ù… ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±</label>
-                  <input placeholder="Ø§Ø³Ù… ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±" value={formData.parent_name}
+                  <label className="text-sm font-semibold block mb-1">اسم ولي الأمر</label>
+                  <input placeholder="اسم ولي الأمر" value={formData.parent_name}
                     onChange={e => setFormData({...formData, parent_name: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div>
-                  <label className="text-sm font-semibold block mb-1">Ù‡Ø§ØªÙ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±</label>
+                  <label className="text-sm font-semibold block mb-1">هاتف ولي الأمر</label>
                   <input placeholder="+223 XX XX XX" dir="ltr" value={formData.parent_phone}
                     onChange={e => setFormData({...formData, parent_phone: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-sm font-semibold block mb-1">Ø¹Ù†ÙˆØ§Ù† ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±</label>
-                  <input placeholder="Ø§Ù„Ù…Ø¯ÙŠÙ†Ø©ØŒ Ø§Ù„Ø­ÙŠØŒ Ø§Ù„Ø´Ø§Ø±Ø¹" value={formData.guardian_address}
+                  <label className="text-sm font-semibold block mb-1">عنوان ولي الأمر</label>
+                  <input placeholder="المدينة، الحي، الشارع" value={formData.guardian_address}
                     onChange={e => setFormData({...formData, guardian_address: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div className="col-span-2">
-                  <label className="text-sm font-semibold block mb-1">Ø§Ù„Ø­Ù„Ù‚Ø©</label>
-                  <select value={formData.halaqah_id} aria-label="Ø§Ù„Ø­Ù„Ù‚Ø©"
+                  <label className="text-sm font-semibold block mb-1">الحلقة</label>
+                  <select value={formData.halaqah_id} aria-label="الحلقة"
                     onChange={e => setFormData({...formData, halaqah_id: e.target.value})}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]">
-                    <option value="">Ø§Ø®ØªØ± Ø§Ù„Ø­Ù„Ù‚Ø©</option>
+                    <option value="">اختر الحلقة</option>
                     {halaqat.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                   </select>
                 </div>
@@ -280,7 +280,7 @@ export default function Students() {
               {/* Plan selection */}
               {studentType === 'memorizing' && (
                 <div>
-                  <label className="text-sm font-semibold block mb-2">Ø®Ø·Ø© Ø§Ù„Ø­ÙØ¸</label>
+                  <label className="text-sm font-semibold block mb-2">خطة الحفظ</label>
                   <div className="grid grid-cols-2 gap-2">
                     {memorizationPlans.map(plan => (
                       <button key={plan.id} onClick={() => setSelectedPlan(plan.id)}
@@ -303,11 +303,11 @@ export default function Students() {
               <div className="flex gap-3">
                 <button onClick={handleSubmit} disabled={submitting}
                   className="flex-1 gradient-primary text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
-                  {submitting ? <><LoadingSpinner size="sm" />Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...</> : <><CheckCircle2 className="w-4 h-4" />ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø·Ø§Ù„Ø¨</>}
+                  {submitting ? <><LoadingSpinner size="sm" />جاري الحفظ...</> : <><CheckCircle2 className="w-4 h-4" />تسجيل الطالب</>}
                 </button>
                 <button onClick={() => setShowAddForm(false)}
                   className="px-5 py-3 rounded-xl border-2 border-[hsl(var(--border))] font-semibold hover:bg-[hsl(var(--muted))]">
-                  Ø¥Ù„ØºØ§Ø¡
+                  إلغاء
                 </button>
               </div>
             </div>
@@ -319,7 +319,7 @@ export default function Students() {
       {filtered.length === 0 ? (
         <div className="text-center py-16 rounded-3xl bg-white border-2 border-dashed border-[hsl(var(--border))]">
           <Users className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
-          <p className="text-[hsl(var(--muted-foreground))] font-medium">Ù„Ø§ ÙŠÙˆØ¬Ø¯ Ø·Ù„Ø§Ø¨ Ù…Ø·Ø§Ø¨Ù‚ÙˆÙ†</p>
+          <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
         </div>
       ) : (
         <div className="space-y-3 stagger">
@@ -337,7 +337,7 @@ export default function Students() {
                     <h3 className="font-black text-[hsl(var(--foreground))]">{student.name}</h3>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                       student.student_type === 'reviewing' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                      {student.student_type === 'reviewing' ? 'Ù…Ø±Ø§Ø¬Ø¹Ø©' : 'Ø­ÙØ¸'}
+                      {student.student_type === 'reviewing' ? 'مراجعة' : 'حفظ'}
                     </span>
                     {student.memorization_plan && (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--primary-light))] text-[hsl(var(--primary))]">
@@ -354,24 +354,24 @@ export default function Students() {
                 {/* Progress */}
                 <div className="text-center px-3 py-2 bg-[hsl(var(--muted))] rounded-xl shrink-0">
                   <p className="text-lg font-black text-[hsl(var(--primary))]">{student.progress || 0}%</p>
-                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">ØªÙ‚Ø¯Ù…</p>
+                  <p className="text-[10px] text-[hsl(var(--muted-foreground))]">تقدم</p>
                 </div>
 
                 {/* Actions */}
                 <div className="flex gap-1 shrink-0">
-                  <button onClick={() => openStudent(student)} title="Ø¹Ø±Ø¶ Ø§Ù„Ù…Ù„Ù"
+                  <button onClick={() => openStudent(student)} title="عرض الملف"
                     className="p-2 rounded-xl bg-[hsl(var(--primary-light))] text-[hsl(var(--primary))] hover:opacity-80 transition-all">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <Link to={`/analytics/${student.id}`} title="ØªØ­Ù„ÙŠÙ„ Ø§Ù„Ø£Ø¯Ø§Ø¡"
+                  <Link to={`/analytics/${student.id}`} title="تحليل الأداء"
                     className="p-2 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:opacity-80 transition-all">
                     <LineChart className="w-4 h-4" />
                   </Link>
-                  <button onClick={() => handleDelete(student.id)} title="Ø­Ø°Ù Ø§Ù„Ø·Ø§Ù„Ø¨"
+                  <button onClick={() => handleDelete(student.id)} title="حذف الطالب"
                     className="p-2 rounded-xl bg-red-50 text-red-500 hover:opacity-80 transition-all">
                     <Trash2 className="w-4 h-4" />
                   </button>
-                  <button onClick={() => setExpandedId(expandedId === student.id ? null : student.id)} title="ØªÙˆØ³ÙŠØ¹/Ø·ÙŠ"
+                  <button onClick={() => setExpandedId(expandedId === student.id ? null : student.id)} title="توسيع/طي"
                     className="p-2 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:opacity-80 transition-all">
                     {expandedId === student.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -382,12 +382,12 @@ export default function Students() {
               {expandedId === student.id && (
                 <div className="border-t border-[hsl(var(--border))] px-4 pb-4 pt-3 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm animate-slide-in-up">
                   {[
-                    { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯', val: student.date_of_birth, icon: Calendar },
-                    { label: 'Ù‡Ø§ØªÙ Ø§Ù„Ø·Ø§Ù„Ø¨', val: student.phone, icon: Phone, dir: 'ltr' },
-                    { label: 'Ù‡Ø§ØªÙ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', val: student.parent_phone, icon: Phone, dir: 'ltr' },
-                    { label: 'Ø¹Ù†ÙˆØ§Ù† ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', val: student.guardian_address, icon: MapPin },
-                    { label: 'Ø§Ù„Ø³ÙˆØ±Ø© Ø§Ù„Ø­Ø§Ù„ÙŠØ©', val: student.current_surah ? `${student.current_surah} (${student.current_ayah})` : null, icon: BookOpen },
-                    { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØ³Ø¬ÙŠÙ„', val: new Date(student.enrollment_date).toLocaleDateString('ar-SA'), icon: Calendar },
+                    { label: 'تاريخ الميلاد', val: student.date_of_birth, icon: Calendar },
+                    { label: 'هاتف الطالب', val: student.phone, icon: Phone, dir: 'ltr' },
+                    { label: 'هاتف ولي الأمر', val: student.parent_phone, icon: Phone, dir: 'ltr' },
+                    { label: 'عنوان ولي الأمر', val: student.guardian_address, icon: MapPin },
+                    { label: 'السورة الحالية', val: student.current_surah ? `${student.current_surah} (${student.current_ayah})` : null, icon: BookOpen },
+                    { label: 'تاريخ التسجيل', val: new Date(student.enrollment_date).toLocaleDateString('ar-SA'), icon: Calendar },
                   ].filter(item => item.val).map(item => (
                     <div key={item.label} className="p-2.5 rounded-xl bg-[hsl(var(--muted))]">
                       <div className="flex items-center gap-1.5 mb-1">
@@ -400,7 +400,7 @@ export default function Students() {
                   {/* progress bar */}
                   <div className="col-span-full">
                     <div className="flex justify-between text-xs mb-1">
-                      <span className="text-[hsl(var(--muted-foreground))]">ØªÙ‚Ø¯Ù… Ø§Ù„Ø­ÙØ¸</span>
+                      <span className="text-[hsl(var(--muted-foreground))]">تقدم الحفظ</span>
                       <span className="font-bold text-[hsl(var(--primary))]">{student.progress || 0}%</span>
                     </div>
                     <div className="h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
@@ -427,19 +427,19 @@ export default function Students() {
                   <div>
                     <h2 className="text-lg font-black text-white">{selectedStudent.name}</h2>
                     <p className="text-white/70 text-sm">
-                      {selectedStudent.student_type === 'reviewing' ? 'Ø·Ø§Ù„Ø¨ Ù…Ø±Ø§Ø¬Ø¹Ø©' : 'Ø·Ø§Ù„Ø¨ Ø­ÙØ¸'}
-                      {selectedStudent.memorization_plan && ` Â· ${planLabels[selectedStudent.memorization_plan]}`}
+                      {selectedStudent.student_type === 'reviewing' ? 'طالب مراجعة' : 'طالب حفظ'}
+                      {selectedStudent.memorization_plan && ` · ${planLabels[selectedStudent.memorization_plan]}`}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedStudent(null)} className="text-white/70 hover:text-white" aria-label="Ø¥ØºÙ„Ø§Ù‚ Ø§Ù„Ù†Ø§ÙØ°Ø©"><X className="w-5 h-5" aria-hidden="true" /></button>
+                <button onClick={() => setSelectedStudent(null)} className="text-white/70 hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
               </div>
               <div className="flex gap-2 mt-4">
-                <button onClick={() => setEditMode(!editMode)} title="ØªØ¨Ø¯ÙŠÙ„ ÙˆØ¶Ø¹ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„"
+                <button onClick={() => setEditMode(!editMode)} title="تبديل وضع التعديل"
                   className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold">
-                  <Edit className="w-4 h-4" /> {editMode ? 'Ø¥Ù„ØºØ§Ø¡' : 'ØªØ¹Ø¯ÙŠÙ„'}
+                  <Edit className="w-4 h-4" /> {editMode ? 'إلغاء' : 'تعديل'}
                 </button>
-                <button onClick={() => handleDelete(selectedStudent.id)} title="Ø­Ø°Ù Ø§Ù„Ø·Ø§Ù„Ø¨"
+                <button onClick={() => handleDelete(selectedStudent.id)} title="حذف الطالب"
                   className="px-4 py-2 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white text-sm font-bold">
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -450,7 +450,7 @@ export default function Students() {
               {/* Progress bar */}
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-2">
-                  <span className="font-semibold text-[hsl(var(--foreground))]">ØªÙ‚Ø¯Ù… Ø§Ù„Ø­ÙØ¸</span>
+                  <span className="font-semibold text-[hsl(var(--foreground))]">تقدم الحفظ</span>
                   <span className="font-black text-[hsl(var(--primary))]">{selectedStudent.progress || 0}%</span>
                 </div>
                 <div className="h-3 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
@@ -458,7 +458,7 @@ export default function Students() {
                 </div>
                 {selectedStudent.current_surah && (
                   <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">
-                    Ø§Ù„Ù…ÙˆÙ‚Ø¹ Ø§Ù„Ø­Ø§Ù„ÙŠ: {selectedStudent.current_surah} - Ø¢ÙŠØ© {selectedStudent.current_ayah}
+                    الموقع الحالي: {selectedStudent.current_surah} - آية {selectedStudent.current_ayah}
                   </p>
                 )}
               </div>
@@ -466,12 +466,12 @@ export default function Students() {
               {editMode ? (
                 <div className="space-y-3">
                   {[
-                    { label: 'Ø§Ù„Ø§Ø³Ù…', key: 'name' },
-                    { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯', key: 'date_of_birth', type: 'date' },
-                    { label: 'Ù‡Ø§ØªÙ Ø§Ù„Ø·Ø§Ù„Ø¨', key: 'phone', dir: 'ltr' },
-                    { label: 'Ø§Ø³Ù… ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', key: 'parent_name' },
-                    { label: 'Ù‡Ø§ØªÙ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', key: 'parent_phone', dir: 'ltr' },
-                    { label: 'Ø¹Ù†ÙˆØ§Ù† ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', key: 'guardian_address' },
+                    { label: 'الاسم', key: 'name' },
+                    { label: 'تاريخ الميلاد', key: 'date_of_birth', type: 'date' },
+                    { label: 'هاتف الطالب', key: 'phone', dir: 'ltr' },
+                    { label: 'اسم ولي الأمر', key: 'parent_name' },
+                    { label: 'هاتف ولي الأمر', key: 'parent_phone', dir: 'ltr' },
+                    { label: 'عنوان ولي الأمر', key: 'guardian_address' },
                   ].map(f => (
                     <div key={f.key}>
                       <label className="text-sm font-semibold block mb-1">{f.label}</label>
@@ -482,32 +482,32 @@ export default function Students() {
                     </div>
                   ))}
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ø­Ù„Ù‚Ø©</label>
-                    <select value={editForm.halaqah_id || ''} aria-label="Ø§Ù„Ø­Ù„Ù‚Ø©"
+                    <label className="text-sm font-semibold block mb-1">الحلقة</label>
+                    <select value={editForm.halaqah_id || ''} aria-label="الحلقة"
                       onChange={e => {
                         const h = halaqat.find(h => h.id === e.target.value);
                         setEditForm({ ...editForm, halaqah_id: e.target.value, halaqah_name: h?.name || '' });
                       }}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
-                      <option value="">Ø§Ø®ØªØ± Ø§Ù„Ø­Ù„Ù‚Ø©</option>
+                      <option value="">اختر الحلقة</option>
                       {halaqat.map(h => <option key={h.id} value={h.id}>{h.name}</option>)}
                     </select>
                   </div>
                   <button onClick={handleEditSave} disabled={submitting}
                     className="w-full gradient-primary text-white font-bold py-3 rounded-xl hover:opacity-90 disabled:opacity-60 flex items-center justify-center gap-2">
-                    <Save className="w-4 h-4" /> {submitting ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...' : 'Ø­ÙØ¸ Ø§Ù„ØªØºÙŠÙŠØ±Ø§Øª'}
+                    <Save className="w-4 h-4" /> {submitting ? 'جاري الحفظ...' : 'حفظ التغييرات'}
                   </button>
                 </div>
               ) : (
                 <div className="space-y-2 text-sm">
                   {[
-                    { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ÙŠÙ„Ø§Ø¯', val: selectedStudent.date_of_birth },
-                    { label: 'Ù‡Ø§ØªÙ Ø§Ù„Ø·Ø§Ù„Ø¨', val: selectedStudent.phone, dir: 'ltr' },
-                    { label: 'Ø§Ù„Ø­Ù„Ù‚Ø©', val: selectedStudent.halaqah_name },
-                    { label: 'Ø§Ø³Ù… ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', val: selectedStudent.parent_name },
-                    { label: 'Ù‡Ø§ØªÙ ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', val: selectedStudent.parent_phone, dir: 'ltr' },
-                    { label: 'Ø¹Ù†ÙˆØ§Ù† ÙˆÙ„ÙŠ Ø§Ù„Ø£Ù…Ø±', val: selectedStudent.guardian_address },
-                    { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØ³Ø¬ÙŠÙ„', val: new Date(selectedStudent.enrollment_date).toLocaleDateString('ar-SA') },
+                    { label: 'تاريخ الميلاد', val: selectedStudent.date_of_birth },
+                    { label: 'هاتف الطالب', val: selectedStudent.phone, dir: 'ltr' },
+                    { label: 'الحلقة', val: selectedStudent.halaqah_name },
+                    { label: 'اسم ولي الأمر', val: selectedStudent.parent_name },
+                    { label: 'هاتف ولي الأمر', val: selectedStudent.parent_phone, dir: 'ltr' },
+                    { label: 'عنوان ولي الأمر', val: selectedStudent.guardian_address },
+                    { label: 'تاريخ التسجيل', val: new Date(selectedStudent.enrollment_date).toLocaleDateString('ar-SA') },
                   ].filter(item => item.val).map(item => (
                     <div key={item.label} className="flex items-center justify-between p-3 rounded-xl bg-[hsl(var(--muted))]">
                       <span className="text-[hsl(var(--muted-foreground))]">{item.label}</span>

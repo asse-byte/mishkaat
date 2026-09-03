@@ -85,9 +85,9 @@ export default function Centers() {
   };
 
   const handleSave = async () => {
-    if (!formData.name.trim()) { setError('Ø§Ø³Ù… Ø§Ù„Ù…Ø±ÙƒØ² Ù…Ø·Ù„ÙˆØ¨'); return; }
-    if (!editCenter && !formData.manager_username) { setError('Ø§Ø³Ù… Ù…Ø³ØªØ®Ø¯Ù… Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ² Ù…Ø·Ù„ÙˆØ¨'); return; }
-    if (!editCenter && !formData.manager_password) { setError('ÙƒÙ„Ù…Ø© Ù…Ø±ÙˆØ± Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ² Ù…Ø·Ù„ÙˆØ¨Ø©'); return; }
+    if (!formData.name.trim()) { setError('اسم المركز مطلوب'); return; }
+    if (!editCenter && !formData.manager_username) { setError('اسم مستخدم مدير المركز مطلوب'); return; }
+    if (!editCenter && !formData.manager_password) { setError('كلمة مرور مدير المركز مطلوبة'); return; }
 
     try {
       setSaving(true); setError('');
@@ -112,17 +112,17 @@ export default function Centers() {
       setShowForm(false);
       await loadCenters();
     } catch (e: any) {
-      setError(e.response?.data?.detail || 'Ø­Ø¯Ø« Ø®Ø·Ø£ Ø£Ø«Ù†Ø§Ø¡ Ø§Ù„Ø­ÙØ¸');
+      setError(e.response?.data?.detail || 'حدث خطأ أثناء الحفظ');
     } finally { setSaving(false); }
   };
 
   const handleDelete = async (c: CenterData) => {
-    if (!confirm(`Ù‡Ù„ Ø£Ù†Øª Ù…ØªØ£ÙƒØ¯ Ù…Ù† Ø­Ø°Ù Ù…Ø±ÙƒØ² "${c.name}"ØŸ`)) return;
+    if (!confirm(`هل أنت متأكد من حذف مركز "${c.name}"؟`)) return;
     try {
       await api.delete(`/centers/${c.id}`);
       await loadCenters();
     } catch (e: any) {
-      alert(e.response?.data?.detail || 'ÙØ´Ù„ Ø§Ù„Ø­Ø°Ù');
+      alert(e.response?.data?.detail || 'فشل الحذف');
     }
   };
 
@@ -140,13 +140,13 @@ export default function Centers() {
         <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
         <div className="relative z-10 flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø±Ø§ÙƒØ²</h1>
-            <p className="text-white/70 text-sm">{centers.length} Ù…Ø±ÙƒØ² Ù…Ø³Ø¬ÙŽÙ‘Ù„ ÙÙŠ Ø§Ù„Ù†Ø¸Ø§Ù…</p>
+            <h1 className="text-2xl font-black mb-1">إدارة المراكز</h1>
+            <p className="text-white/70 text-sm">{centers.length} مركز مسجَّل في النظام</p>
           </div>
           {user?.role === 'admin' && (
             <button onClick={openAdd}
               className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
-              <Plus className="w-4 h-4" /> Ø¥Ø¶Ø§ÙØ© Ù…Ø±ÙƒØ²
+              <Plus className="w-4 h-4" /> إضافة مركز
             </button>
           )}
         </div>
@@ -155,9 +155,9 @@ export default function Centers() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">
         {[
-          { label: 'Ø§Ù„Ù…Ø±Ø§ÙƒØ² Ø§Ù„Ù†Ø´Ø·Ø©', value: centers.filter(c => c.is_active).length, icon: Building2, cls: 'gradient-primary' },
-          { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø­ÙØ¸ÙŠÙ†', value: centers.reduce((s, c) => s + (c.teachers_count || 0), 0), icon: GraduationCap, cls: 'gradient-gold' },
-          { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø·Ù„Ø§Ø¨', value: centers.reduce((s, c) => s + (c.students_count || 0), 0), icon: Users, cls: 'stat-card-teal' },
+          { label: 'المراكز النشطة', value: centers.filter(c => c.is_active).length, icon: Building2, cls: 'gradient-primary' },
+          { label: 'إجمالي المحفظين', value: centers.reduce((s, c) => s + (c.teachers_count || 0), 0), icon: GraduationCap, cls: 'gradient-gold' },
+          { label: 'إجمالي الطلاب', value: centers.reduce((s, c) => s + (c.students_count || 0), 0), icon: Users, cls: 'stat-card-teal' },
         ].map(s => (
           <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
             <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
@@ -173,7 +173,7 @@ export default function Centers() {
       <div className="relative">
         <Search className="absolute right-3 top-3.5 w-5 h-5 text-[hsl(var(--muted-foreground))]" />
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="Ø¨Ø­Ø« Ø¨Ø§Ù„Ø§Ø³Ù… Ø£Ùˆ Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ² Ø£Ùˆ Ø§Ù„Ù‡Ø§ØªÙ..."
+          placeholder="بحث بالاسم أو مدير المركز أو الهاتف..."
           className="form-input pr-10" />
       </div>
 
@@ -185,10 +185,10 @@ export default function Centers() {
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-[hsl(var(--muted-foreground))] bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
           <Building2 className="w-14 h-14 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…Ø±Ø§ÙƒØ²{search ? ' Ù…Ø·Ø§Ø¨Ù‚Ø© Ù„Ù„Ø¨Ø­Ø«' : ' Ù…Ø³Ø¬ÙŽÙ‘Ù„Ø©'}</p>
+          <p className="font-medium">لا توجد مراكز{search ? ' مطابقة للبحث' : ' مسجَّلة'}</p>
           {!search && user?.role === 'admin' && (
             <button onClick={openAdd} className="mt-3 text-[hsl(var(--primary))] font-bold text-sm underline">
-              Ø¥Ø¶Ø§ÙØ© Ø£ÙˆÙ„ Ù…Ø±ÙƒØ²
+              إضافة أول مركز
             </button>
           )}
         </div>
@@ -202,11 +202,11 @@ export default function Centers() {
                   <div className="flex-1 min-w-0">
                     <h3 className="text-lg font-black text-white truncate">{center.name}</h3>
                     {center.manager_name && (
-                      <p className="text-white/70 text-sm mt-0.5 truncate">Ù…. {center.manager_name}</p>
+                      <p className="text-white/70 text-sm mt-0.5 truncate">م. {center.manager_name}</p>
                     )}
                   </div>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${center.is_active ? 'bg-emerald-400/30 text-white' : 'bg-red-400/30 text-white'}`}>
-                    {center.is_active ? 'Ù†Ø´Ø·' : 'Ù…ÙˆÙ‚ÙˆÙ'}
+                    {center.is_active ? 'نشط' : 'موقوف'}
                   </span>
                 </div>
               </div>
@@ -214,9 +214,9 @@ export default function Centers() {
               {/* Stats row */}
               <div className="grid grid-cols-3 divide-x divide-x-reverse divide-[hsl(var(--border))] border-b border-[hsl(var(--border))]">
                 {[
-                  { icon: Users, val: center.students_count, label: 'Ø·Ø§Ù„Ø¨' },
-                  { icon: GraduationCap, val: center.teachers_count, label: 'Ù…Ø­ÙØ¸' },
-                  { icon: BookOpen, val: center.halaqat_count, label: 'Ø­Ù„Ù‚Ø©' },
+                  { icon: Users, val: center.students_count, label: 'طالب' },
+                  { icon: GraduationCap, val: center.teachers_count, label: 'محفظ' },
+                  { icon: BookOpen, val: center.halaqat_count, label: 'حلقة' },
                 ].map(s => (
                   <div key={s.label} className="p-3 text-center">
                     <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
@@ -243,7 +243,7 @@ export default function Centers() {
                 {center.created_at && (
                   <div className="flex items-center gap-2 text-xs text-[hsl(var(--muted-foreground))]">
                     <Calendar className="w-3.5 h-3.5 shrink-0" />
-                    <span>ØªÙØ£Ø³Ø³: {new Date(center.created_at).toLocaleDateString('ar-SA')}</span>
+                    <span>تُأسس: {new Date(center.created_at).toLocaleDateString('ar-SA')}</span>
                   </div>
                 )}
               </div>
@@ -253,15 +253,15 @@ export default function Centers() {
                 <div className="px-4 pb-4 flex gap-2">
                   <button onClick={() => openDetail(center)}
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl gradient-primary text-white hover:opacity-90 transition-all">
-                    <Eye className="w-3.5 h-3.5" /> Ø¹Ø±Ø¶ Ø§Ù„ØªÙØ§ØµÙŠÙ„
+                    <Eye className="w-3.5 h-3.5" /> عرض التفاصيل
                   </button>
                   <button onClick={() => openEdit(center)}
-                    title="ØªØ¹Ø¯ÙŠÙ„"
+                    title="تعديل"
                     className="p-2.5 rounded-xl bg-[hsl(var(--gold-light))] text-[hsl(var(--gold-dark))] hover:opacity-80 transition-all">
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button onClick={() => handleDelete(center)}
-                    title="Ø­Ø°Ù"
+                    title="حذف"
                     className="p-2.5 rounded-xl bg-red-50 text-red-600 hover:opacity-80 transition-all">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -278,7 +278,7 @@ export default function Centers() {
           <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
               <h2 className="text-lg font-black text-white">
-                {editCenter ? 'ØªØ¹Ø¯ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ÙƒØ²' : 'Ø¥Ø¶Ø§ÙØ© Ù…Ø±ÙƒØ² Ø¬Ø¯ÙŠØ¯'}
+                {editCenter ? 'تعديل بيانات المركز' : 'إضافة مركز جديد'}
               </h2>
               <button onClick={() => setShowForm(false)} className="p-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all">
                 <X className="w-5 h-5" />
@@ -286,21 +286,21 @@ export default function Centers() {
             </div>
             <div className="p-6 space-y-4">
               {/* Center Info */}
-              <p className="text-xs font-bold text-[hsl(var(--primary))] uppercase tracking-wider">Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„Ù…Ø±ÙƒØ²</p>
+              <p className="text-xs font-bold text-[hsl(var(--primary))] uppercase tracking-wider">بيانات المركز</p>
               <div>
-                <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ø³Ù… Ø§Ù„Ù…Ø±ÙƒØ² *</label>
-                <input className="form-input" placeholder="Ù…Ø«Ø§Ù„: Ù…Ø±ÙƒØ² Ø§Ù„Ù†ÙˆØ± Ù„ØªØ­ÙÙŠØ¸ Ø§Ù„Ù‚Ø±Ø¢Ù†"
+                <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">اسم المركز *</label>
+                <input className="form-input" placeholder="مثال: مركز النور لتحفيظ القرآن"
                   value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø±Ù‚Ù… Ø§Ù„Ù‡Ø§ØªÙ</label>
+                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">رقم الهاتف</label>
                   <input className="form-input" placeholder="+222 XX XX XX XX" dir="ltr"
                     value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
                 </div>
                 <div>
-                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ù„Ø¹Ù†ÙˆØ§Ù†</label>
-                  <input className="form-input" placeholder="Ø­ÙŠ/Ù…Ù†Ø·Ù‚Ø©..."
+                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">العنوان</label>
+                  <input className="form-input" placeholder="حي/منطقة..."
                     value={formData.address} onChange={e => setFormData({ ...formData, address: e.target.value })} />
                 </div>
               </div>
@@ -309,26 +309,26 @@ export default function Centers() {
               {!editCenter && (
                 <>
                   <hr className="border-[hsl(var(--border))]" />
-                  <p className="text-xs font-bold text-[hsl(var(--primary))] uppercase tracking-wider">Ø­Ø³Ø§Ø¨ Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ²</p>
+                  <p className="text-xs font-bold text-[hsl(var(--primary))] uppercase tracking-wider">حساب مدير المركز</p>
                   <div>
-                    <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ù„Ø§Ø³Ù… Ø§Ù„ÙƒØ§Ù…Ù„</label>
-                    <input className="form-input" placeholder="Ø§Ø³Ù… Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ²"
+                    <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">الاسم الكامل</label>
+                    <input className="form-input" placeholder="اسم مدير المركز"
                       value={formData.manager_name} onChange={e => setFormData({ ...formData, manager_name: e.target.value })} />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù… *</label>
+                      <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">اسم المستخدم *</label>
                       <input className="form-input" placeholder="manager_nour" dir="ltr"
                         value={formData.manager_username} onChange={e => setFormData({ ...formData, manager_username: e.target.value })} />
                     </div>
                     <div>
-                      <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">ÙƒÙ„Ù…Ø© Ø§Ù„Ù…Ø±ÙˆØ± *</label>
-                      <input className="form-input" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" dir="ltr"
+                      <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">كلمة المرور *</label>
+                      <input className="form-input" type="password" placeholder="••••••••" dir="ltr"
                         value={formData.manager_password} onChange={e => setFormData({ ...formData, manager_password: e.target.value })} />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ù„Ø¨Ø±ÙŠØ¯ Ø§Ù„Ø¥Ù„ÙƒØªØ±ÙˆÙ†ÙŠ</label>
+                    <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">البريد الإلكتروني</label>
                     <input className="form-input" type="email" placeholder="manager@center.com" dir="ltr"
                       value={formData.manager_email} onChange={e => setFormData({ ...formData, manager_email: e.target.value })} />
                   </div>
@@ -338,8 +338,8 @@ export default function Centers() {
               {/* Edit manager name */}
               {editCenter && (
                 <div>
-                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">Ø§Ø³Ù… Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø±ÙƒØ²</label>
-                  <input className="form-input" placeholder="Ø§Ø³Ù… Ø§Ù„Ù…Ø¯ÙŠØ±"
+                  <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">اسم مدير المركز</label>
+                  <input className="form-input" placeholder="اسم المدير"
                     value={formData.manager_name} onChange={e => setFormData({ ...formData, manager_name: e.target.value })} />
                 </div>
               )}
@@ -355,11 +355,11 @@ export default function Centers() {
                   className="flex-1 gradient-primary text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all disabled:opacity-60 flex items-center justify-center gap-2">
                   {saving
                     ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    : <><CheckCircle2 className="w-5 h-5" />{editCenter ? 'Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª' : 'Ø¥Ù†Ø´Ø§Ø¡ Ø§Ù„Ù…Ø±ÙƒØ²'}</>}
+                    : <><CheckCircle2 className="w-5 h-5" />{editCenter ? 'حفظ التعديلات' : 'إنشاء المركز'}</>}
                 </button>
                 <button onClick={() => setShowForm(false)}
                   className="px-5 py-3 rounded-xl border-2 border-[hsl(var(--border))] text-[hsl(var(--foreground))] font-bold hover:bg-[hsl(var(--muted))] transition-all">
-                  Ø¥Ù„ØºØ§Ø¡
+                  إلغاء
                 </button>
               </div>
             </div>
@@ -374,7 +374,7 @@ export default function Centers() {
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
               <div>
                 <h2 className="text-xl font-black text-white">{detailCenter.name}</h2>
-                <p className="text-white/70 text-sm">ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ù…Ø±ÙƒØ² Ø§Ù„ÙƒØ§Ù…Ù„Ø©</p>
+                <p className="text-white/70 text-sm">تفاصيل المركز الكاملة</p>
               </div>
               <button onClick={() => setDetailCenter(null)} className="p-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all">
                 <X className="w-5 h-5" />
@@ -390,9 +390,9 @@ export default function Centers() {
                   {/* Basic Info */}
                   <div className="grid grid-cols-3 gap-4">
                     {[
-                      { label: 'Ø§Ù„Ø·Ù„Ø§Ø¨', val: detailCenter.students_count || 0, icon: Users, cls: 'gradient-primary' },
-                      { label: 'Ø§Ù„Ù…Ø­ÙØ¸ÙˆÙ†', val: detailCenter.teachers_count || 0, icon: GraduationCap, cls: 'gradient-gold' },
-                      { label: 'Ø§Ù„Ø­Ù„Ù‚Ø§Øª', val: detailCenter.halaqat_count || 0, icon: BookOpen, cls: 'stat-card-teal' },
+                      { label: 'الطلاب', val: detailCenter.students_count || 0, icon: Users, cls: 'gradient-primary' },
+                      { label: 'المحفظون', val: detailCenter.teachers_count || 0, icon: GraduationCap, cls: 'gradient-gold' },
+                      { label: 'الحلقات', val: detailCenter.halaqat_count || 0, icon: BookOpen, cls: 'stat-card-teal' },
                     ].map(s => (
                       <div key={s.label} className={`${s.cls} rounded-2xl p-4 text-white text-center shadow-md`}>
                         <s.icon className="w-6 h-6 mx-auto mb-2" />
@@ -404,13 +404,13 @@ export default function Centers() {
 
                   {/* Details */}
                   <div className="bg-[hsl(var(--muted))] rounded-2xl p-4 space-y-3">
-                    <h4 className="font-black text-[hsl(var(--foreground))] text-sm">Ù…Ø¹Ù„ÙˆÙ…Ø§Øª Ø§Ù„ØªØ³Ø¬ÙŠÙ„</h4>
+                    <h4 className="font-black text-[hsl(var(--foreground))] text-sm">معلومات التسجيل</h4>
                     {[
-                      { label: 'Ø§Ù„Ù…Ø¯ÙŠØ±', val: detailCenter.manager_name },
-                      { label: 'Ø§Ù„Ù‡Ø§ØªÙ', val: detailCenter.phone, dir: 'ltr' },
-                      { label: 'Ø§Ù„Ø¹Ù†ÙˆØ§Ù†', val: detailCenter.address },
-                      { label: 'ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥Ù†Ø´Ø§Ø¡', val: detailCenter.created_at ? new Date(detailCenter.created_at).toLocaleDateString('ar-SA') : 'â€”' },
-                      { label: 'Ø§Ù„Ø­Ø§Ù„Ø©', val: detailCenter.is_active ? 'Ù†Ø´Ø· âœ…' : 'Ù…ÙˆÙ‚ÙˆÙ â›”' },
+                      { label: 'المدير', val: detailCenter.manager_name },
+                      { label: 'الهاتف', val: detailCenter.phone, dir: 'ltr' },
+                      { label: 'العنوان', val: detailCenter.address },
+                      { label: 'تاريخ الإنشاء', val: detailCenter.created_at ? new Date(detailCenter.created_at).toLocaleDateString('ar-SA') : '—' },
+                      { label: 'الحالة', val: detailCenter.is_active ? 'نشط ✅' : 'موقوف ⛔' },
                     ].map(row => row.val && (
                       <div key={row.label} className="flex items-center justify-between text-sm">
                         <span className="text-[hsl(var(--muted-foreground))] font-medium">{row.label}</span>
@@ -424,7 +424,7 @@ export default function Centers() {
                     <div>
                       <h4 className="font-black text-[hsl(var(--foreground))] mb-3 flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />
-                        Ø§Ù„Ù…Ø­ÙØ¸ÙˆÙ† ({(detailCenter as any).teachers.length})
+                        المحفظون ({(detailCenter as any).teachers.length})
                       </h4>
                       <div className="space-y-2">
                         {(detailCenter as any).teachers.map((t: any) => (
@@ -439,7 +439,7 @@ export default function Centers() {
                               )}
                             </div>
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-[hsl(var(--primary-light))] text-[hsl(var(--primary))]">
-                              {t.students_count || 0} Ø·Ø§Ù„Ø¨
+                              {t.students_count || 0} طالب
                             </span>
                           </div>
                         ))}
@@ -451,11 +451,11 @@ export default function Centers() {
                   <div className="flex gap-3 pt-2">
                     <button onClick={() => { setDetailCenter(null); openEdit(detailCenter); }}
                       className="flex-1 flex items-center justify-center gap-2 gradient-gold text-white font-bold py-3 rounded-xl hover:opacity-90 transition-all">
-                      <Edit2 className="w-4 h-4" /> ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+                      <Edit2 className="w-4 h-4" /> تعديل البيانات
                     </button>
                     <button onClick={() => { setDetailCenter(null); handleDelete(detailCenter); }}
                       className="px-4 flex items-center gap-2 bg-red-50 text-red-700 font-bold py-3 rounded-xl hover:bg-red-100 transition-all">
-                      <Trash2 className="w-4 h-4" /> Ø­Ø°Ù
+                      <Trash2 className="w-4 h-4" /> حذف
                     </button>
                   </div>
                 </>

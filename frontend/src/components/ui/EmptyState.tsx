@@ -1,5 +1,6 @@
 import React from 'react';
-import { LucideIcon, HelpCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface EmptyStateProps {
   icon?: LucideIcon;
