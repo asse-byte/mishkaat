@@ -28,31 +28,42 @@ import {
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 
+/* المجموعات: أربع عشرة وجهة في قائمة مسطّحة واحدة تجعل "لوحة التحكم" (يومية)
+   و"الإعدادات" (شهرية) متساويتين في الوزن. التجميع يعيد ترتيب الأولوية. */
+type NavGroup = 'daily' | 'manage' | 'system';
+
+const GROUP_LABEL: Record<NavGroup, string> = {
+  daily:  'العمل اليومي',
+  manage: 'الإدارة',
+  system: 'النظام',
+};
+
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
+  group: NavGroup;
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
-  { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'] },
-  { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'] },
-  { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'] },
-  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'] },
-  { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'] },
-  { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'] },
-  { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'] },
-  { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'] },
-  { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'] },
-  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'] },
-  { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'] },
-  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'] },
-  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'] },
-  { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'] },
-  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
-  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
+  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'daily' },
+  { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'], group: 'manage' },
+  { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'], group: 'manage' },
+  { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'], group: 'daily' },
+  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'], group: 'daily' },
+  { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'], group: 'daily' },
+  { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'], group: 'manage' },
+  { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'], group: 'manage' },
+  { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
+  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },
+  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
+  { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
+  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
+  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
 ];
 
 const roleLabels: Record<UserRole, string> = {
@@ -158,25 +169,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Nav */}
-          <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-            {filteredNavItems.map(item => {
-              const isActive = location.pathname === item.href;
+          <nav className="flex-1 px-3 py-2 overflow-y-auto">
+            {(['daily', 'manage', 'system'] as const).map(group => {
+              const items = filteredNavItems.filter(i => i.group === group);
+              if (items.length === 0) return null;
               return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    'nav-item flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all',
-                    isActive
-                      ? 'active text-white shadow-lg'
-                      : 'text-white/60 hover:text-white'
-                  )}
-                >
-                  <item.icon className="w-4.5 h-4.5 shrink-0 w-5 h-5" />
-                  <span className="flex-1">{item.title}</span>
-                  {isActive && <ChevronLeft className="w-4 h-4 opacity-60" />}
-                </Link>
+                <div key={group}>
+                  <p className="nav-group-label">{GROUP_LABEL[group]}</p>
+                  <div className="space-y-0.5">
+                    {items.map(item => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            'nav-item flex items-center gap-3 px-4 py-2.5 text-sm',
+                            isActive ? 'active' : 'text-white/60 hover:text-white'
+                          )}
+                        >
+                          <item.icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
+                          <span className="flex-1">{item.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>

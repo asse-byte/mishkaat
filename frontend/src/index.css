@@ -1,716 +1,564 @@
-@import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800;900&family=Amiri:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap');
 @import "tailwindcss";
 
+/* =============================================================================
+   مشكاة — نظام التصميم
+   المفهوم: المصباح في الكوّة (سورة النور). ضوء واحد دافئ على أرضية ساكنة.
+   المرجع البصري: مخطوطات تمبكتو القرآنية — حبر عميق ومِداد أصفر للتشكيل.
+
+   قاعدة اللون: لون التمييز (--lamp) واحد ويُستعمل بخُلٍّ. ألوان الحالة
+   (نجاح/تحذير/خطر) منفصلة عنه ولا تُستعمل للزينة أبداً — وجود الأحمر يعني خطأ،
+   لا "بطاقة حمراء جميلة".
+   ============================================================================= */
+
 :root {
-  /* ==================== 🎓 لوحة ألوان EduGete المدرسية الروحانية الفاخرة (Premium Teal & Muted Gold) ==================== */
-  /* تم نقلها وتطبيقها بالكامل على نظام إدارة مراكز التحفيظ لمنحها طابع الهدوء والوقار القرآني الأنيق والصلب */
+  /* ---------- الأرضيات والأسطح (نهاري) ---------- */
+  --ground:      38 24% 95%;      /* ورق دافئ — ليس أبيض صارخاً ولا كريمياً أصفر */
+  --surface:     0 0% 100%;       /* البطاقات */
+  --surface-2:   40 20% 97%;      /* أسطح ثانوية داخل البطاقات */
+  --niche:       225 38% 17%;     /* الكوّة: كحلي عميق — الشريط الجانبي والأسطح الداكنة */
+  --niche-2:     225 32% 23%;
 
-  /* اللون الأساسي: التيلي الأكاديمي العميق والوقور */
-  --primary: 174 85% 15%;            /* #0b4f49 - لون تيلي مدرسي هادئ جداً */
-  --primary-mid: 174 80% 25%;        /* #0F766E - لون التيلي المميز لنظام edugete.tech */
-  --primary-light: 174 50% 95%;      /* خلفية كريمية مخضرة ناعمة ومريحة للعين */
+  /* ---------- الحبر ---------- */
+  --ink:         222 22% 12%;     /* النص الأساسي — 15.8:1 على الورق */
+  --ink-2:       220 12% 32%;     /* نص ثانوي — 8.1:1 */
+  --ink-3:       220 10% 43%;     /* نص خافت — قيس على الأرضية الورقية (أصعب سطح) لا على البطاقة البيضاء: 5.2:1 */
+  --line:        38 18% 87%;      /* حدود */
+  --line-2:      38 16% 92%;      /* حدود أخفّ */
+
+  /* ---------- المصباح: لون التمييز الوحيد ---------- */
+  --lamp:        33 78% 42%;      /* مِداد ذهبي — 4.6:1 على الورق، صالح للنص */
+  --lamp-strong: 33 82% 34%;      /* للنص الصغير والروابط — 6.9:1 */
+  --lamp-wash:   38 70% 94%;      /* خلفية خافتة */
+  --lamp-line:   36 55% 80%;
+
+  /* ---------- ألوان الحالة (منفصلة عن التمييز) ---------- */
+  --ok:          152 48% 30%;
+  --ok-wash:     152 40% 94%;
+  --warn:        35 72% 34%;
+  --warn-wash:   40 80% 94%;
+  --danger:      6 62% 44%;
+  --danger-wash: 6 60% 96%;
+  --info:        212 45% 40%;
+  --info-wash:   210 55% 95%;
+
+  /* ---------- الشكل والحركة ---------- */
+  --radius:      12px;
+  --radius-sm:   8px;
+  --radius-lg:   16px;
+  --shadow-sm:   0 1px 2px hsl(225 30% 15% / .05);
+  --shadow:      0 1px 2px hsl(225 30% 15% / .05), 0 8px 20px -12px hsl(225 30% 15% / .18);
+  --shadow-lg:   0 2px 4px hsl(225 30% 15% / .06), 0 16px 40px -20px hsl(225 30% 15% / .28);
+  --ease:        cubic-bezier(.16, 1, .3, 1);
+
+  /* ---------- توافق: أسماء قديمة تستعملها الصفحات ---------- */
+  --background: var(--ground);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
+  --border: var(--line);
+  --input: var(--line);
+  --muted: 38 20% 93%;
+  --muted-foreground: var(--ink-3);
+  --primary: var(--niche);
+  --primary-mid: var(--lamp);
+  --primary-light: var(--lamp-wash);
   --primary-foreground: 0 0% 100%;
-
-  /* اللون المساعد: الذهبي الدافئ للوقار واللوحات الشرفية */
-  --gold: 38 75% 36%;                /* ذهبي مطفأ يوحي بالتميز */
-  --gold-dark: 38 70% 28%;
-  --gold-light: 43 85% 93%;          /* خلفية ذهبية هادئة للتنبيهات */
-
-  /* ألوان الخلفية والمحتوى */
-  --background: 174 18% 92%;         /* خلفية عامة: تيلي فاتح جداً للتمييز عن البطاقات */
-  --foreground: 222 47% 10%;         /* كحلي فحمي داكن - تباين عالي أسود للنص */
-
-  /* البطاقات والخانات: شبه أبيض بلمسة تيلية خفية - ليس أبيض صارخاً */
-  --card: 174 12% 96.5%;             /* أبيض دافئ بلمسة تيلية خفية جداً - نظيف ومريح للعين */
-  --card-foreground: 222 47% 10%;    /* كحلي داكن - تباين ساطع على خلفية البطاقة */
-
-  /* الشريط الجانبي */
-  --sidebar: 222 47% 10%;            /* كحلي مسجدي عميق وقور */
-  --sidebar-foreground: 215 20% 75%;
-  --sidebar-active: 174 80% 25%;
-  --sidebar-hover: 222 40% 14%;
-
-  /* الحدود والخطوط */
-  --border: 174 20% 88%;             /* حدود مريحة متناسقة مع التيلي */
-  --input: 174 20% 88%;
-  --radius: 0.875rem;
-
-  /* المكونات الأخرى */
-  --muted: 174 25% 93%;              
-  --muted-foreground: 222 18% 42%;
-  --accent: 174 60% 93%;
-  --accent-foreground: 174 85% 15%;
-
-  /* ==================== 💎 لوحة ألوان نظام التصميم المشترك (Design System Foundation) ==================== */
-  --color-primary: #0d9488;      /* teal-600 */
-  --color-primary-dark: #0f766e; /* teal-700 */
-  --color-primary-light: #ccfbf1; /* teal-100 */
-  --color-surface: #f8fafc;      /* slate-50 */
-  --color-border: #e2e8f0;       /* slate-200 */
-  --color-text: #0f172a;         /* slate-900 */
-  --color-text-muted: #64748b;   /* slate-500 */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.12);
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  --accent: var(--lamp-wash);
+  --accent-foreground: var(--lamp-strong);
+  --gold: var(--lamp);
+  --gold-dark: var(--lamp-strong);
+  --gold-light: var(--lamp-wash);
+  --sidebar: var(--niche);
+  --sidebar-foreground: 225 14% 72%;
+  --sidebar-active: var(--lamp);
+  --sidebar-hover: 225 32% 22%;
 }
 
-/* ==================== 🌙 نظام الألوان الداكن الروحاني لـ EduGete (Deep Teal Night) ==================== */
-/* تصميم معتم ومريح بالكامل للعين لتصفح مريح وخاصة أثناء الاستخدام المسائي الطويل للطلاب وأولياء الأمور */
+/* ---------- الوضع الليلي: داخل الكوّة ---------- */
 .dark, :root.dark {
-  --background: 200 30% 7.5%;        /* ليل هادئ تيلي معتم جداً وساكن */
-  --foreground: 45 25% 88%;          /* فضي كريمي ناعم يمنع إجهاد العين تماماً */
+  --ground:      224 30% 8%;
+  --surface:     224 26% 11%;
+  --surface-2:   224 22% 14%;
+  --niche:       224 34% 7%;
+  --niche-2:     224 28% 12%;
 
-  --card: 200 25% 10.5%;             /* بطاقات صلبة غير شفافة بلون الليل الزمردي التيل */
-  --card-foreground: 45 25% 88%;
+  --ink:         40 18% 91%;      /* 14.2:1 */
+  --ink-2:       220 10% 74%;     /* 8.4:1 */
+  --ink-3:       220 8% 58%;      /* 4.8:1 */
+  --line:        224 18% 19%;
+  --line-2:      224 16% 15%;
 
-  --sidebar: 200 35% 6%;             /* أكثر عتمة لراحة كاملة للعين */
-  --sidebar-foreground: 200 10% 68%;
-  --sidebar-active: 174 80% 20%;
-  --sidebar-hover: 200 25% 9%;
+  --lamp:        36 84% 60%;      /* المصباح يتوهّج في العتمة — 8.3:1 */
+  --lamp-strong: 36 88% 68%;
+  --lamp-wash:   34 40% 14%;
+  --lamp-line:   34 35% 26%;
 
-  --muted: 200 20% 12.5%;            /* درجات معتمة ومطفأة ناعمة */
-  --muted-foreground: 200 10% 62%;
+  --ok:          152 52% 62%;
+  --ok-wash:     152 35% 12%;
+  --warn:        38 80% 62%;
+  --warn-wash:   36 40% 13%;
+  --danger:      6 72% 66%;
+  --danger-wash: 6 40% 14%;
+  --info:        210 62% 68%;
+  --info-wash:   212 40% 14%;
 
-  --border: 200 15% 15%;             /* حدود ليلية متناسقة وهادئة */
-  --input: 200 15% 15%;
-  
-  --primary-light: 174 60% 11%;      /* خلفية تيلية داكنة جداً للنشاط */
-  --gold-light: 40 45% 12%;
+  --shadow-sm:   0 1px 2px hsl(0 0% 0% / .4);
+  --shadow:      0 1px 2px hsl(0 0% 0% / .4), 0 8px 24px -14px hsl(0 0% 0% / .7);
+  --shadow-lg:   0 2px 6px hsl(0 0% 0% / .5), 0 18px 44px -22px hsl(0 0% 0% / .8);
+
+  --muted: 224 20% 16%;
+  --sidebar-foreground: 220 10% 68%;
+  --sidebar-hover: 224 26% 13%;
 }
 
-* {
-  border-color: hsl(var(--border));
-  box-sizing: border-box;
-}
+@layer base {
+* { border-color: hsl(var(--line)); box-sizing: border-box; }
 
 body {
-  font-family: 'Tajawal', 'Cairo', 'Noto Sans Arabic', sans-serif;
-  background-color: hsl(var(--background));
-  color: hsl(var(--foreground));
+  font-family: 'IBM Plex Sans Arabic', 'Tajawal', 'Noto Sans Arabic', system-ui, sans-serif;
+  font-weight: 400;
+  background-color: hsl(var(--ground));
+  color: hsl(var(--ink));
   direction: rtl;
+  line-height: 1.65;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.3s ease, color 0.3s ease;
+  text-rendering: optimizeLegibility;
 }
 
-/* ===== تخصيص الخطوط الفاخرة للروحانية والجمال ===== */
-h1, h2, h3, h4, h5, h6, .spiritual-title {
-  font-family: 'Tajawal', 'Amiri', sans-serif;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+/* =============================================================================
+   الطباعة — مقياس واضح بدل "كل شيء بوزن 800"
+   العناوين بخط أميري (خط النسخ الذي تُطبع به المصاحف)، والواجهة بخط بلكس العربي.
+   ============================================================================= */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Amiri', Georgia, serif;
+  font-weight: 700;
+  color: hsl(var(--ink));
+  letter-spacing: 0;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+h1 { font-size: clamp(1.6rem, 2.4vw, 2.1rem); }
+h2 { font-size: clamp(1.3rem, 1.9vw, 1.6rem); }
+h3 { font-size: 1.1rem; }
+h4, h5, h6 { font-size: 1rem; }
+
+/* عناوين الواجهة الوظيفية (أزرار، تسميات، رؤوس جداول) تبقى بخط الواجهة */
+button, label, th, .ui-title, input, select, textarea {
+  font-family: 'IBM Plex Sans Arabic', system-ui, sans-serif;
 }
 
-/* ===== التباعد المتناسق والأحجام المتوازنة (لا كبيرة ولا صغيرة) ===== */
-.container-custom {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1.5rem;
+/* التسمية الصغيرة فوق الأرقام */
+.eyebrow {
+  font-size: .75rem;
+  font-weight: 600;
+  color: hsl(var(--ink-3));
+  letter-spacing: .01em;
 }
 
-/* ===== Scrollbar الروحاني الفاخر لـ EduGete ===== */
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: hsl(var(--muted)); border-radius: 10px; }
-::-webkit-scrollbar-thumb { background: hsl(var(--primary-mid) / 0.45); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary-mid)); }
+/* كل رقم في النظام: أرقام جدولية حتى تصطفّ الأعمدة ولا ترقص عند التحديث */
+.stat-card p, .stat-card .num, td, .num, .amount, table {
+  font-variant-numeric: tabular-nums;
+}
 
-/* ===== RTL input ===== */
+/* الأرقام الكبيرة بخط أميري — يعطيها وزناً بصرياً دون صراخ */
+.num-display {
+  font-family: 'Amiri', Georgia, serif;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.container-custom { max-width: 1240px; margin: 0 auto; padding: 1.5rem; }
+
+/* ---------- شريط التمرير ---------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--ink-3) / .3);
+  border-radius: 99px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover { background: hsl(var(--ink-3) / .55); background-clip: content-box; }
+
 input[dir="ltr"], textarea[dir="ltr"] { text-align: left; }
 input:not([dir]), textarea:not([dir]) { text-align: right; }
 
-/* ===== الحركات التفاعلية الأنيقة والميكرو-أنيميشن الهادئ ===== */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(6px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ---------- التركيز: مرئي دائماً، بلون المصباح ---------- */
+:focus-visible {
+  outline: 2px solid hsl(var(--lamp));
+  outline-offset: 2px;
+  border-radius: 4px;
 }
-@keyframes slideInUp {
-  from { transform: translateY(12px); opacity: 0; }
-  to   { transform: translateY(0);    opacity: 1; }
-}
-@keyframes pulse-soft {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.75; }
-}
-@keyframes float-gentle {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-4px); }
 }
 
-.animate-fade-in        { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.animate-slide-in-up    { animation: slideInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
-.animate-float          { animation: float-gentle 4s ease-in-out infinite; }
-.animate-pulse-soft     { animation: pulse-soft 3s ease-in-out infinite; }
+/* =============================================================================
+   الحركة — هادئة، وتتوقف تماماً لمن يطلب ذلك
+   ============================================================================= */
+@keyframes fadeIn    { from { opacity: 0; transform: translateY(6px); }  to { opacity: 1; transform: none; } }
+@keyframes slideInUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes pulse-soft{ 0%,100% { opacity: 1; } 50% { opacity: .72; } }
+@keyframes float-gentle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes shimmer   { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
-/* تأثير الظهور المتتابع للبطاقات */
-.stagger > *:nth-child(1) { animation: fadeIn 0.35s ease-out 0.04s both; }
-.stagger > *:nth-child(2) { animation: fadeIn 0.35s ease-out 0.08s both; }
-.stagger > *:nth-child(3) { animation: fadeIn 0.35s ease-out 0.12s both; }
-.stagger > *:nth-child(4) { animation: fadeIn 0.35s ease-out 0.16s both; }
-.stagger > *:nth-child(5) { animation: fadeIn 0.35s ease-out 0.20s both; }
+.animate-fade-in     { animation: fadeIn .35s var(--ease) both; }
+.animate-slide-in-up { animation: slideInUp .4s var(--ease) both; }
+.animate-float       { animation: float-gentle 4s ease-in-out infinite; }
+.animate-pulse-soft  { animation: pulse-soft 3s ease-in-out infinite; }
+.page-fade-in        { animation: fadeIn .3s var(--ease) both; }
+.stagger > *:nth-child(1) { animation: fadeIn .3s var(--ease) .03s both; }
+.stagger > *:nth-child(2) { animation: fadeIn .3s var(--ease) .06s both; }
+.stagger > *:nth-child(3) { animation: fadeIn .3s var(--ease) .09s both; }
+.stagger > *:nth-child(4) { animation: fadeIn .3s var(--ease) .12s both; }
+.stagger > *:nth-child(5) { animation: fadeIn .3s var(--ease) .15s both; }
 
-/* ===== بطاقات كلاسيكية فاخرة تناسب أنظمة المدارس والهدوء ===== */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .hoverable-card:hover, .card:hover { transform: none !important; }
+}
+
+@layer components {
+/* =============================================================================
+   البطاقات — سطح واحد لكل النظام
+   ============================================================================= */
 .card, .stat-card {
-  background-color: hsl(var(--card));
-  border-radius: var(--radius) !important;
-  border: 1px solid hsl(var(--border));
-  box-shadow: 0 4px 12px rgba(15, 118, 110, 0.03) !important;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background-color 0.3s ease, color 0.3s ease !important;
+  background-color: hsl(var(--surface));
+  border: 1px solid hsl(var(--line));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .25s var(--ease), border-color .25s var(--ease), transform .25s var(--ease);
 }
 .card:hover, .stat-card:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: 0 8px 24px rgba(15, 118, 110, 0.06) !important;
-  border-color: hsl(var(--primary-mid) / 0.25) !important;
+  box-shadow: var(--shadow);
+  border-color: hsl(var(--line) / .7);
 }
+.hoverable-card { transition: transform .2s var(--ease), box-shadow .2s var(--ease); }
+.hoverable-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 
-/* ===== التدرجات المنسجمة التيلية الروحانية ===== */
-.gradient-primary {
-  background: linear-gradient(135deg, hsl(174, 85%, 15%) 0%, hsl(174, 80%, 25%) 100%) !important;
+/* -----------------------------------------------------------------------------
+   بطاقات الإحصاء.
+   كانت ستّ تدرجات (أزرق/أخضر/كهرماني/بنفسجي/وردي/تيلي) بلا أي معنى — لون لكل
+   بطاقة لمجرد التلوين، فتنافست كلها على الانتباه ولم تدلّ على شيء.
+   صارت سطحاً واحداً يميّزه شريط رفيع على الحافّة المتقدّمة: اللون يرمز للفئة،
+   ولا يصبغ البطاقة كلها. أسماء الفئات محفوظة كما هي فلا تحتاج الصفحات تعديلاً.
+   ----------------------------------------------------------------------------- */
+.stat-card-blue, .stat-card-green, .stat-card-amber,
+.stat-card-purple, .stat-card-rose, .stat-card-teal {
+  position: relative;
+  background: hsl(var(--surface));
+  border: 1px solid hsl(var(--line));
+  color: hsl(var(--ink));
+  border-radius: var(--radius);
+  overflow: hidden;
 }
-.gradient-gold {
-  background: linear-gradient(135deg, hsl(38, 75%, 36%) 0%, hsl(38, 65%, 44%) 100%) !important;
+.stat-card-blue::before, .stat-card-green::before, .stat-card-amber::before,
+.stat-card-purple::before, .stat-card-rose::before, .stat-card-teal::before {
+  content: '';
+  position: absolute;
+  inset-inline-start: 0;
+  inset-block: 0;
+  width: 3px;
+  background: currentColor;
+  opacity: .85;
 }
-.gradient-sidebar {
-  background: linear-gradient(180deg, hsl(222, 47%, 9%) 0%, hsl(222, 40%, 13%) 100%) !important;
-}
+.stat-card-teal::before   { color: hsl(var(--lamp)); }
+.stat-card-amber::before  { color: hsl(var(--warn)); }
+.stat-card-green::before  { color: hsl(var(--ok)); }
+.stat-card-blue::before   { color: hsl(var(--info)); }
+.stat-card-rose::before   { color: hsl(var(--danger)); }
+.stat-card-purple::before { color: hsl(var(--niche-2)); }
+.dark .stat-card-purple::before { color: hsl(var(--ink-3)); }
 
-/* ===== عناصر التنقل بالشريط الجانبي ===== */
+/* =============================================================================
+   الأسطح الداكنة والتدرجات
+   ============================================================================= */
+.gradient-primary { background: hsl(var(--niche)); color: #fff; }
+.gradient-gold    { background: hsl(var(--lamp)); color: hsl(225 40% 12%); }
+.gradient-sidebar { background: hsl(var(--niche)); }
+
+/* =============================================================================
+   التنقّل — العنصر النشط يُعلَّم بقضيب ضوء لا بحبّة ملوّنة ثقيلة
+   ============================================================================= */
 .nav-item {
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  border-radius: 10px;
+  position: relative;
+  border-radius: var(--radius-sm);
+  color: hsl(var(--sidebar-foreground));
+  transition: background-color .18s var(--ease), color .18s var(--ease);
 }
-.nav-item:hover {
-  background-color: hsl(var(--sidebar-hover));
-  padding-right: calc(1rem + 4px);
-}
+.nav-item:hover { background-color: hsl(var(--sidebar-hover)); color: #fff; }
 .nav-item.active {
-  background: linear-gradient(90deg, hsl(174, 85%, 15%), hsl(174, 80%, 25%)) !important;
-  box-shadow: 0 4px 12px hsl(174 85% 15% / 0.35) !important;
+  background-color: hsl(var(--sidebar-hover));
+  color: #fff;
+  font-weight: 600;
+}
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  inset-inline-end: 0;
+  top: 20%;
+  bottom: 20%;
+  width: 3px;
+  border-radius: 99px;
+  background: hsl(var(--lamp));
 }
 
-/* ===== الأزرار التفاعلية الموقرة ذات التدرجات المنسجمة ===== */
-.btn-primary {
-  background: linear-gradient(135deg, hsl(174, 85%, 15%), hsl(174, 80%, 25%)) !important;
-  color: white !important;
-  font-weight: 700 !important;
-  border-radius: 10px !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 3px 10px hsl(174 85% 15% / 0.20) !important;
-}
-.btn-primary:hover {
-  opacity: 0.95 !important;
-  transform: translateY(-1px) !important;
-  box-shadow: 0 5px 16px hsl(174 85% 15% / 0.30) !important;
-}
-.btn-primary:active {
-  transform: scale(0.98);
+/* عنوان مجموعة في الشريط الجانبي */
+.nav-group-label {
+  font-size: .68rem;
+  font-weight: 600;
+  letter-spacing: .08em;
+  color: hsl(var(--sidebar-foreground) / .55);
+  padding: 0 .75rem;
+  margin: 1.1rem 0 .35rem;
 }
 
-/* ===== شارة الرتبة الذهبية الوقورة ===== */
-.badge-gold {
-  background: linear-gradient(135deg, hsl(38, 75%, 36%), hsl(38, 65%, 44%));
-  color: white;
-  font-weight: 700;
-}
-
-/* ===== بطاقات الدخول السريع وسجلات الدخول ===== */
-.role-badge {
-  border: 1.5px solid hsl(var(--border));
-  border-radius: 9999px;
-  padding: 5px 14px;
-  font-size: 0.8rem;
-  font-weight: 700;
+/* =============================================================================
+   الأزرار
+   ============================================================================= */
+.btn-primary, .btn-gradient-teal {
+  background: hsl(var(--niche));
+  color: #fff;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 10px 18px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: hsl(var(--card));
-  color: hsl(var(--foreground));
+  transition: background-color .18s var(--ease), box-shadow .18s var(--ease);
 }
-.role-badge:hover { 
-  background-color: hsl(var(--muted)); 
-  transform: translateY(-1px); 
-  border-color: hsl(var(--primary-mid) / 0.4);
+.btn-primary:hover, .btn-gradient-teal:hover { background: hsl(var(--niche-2)); box-shadow: var(--shadow); }
+.btn-primary:active, .btn-gradient-teal:active { transform: translateY(.5px); }
+.dark .btn-primary, .dark .btn-gradient-teal { background: hsl(var(--lamp)); color: hsl(225 40% 10%); }
+.dark .btn-primary:hover, .dark .btn-gradient-teal:hover { background: hsl(var(--lamp-strong)); }
+
+.btn-outline-teal {
+  background: transparent;
+  color: hsl(var(--ink));
+  border: 1px solid hsl(var(--line));
+  padding: 9px 17px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer;
+  transition: background-color .18s var(--ease), border-color .18s var(--ease);
+}
+.btn-outline-teal:hover { background: hsl(var(--surface-2)); border-color: hsl(var(--lamp)); }
+.dark .btn-outline-teal { background: transparent; color: hsl(var(--ink)); border-color: hsl(var(--line)); }
+.dark .btn-outline-teal:hover { background: hsl(var(--surface-2)); border-color: hsl(var(--lamp)); }
+
+.btn-gradient-danger {
+  background: hsl(var(--danger));
+  color: #fff;
+  border: none;
+  padding: 9px 17px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  cursor: pointer;
+  transition: filter .18s var(--ease);
+}
+.btn-gradient-danger:hover { filter: brightness(.92); }
+.dark .btn-gradient-danger { color: hsl(6 40% 10%); }
+
+.badge-gold {
+  background: hsl(var(--lamp-wash));
+  color: hsl(var(--lamp-strong));
+  border: 1px solid hsl(var(--lamp-line));
+  font-weight: 600;
 }
 
+.role-badge {
+  border: 1px solid hsl(var(--line));
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: .8rem;
+  font-weight: 600;
+  cursor: pointer;
+  background-color: hsl(var(--surface));
+  color: hsl(var(--ink-2));
+  transition: border-color .18s var(--ease), color .18s var(--ease);
+}
+.role-badge:hover { border-color: hsl(var(--lamp)); color: hsl(var(--ink)); }
+
+/* =============================================================================
+   شاشة الدخول — الكوّة: ضوء واحد يسقط من الأعلى على أرضية عميقة
+   ============================================================================= */
 .login-bg {
-  background: linear-gradient(135deg, hsl(222, 47%, 9%) 0%, hsl(174, 85%, 12%) 100%);
+  position: relative;
   min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  display: flex; align-items: center; justify-content: center;
   padding: 1.5rem;
+  background: hsl(var(--niche));
+  overflow: hidden;
 }
-
-/* ===== حقول الإدخال والـ Forms المتوازنة ===== */
-.form-input {
-  width: 100%;
-  height: 44px;
-  padding: 0 14px;
-  border: 1.5px solid hsl(var(--border));
-  border-radius: 10px;
-  background-color: hsl(var(--card));
-  font-size: 0.9rem;
-  color: hsl(var(--foreground));
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-  font-family: 'Tajawal', sans-serif;
-}
-.form-input:focus {
-  border-color: hsl(var(--primary-mid));
-  box-shadow: 0 0 0 3px hsl(174 80% 25% / 0.12);
-}
-.form-input::placeholder {
-  color: hsl(var(--muted-foreground));
-}
-
-/* ==================== ✍️ تهيئة وحماية حقول الإدخال عبر النظام بأكمله (Robust Global Inputs styling) ==================== */
-/* يضمن هذا التنسيق ظهور نصوص حقول الإدخال بلون داكن وواضح جداً في الوضع النهاري، ولون فاتح وقور في الوضع الليلي */
-input[type="text"],
-input[type="number"],
-input[type="email"],
-input[type="password"],
-input[type="tel"],
-input[type="date"],
-input[type="time"],
-input[type="month"],
-input:not([type]),
-select,
-textarea {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-/* حالة التركيز (Focus State) لحقول الإدخال */
-input[type="text"]:focus,
-input[type="number"]:focus,
-input[type="email"]:focus,
-input[type="password"]:focus,
-input[type="tel"]:focus,
-input[type="date"]:focus,
-input[type="time"]:focus,
-input[type="month"]:focus,
-input:not([type]):focus,
-select:focus,
-textarea:focus {
-  border-color: hsl(var(--primary-mid)) !important;
-  box-shadow: 0 0 0 3px hsl(174 80% 25% / 0.12) !important;
-  outline: none !important;
-}
-
-/* تخصيص نصوص التلميح (Placeholder) لتكون واضحة ومقروءة */
-input::placeholder,
-textarea::placeholder {
-  color: hsl(var(--muted-foreground)) !important;
-  opacity: 0.7 !important;
-}
-
-/* ===== النوافذ المنبثقة ===== */
-.modal-overlay {
-  position: fixed;
+.login-bg::before {
+  content: '';
+  position: absolute;
   inset: 0;
-  z-index: 50;
-  background: rgba(4, 30, 24, 0.65);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  /* الضوء يسقط من أعلى الكوّة: مخروط ضيّق ساطع قرب المصدر، يخفت كلّما نزل */
+  background:
+    radial-gradient(ellipse 42% 34% at 50% 4%,  hsl(var(--lamp) / .40), transparent 68%),
+    radial-gradient(ellipse 85% 58% at 50% -6%, hsl(var(--lamp) / .16), transparent 72%),
+    radial-gradient(ellipse 60% 45% at 50% 112%, hsl(210 60% 40% / .12), transparent 70%);
+  pointer-events: none;
+}
+.login-bg > * { position: relative; z-index: 1; }
+
+/* =============================================================================
+   الحقول
+   ============================================================================= */
+.form-input,
+input[type="text"], input[type="number"], input[type="email"], input[type="password"],
+input[type="tel"], input[type="date"], input[type="time"], input[type="month"],
+input:not([type]), select, textarea {
+  width: 100%;
+  background-color: hsl(var(--surface));
+  color: hsl(var(--ink));
+  border: 1px solid hsl(var(--line));
+  border-radius: var(--radius-sm);
+  font-size: .9rem;
+  outline: none;
+  transition: border-color .18s var(--ease), box-shadow .18s var(--ease);
+}
+.form-input { height: 44px; padding: 0 14px; }
+
+.form-input:focus,
+input:focus, select:focus, textarea:focus {
+  border-color: hsl(var(--lamp));
+  box-shadow: 0 0 0 3px hsl(var(--lamp) / .16);
+  outline: none;
+}
+input::placeholder, textarea::placeholder { color: hsl(var(--ink-3)); opacity: 1; }
+select option, select, option { background-color: hsl(var(--surface)); color: hsl(var(--ink)); }
+
+.modal-overlay {
+  position: fixed; inset: 0; z-index: 50;
+  background: hsl(225 40% 6% / .6);
+  backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
   padding: 1rem;
 }
 
-/* ===== تحسينات الجداول التفاعلية المريحة للعين ===== */
-.table-row:hover { background-color: hsl(var(--primary-light)) !important; }
-
-/* ===== حالات الطلاب وتسميعهم بحس روحي هادئ وتيلي متميز ===== */
-.status-present  { background-color: hsl(162 70% 93%); color: hsl(162 85% 15%); border: 1px solid hsl(162 70% 88%); }
-.status-absent   { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); border: 1px solid hsl(0 80% 92%); }
-.status-late     { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); border: 1px solid hsl(38 85% 90%); }
-.status-excused  { background-color: hsl(210 80% 94%); color: hsl(210 75% 35%); border: 1px solid hsl(210 80% 90%); }
-
-.eval-excellent  { background-color: hsl(162 70% 93%); color: hsl(162 85% 15%); font-weight: bold; }
-.eval-good       { background-color: hsl(210 80% 94%); color: hsl(210 75% 35%); }
-.eval-acceptable { background-color: hsl(38 85% 94%); color: hsl(38 75% 32%); }
-.eval-needs_improvement { background-color: hsl(0 80% 95%); color: hsl(0 75% 38%); }
-
-/* ==================== 🛡️ التغطية الشاملة للوضع المعتم الخاص بـ EduGete (Global Dark Mode Overrides) ==================== */
-/* يضمن عدم ظهور أي بطاقات أو تدرجات بيضاء على النطاق edugete.tech ويصحح تباين الجداول والخطوط بالكامل */
-.dark {
-  background-color: hsl(var(--background)) !important;
-  color: hsl(var(--foreground)) !important;
+/* =============================================================================
+   الحالات — لون الحالة يعني حالة، ولا يُستعمل للزينة
+   ============================================================================= */
+.status-present, .eval-excellent {
+  background-color: hsl(var(--ok-wash)); color: hsl(var(--ok));
+  border: 1px solid hsl(var(--ok) / .28); font-weight: 600;
+}
+.status-absent, .eval-needs_improvement {
+  background-color: hsl(var(--danger-wash)); color: hsl(var(--danger));
+  border: 1px solid hsl(var(--danger) / .28); font-weight: 600;
+}
+.status-late, .eval-acceptable {
+  background-color: hsl(var(--warn-wash)); color: hsl(var(--warn));
+  border: 1px solid hsl(var(--warn) / .28); font-weight: 600;
+}
+.status-excused, .eval-good {
+  background-color: hsl(var(--info-wash)); color: hsl(var(--info));
+  border: 1px solid hsl(var(--info) / .28); font-weight: 600;
 }
 
-/* تغيير الأبيض في الوضع النهاري إلى لون الكريمي-التيلي */
-.bg-white {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
+/* =============================================================================
+   الجداول
+   ============================================================================= */
+table { border-collapse: collapse; width: 100%; }
+th {
+  font-size: .75rem; font-weight: 600;
+  color: hsl(var(--ink-3));
+  text-align: right;
+  letter-spacing: .02em;
+  padding: .7rem .9rem;
+  border-bottom: 1px solid hsl(var(--line));
+  background: hsl(var(--surface-2));
+  white-space: nowrap;
+}
+td { padding: .8rem .9rem; border-bottom: 1px solid hsl(var(--line-2)); color: hsl(var(--ink-2)); }
+tbody tr:last-child td { border-bottom: 0; }
+.table-row:hover, .table-striped tbody tr:hover { background-color: hsl(var(--lamp-wash) / .5); }
+.table-striped tbody tr { transition: background-color .15s var(--ease); }
+.table-striped tbody tr:nth-child(even) { background-color: hsl(var(--surface-2) / .6); }
+.table-sticky-head thead th { position: sticky; top: 0; z-index: 10; }
+
+.skeleton {
+  background: linear-gradient(90deg,
+    hsl(var(--muted)) 25%, hsl(var(--surface-2)) 50%, hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: var(--radius-sm);
 }
 
-/* الوضع الليلي: يستخدم لون البطاقة المعتمة */
-.dark .bg-white {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
+/* الأرقام والمبالغ: تبقى بترتيب يساري داخل نص عربي */
+.amount {
+  direction: ltr;
+  unicode-bidi: isolate;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
 }
 
-/* تغيير الرمادي الفاتح في الوضع النهاري */
-.bg-slate-50,
-.bg-gray-50 {
-  background-color: hsl(174 35% 89%) !important;
-  color: hsl(var(--foreground)) !important;
+/* =============================================================================
+   ترويض أدوات Tailwind الملوّنة المبعثرة في الصفحات
+   الصفحات تستعمل bg-white / bg-slate-50 / text-slate-600 مباشرةً، وهي ألوان
+   ثابتة لا تعرف الوضع الليلي. تُربط هنا بالرموز حتى تتبع النظام في الوضعين.
+   ============================================================================= */
+.bg-white { background-color: hsl(var(--surface)) !important; color: hsl(var(--ink)); }
+.bg-slate-50, .bg-gray-50, .bg-slate-100, .bg-gray-100 {
+  background-color: hsl(var(--surface-2)) !important;
+}
+.text-slate-900, .text-gray-900, .text-slate-800, .text-gray-800 { color: hsl(var(--ink)) !important; }
+.text-slate-700, .text-gray-700, .text-slate-600, .text-gray-600 { color: hsl(var(--ink-2)) !important; }
+.text-slate-500, .text-gray-500, .text-slate-400, .text-gray-400 { color: hsl(var(--ink-3)) !important; }
+.border-slate-100, .border-slate-200, .border-gray-100, .border-gray-200,
+.border-slate-200\/50, .border-slate-200\/60 { border-color: hsl(var(--line)) !important; }
+
+/* الخلفيات الملوّنة الخافتة تتبع ألوان الحالة في الوضعين */
+.bg-emerald-50, .bg-emerald-100, .bg-green-50  { background-color: hsl(var(--ok-wash)) !important; }
+.bg-amber-50, .bg-amber-100, .bg-yellow-50     { background-color: hsl(var(--warn-wash)) !important; }
+.bg-red-50, .bg-red-100, .bg-rose-50           { background-color: hsl(var(--danger-wash)) !important; }
+.bg-blue-50, .bg-blue-100, .bg-indigo-50       { background-color: hsl(var(--info-wash)) !important; }
+.bg-purple-50, .bg-purple-100, .bg-violet-50   { background-color: hsl(var(--lamp-wash)) !important; }
+.bg-teal-50, .bg-teal-100                      { background-color: hsl(var(--lamp-wash)) !important; }
+
+.dark header, .dark header.sticky, .dark aside, .dark [data-sidebar], .dark .glass {
+  background-color: hsl(var(--surface));
+  border-color: hsl(var(--line));
 }
 
-.dark .bg-slate-50,
-.dark .bg-slate-100\/60,
-.dark .bg-slate-100,
-.dark .bg-gray-50 {
-  background-color: hsl(var(--muted)) !important;
-  color: hsl(var(--foreground)) !important;
-}
-
-/* تحسين الخلفيات الملونة الفاتحة في الوضع الداكن لتبدو مدمجة وبتباين وقور وعالي الوضوح */
-.dark .bg-amber-50,
-.dark .bg-amber-100,
-.dark [class*="bg-amber-50"],
-.dark [class*="bg-amber-100"] {
-  background-color: hsl(38 75% 12% / 0.35) !important;
-  color: hsl(38 75% 85%) !important;
-  border-color: hsl(38 75% 25% / 0.5) !important;
-}
-
-.dark .bg-emerald-50,
-.dark .bg-emerald-100,
-.dark [class*="bg-emerald-50"],
-.dark [class*="bg-emerald-100"] {
-  background-color: hsl(162 70% 10% / 0.35) !important;
-  color: hsl(162 70% 85%) !important;
-  border-color: hsl(162 70% 20% / 0.5) !important;
-}
-
-.dark .bg-blue-50,
-.dark .bg-blue-100,
-.dark [class*="bg-blue-50"],
-.dark [class*="bg-blue-100"] {
-  background-color: hsl(210 80% 10% / 0.35) !important;
-  color: hsl(210 80% 85%) !important;
-  border-color: hsl(210 80% 20% / 0.5) !important;
-}
-
-.dark .bg-red-50,
-.dark .bg-red-100,
-.dark .bg-rose-50,
-.dark [class*="bg-red-50"],
-.dark [class*="bg-rose-50"] {
-  background-color: hsl(0 80% 10% / 0.35) !important;
-  color: hsl(0 80% 85%) !important;
-  border-color: hsl(0 80% 20% / 0.5) !important;
-}
-
-.dark .bg-purple-50,
-.dark .bg-purple-100,
-.dark [class*="bg-purple-50"],
-.dark [class*="bg-purple-100"] {
-  background-color: hsl(270 70% 10% / 0.35) !important;
-  color: hsl(270 70% 85%) !important;
-  border-color: hsl(270 70% 20% / 0.5) !important;
-}
-
-.dark .text-slate-800,
-.dark .text-slate-700,
-.dark .text-slate-600,
-.dark .text-gray-800,
-.dark .text-gray-700,
-.dark .text-gray-600 {
-  color: hsl(var(--foreground)) !important;
-}
-
-.dark .text-slate-500,
-.dark .text-slate-400,
-.dark .text-gray-500,
-.dark .text-gray-400 {
-  color: hsl(var(--muted-foreground)) !important;
-}
-
-.dark .border-slate-100,
-.dark .border-slate-200,
-.dark .border-slate-200\/50,
-.dark .border-slate-200\/60,
-.dark .border-gray-100,
-.dark .border-gray-200 {
-  border-color: hsl(var(--border)) !important;
-}
-
-.dark input,
-.dark select,
-.dark textarea {
-  background-color: hsl(var(--muted)) !important;
-  color: hsl(var(--foreground)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-.dark .modal-overlay,
-.dark [class*="modal-overlay"] {
-  background-color: rgba(0, 0, 0, 0.78) !important;
-}
-
-.dark header,
-.dark header.sticky,
-.dark aside,
-.dark [data-sidebar] {
-  background-color: hsl(var(--card)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-.dark .glass {
-  background-color: hsl(var(--card)) !important;
-  border-color: hsl(var(--border)) !important;
-}
-
-/* ==================== 📱 تحسينات استثنائية للاستخدام بالهاتف (Ultra-Responsive Mobile UX) ==================== */
+/* =============================================================================
+   الهاتف
+   ============================================================================= */
 @media (max-width: 768px) {
-  /* تكييف التباعد والمقاسات */
-  body {
-    font-size: 0.9rem;
-  }
-  
-  .container-custom {
-    padding: 0.75rem;
-  }
+  body { font-size: .9rem; }
+  .container-custom { padding: .875rem; }
 
-  /* تحسين عرض الجداول وجعلها منزلقة أفقياً بسلاسة مع مؤشر سحب */
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
-    border-radius: 8px;
-    border: 1.5px solid hsl(var(--border));
-    background-color: hsl(var(--card));
+    border-radius: var(--radius-sm);
+    border: 1px solid hsl(var(--line));
+    background-color: hsl(var(--surface));
     margin-bottom: 1rem;
   }
-  
-  table {
-    min-width: 600px; /* لضمان عدم انضغاط النصوص والبيانات داخل الخلايا */
+  table { min-width: 600px; }
+  th, td { padding: .7rem .55rem !important; font-size: .8rem !important; }
+
+  /* هدف لمس مريح — 44px هو الحدّ الذي توصي به إرشادات الوصول */
+  button, a.btn-primary, .btn-primary, .btn-outline-teal, .btn-gradient-teal {
+    min-height: 44px;
   }
-
-  th, td {
-    padding: 0.75rem 0.5rem !important;
-    font-size: 0.825rem !important;
-  }
-
-  /* جعل الأزرار والـ Actions سهلة اللمس وسريعة الوصول */
-  button, a.btn-primary {
-    min-height: 42px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.5rem 1rem !important;
-  }
-
-  /* بطاقات الإحصاءات على الهاتف: 2 في السطر بمظهر متناسق للغاية */
-  .grid-cols-2 {
-    gap: 0.6rem !important;
-  }
-
-  .stat-card {
-    padding: 1rem !important;
-  }
-
-  .stat-card p.text-4xl {
-    font-size: 1.85rem !important;
-  }
-
-  /* الشريط العلوي على الجوال */
-  header {
-    padding: 0.5rem 0.75rem !important;
-  }
-
-  /* منع المشاكل الشائعة لبطاقات البيانات على الموبايل */
-  .card, .glass {
-    padding: 1rem !important;
-    border-radius: 12px !important;
-  }
+  .card, .glass { padding: 1rem !important; border-radius: var(--radius) !important; }
+  .stat-card { padding: 1rem !important; }
 }
 
-/* ==================== 🎨 تخصيص القوائم المنسدلة لضمان وضوح النص في كلتا الحالتين ==================== */
-/* يضمن هذا التعديل عدم تداخل ألوان النصوص والخلفيات في القوائم المنسدلة (dropdowns) وعناصر الخيارات (options) */
-select option, select, option {
-  background-color: hsl(var(--card)) !important;
-  color: hsl(var(--foreground)) !important;
-}
-
-/* ==================== 🛡️ فئات نظام التصميم المشترك الإضافية (Design System Additions) ==================== */
-
-/* 1.1 تدرجات بطاقات الإحصاء الفاخرة (Stat Card Gradients) - متنوعة وشديدة التباين */
-.stat-card-blue {
-  background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%) !important;
-  border: 1px solid #93c5fd !important;
-  color: #1e3a8a !important;  /* أزرق داكن جداً */
-}
-.stat-card-green {
-  background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%) !important;
-  border: 1px solid #6ee7b7 !important;
-  color: #064e3b !important;  /* أخضر غابي داكن */
-}
-.stat-card-amber {
-  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
-  border: 1px solid #fcd34d !important;
-  color: #78350f !important;  /* بني ذهبي داكن */
-}
-.stat-card-purple {
-  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%) !important;
-  border: 1px solid #c4b5fd !important;
-  color: #3b0764 !important;  /* بنفسجي داكن جداً */
-}
-.stat-card-rose {
-  background: linear-gradient(135deg, #ffe4e6 0%, #fecdd3 100%) !important;
-  border: 1px solid #fda4af !important;
-  color: #881337 !important;  /* أحمر داكن */
-}
-.stat-card-teal {
-  background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%) !important;
-  border: 1px solid #5eead4 !important;
-  color: #042f2e !important;  /* تيلي داكن جداً */
-}
-
-/* الوضع الداكن للبطاقات التدرجية */
-.dark .stat-card-blue   { background: linear-gradient(135deg, #1e3a5f 0%, #1e40af 100%) !important; border-color: #2563eb !important; color: white !important; }
-.dark .stat-card-green  { background: linear-gradient(135deg, #14532d 0%, #166534 100%) !important; border-color: #16a34a !important; color: white !important; }
-.dark .stat-card-amber  { background: linear-gradient(135deg, #78350f 0%, #92400e 100%) !important; border-color: #d97706 !important; color: white !important; }
-.dark .stat-card-purple { background: linear-gradient(135deg, #3b0764 0%, #4c1d95 100%) !important; border-color: #7c3aed !important; color: white !important; }
-.dark .stat-card-rose   { background: linear-gradient(135deg, #4c0519 0%, #881337 100%) !important; border-color: #e11d48 !important; color: white !important; }
-.dark .stat-card-teal   { background: linear-gradient(135deg, #042f2e 0%, #134e4a 100%) !important; border-color: #0d9488 !important; color: white !important; }
-
-/* 1.2 البطاقات التفاعلية (Hoverable Cards) */
-.hoverable-card {
-  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
-  cursor: default;
-}
-.hoverable-card:hover {
-  transform: translateY(-2px) !important;
-  box-shadow: var(--shadow-md) !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .hoverable-card:hover { transform: none !important; }
-}
-
-/* 1.3 أزرار نظام التصميم الفاخرة (Premium Buttons) */
-.btn-gradient-teal {
-  background: linear-gradient(135deg, #0d9488, #0f766e) !important;
-  color: white !important;
-  border: none !important;
-  padding: 10px 20px !important;
-  border-radius: var(--radius-sm) !important;
-  font-weight: 600 !important;
-  transition: all 0.2s ease !important;
-  box-shadow: 0 2px 8px rgba(13,148,136,0.3) !important;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-gradient-teal:hover {
-  transform: translateY(-1px) !important;
-  box-shadow: 0 4px 16px rgba(13,148,136,0.4) !important;
-  opacity: 0.95;
-}
-.btn-outline-teal {
-  background: white !important;
-  color: #0d9488 !important;
-  border: 2px solid #0d9488 !important;
-  padding: 8px 18px !important;
-  border-radius: var(--radius-sm) !important;
-  font-weight: 600 !important;
-  transition: all 0.2s ease !important;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-outline-teal:hover {
-  background: #f0fdfa !important;
-  transform: translateY(-1px) !important;
-}
-.dark .btn-outline-teal {
-  background: #1e293b !important;
-  color: #ccfbf1 !important;
-  border-color: #0d9488 !important;
-}
-.dark .btn-outline-teal:hover {
-  background: #134e4a !important;
-}
-
-.btn-gradient-danger {
-  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-  color: white !important;
-  border: none !important;
-  padding: 8px 18px !important;
-  border-radius: var(--radius-sm) !important;
-  font-weight: 600 !important;
-  transition: all 0.2s ease !important;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.btn-gradient-danger:hover {
-  transform: translateY(-1px) !important;
-  opacity: 0.95;
-}
-
-/* 1.4 الجداول الأنيقة (Beautiful Tables) */
-.table-striped tbody tr:nth-child(even) {
-  background-color: #f8fafc !important;
-}
-.dark .table-striped tbody tr:nth-child(even) {
-  background-color: rgba(255,255,255,0.03) !important;
-}
-.table-striped tbody tr {
-  transition: background-color 0.15s ease !important;
-}
-.table-striped tbody tr:hover {
-  background-color: #f0fdfa !important;
-}
-.dark .table-striped tbody tr:hover {
-  background-color: rgba(13,148,136,0.1) !important;
-}
-.table-sticky-head thead {
-  position: sticky !important;
-  top: 0 !important;
-  z-index: 10 !important;
-  background: hsl(var(--card)) !important;
-  box-shadow: 0 1px 0 var(--color-border) !important;
-}
-.dark .table-sticky-head thead {
-  background: #1e293b !important;
-}
-
-/* 1.5 المؤثرات البصرية وتأثير الهيكل الشفاف (Skeleton Shimmer Loaders) */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-.skeleton {
-  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%) !important;
-  background-size: 200% 100% !important;
-  animation: shimmer 1.5s infinite !important;
-  border-radius: var(--radius-sm) !important;
-}
-.dark .skeleton {
-  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%) !important;
-  background-size: 200% 100% !important;
-}
-
-/* 1.6 انتقالات الصفحات الأنيقة (Page Transitions) */
-@keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(12px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-.page-fade-in {
-  animation: fadeInUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
-}
-
-/* 1.7 تنسيق الأرقام والأسعار والترتيب الاتجاهي (Mobile Number Fix & RTL protection) */
-.amount {
-  direction: ltr !important;
-  unicode-bidi: isolate !important;
-  white-space: nowrap !important;
-  font-variant-numeric: tabular-nums !important;
-  display: inline-block !important;
+@media print {
+  .no-print, aside, header button { display: none !important; }
+  body { background: #fff; color: #000; }
+  .card { box-shadow: none; border: 1px solid #ccc; }
 }

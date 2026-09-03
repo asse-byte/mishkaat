@@ -43,7 +43,9 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:8001',
+        // العنوان قابل للضبط حتى يمكن تشغيل أكثر من خادم تطوير جنباً إلى جنب
+        // (مراجعة/تصميم على منفذ، وعملك الجاري على آخر). الافتراضي لم يتغيّر.
+        target: process.env.VITE_API_TARGET || 'http://localhost:8001',
         changeOrigin: true,
       },
     },
