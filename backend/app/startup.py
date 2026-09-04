@@ -502,4 +502,18 @@ async def startup_event():
                 {"$set": {"current_students": count}}
             )
         
+        # [إصلاح 2026-09-04] حساب وليّ الأمر التجريبي لم يكن يحمل رقم هاتف، والربط
+        # بالأبناء يقوم على تطابق parent_phone — فكان parent1 لا يرى طالباً ولا يصله
+        # تنبيه غياب أبداً، وتبدو الميزة معطّلة في أي عرض للنظام. نربطه بأول طالب.
+        first_student = await db.students.find_one({"center_id": center_ids[0]})
+        if first_student and first_student.get("parent_phone"):
+            await db.users.update_one(
+                {"username": "parent1"},
+                {"$set": {"phone": first_student["parent_phone"], "center_id": center_ids[0]}},
+            )
+            # لا تُطبَع أسماء عربية هنا: طرفية ويندوز الافتراضية cp1252 لا تُرمّزها،
+            # فيرفع print استثناء UnicodeEncodeError داخل دورة الحياة ويسقط الإقلاع كلّه.
+            # بقية الملف تلتزم ASCII في الطباعة للسبب نفسه.
+            print("[SUCCESS] parent1 linked to the first demo student")
+
         print("[SUCCESS] Default students created")
