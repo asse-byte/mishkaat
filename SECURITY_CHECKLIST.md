@@ -10,8 +10,11 @@
 ## 0. Pre-flight: Confirm the Latest Audit Applied
 
 - [ ] `git log --oneline -n 5` shows the audit commit.
-- [ ] `grep -c "AUDIT-2026-05-22" backend/server.py` returns **≥ 75**.
-- [ ] `python -c "import ast; ast.parse(open('backend/server.py').read())"` exits cleanly.
+- [ ] `grep -rc "AUDIT-2026-05-22" backend/app/ | awk -F: '{s+=$2} END {print s}'` returns **≥ 75**.
+      (الشيفرة انتقلت من `server.py` إلى حزمة `backend/app/`؛ `server.py` صار غلافاً
+      يُبقي `server:app` نقطةَ الدخول.)
+- [ ] `python -m compileall -q backend/app backend/server.py` exits cleanly.
+- [ ] `python -m pyflakes backend/app backend/server.py` prints nothing.
 - [ ] `python -c "from cryptography.fernet import Fernet; print('OK')"` succeeds (dependency installed).
 
 ---

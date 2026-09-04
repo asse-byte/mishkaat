@@ -73,7 +73,20 @@ npm run dev
 ```
 coran-center-management-main/
 ├── backend/
-│   ├── server.py          # FastAPI — نقاط API كاملة
+│   ├── server.py          # غلاف رفيع: نقطة الدخول server:app
+│   ├── app/
+│   │   ├── config.py      # الإعدادات والأسرار وحرّاس الإنتاج
+│   │   ├── db.py          # اتصال MongoDB
+│   │   ├── models.py      # نماذج Pydantic
+│   │   ├── security.py    # المصادقة والتوكنات وحدود المحاولات
+│   │   ├── pii.py         # تعمية الحقول الشخصية
+│   │   ├── audit.py       # سلسلة سجل التدقيق
+│   │   ├── common.py      # المساعدات وفحص الملكية (BOLA)
+│   │   ├── scoring.py     # معادلة التقييم الذكي
+│   │   ├── sse.py         # الإشعارات: الحفظ والبثّ الحيّ
+│   │   ├── startup.py     # الفهارس والحسابات الأولى
+│   │   ├── main.py        # تركيب التطبيق وضمّ الموجّهات
+│   │   └── routers/       # 17 موجّهاً حسب المجال (89 مساراً)
 │   └── requirements.txt   # مكتبات Python المطلوبة
 └── frontend/
     ├── src/
