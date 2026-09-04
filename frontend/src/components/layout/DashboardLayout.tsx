@@ -27,6 +27,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
+import { NotificationsProvider, useNotifications } from '@/contexts/NotificationsContext';
 
 /* المجموعات: أربع عشرة وجهة في قائمة مسطّحة واحدة تجعل "لوحة التحكم" (يومية)
    و"الإعدادات" (شهرية) متساويتين في الوزن. التجميع يعيد ترتيب الأولوية. */
@@ -76,6 +77,17 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user: currentUser } = useAuth();
+  return (
+    <NotificationsProvider enabled={!!currentUser && currentUser.role !== 'admin'}>
+      <DashboardShell>{children}</DashboardShell>
+    </NotificationsProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  // عدّاد الإشعارات غير المقروءة — مشترك مع صفحة الإشعارات، وقناة SSE واحدة
+  const { unread } = useNotifications();
   const { user, logout, hasRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -250,11 +262,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user?.role !== 'admin' && (
                 <Link
                   to="/notifications"
-                  aria-label="الإشعارات"
+                  aria-label={unread > 0 ? `الإشعارات — ${unread} غير مقروء` : "الإشعارات"}
                   className="relative p-2 rounded-xl hover:bg-[hsl(var(--muted))] transition-colors text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 >
                   <Bell className="w-5 h-5" aria-hidden="true" />
-                  <span className="absolute top-2 left-2 w-2 h-2 bg-[hsl(var(--danger))] rounded-full border-2 border-white" aria-hidden="true" />
+                  {/* كانت النقطة الحمراء ظاهرة دائماً بلا علاقة بوجود شيء غير مقروء —
+                      شارةٌ تقول «لديك جديد» في كل الأحوال تُعلِّم المستخدمَ تجاهلَها.
+                      صارت تظهر عند وجود غير مقروء فعلاً، وتحمل عددَه. */}
+                  {unread > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-[hsl(var(--danger))] text-white border-2 border-[hsl(var(--surface))] tabular-nums">
+                      {unread > 99 ? '99+' : unread}
+                    </span>
+                  )}
                 </Link>
               )}
               {user && (

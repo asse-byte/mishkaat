@@ -5,9 +5,12 @@ import {
   UserCheck, DollarSign, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import api from '@/services/api';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 interface Notification {
   id: string;
+  /** stored = محفوظ على الخادم ويُعلَّم كمقروء هناك؛ derived = مشتقّ من نشاط، محلّي فقط */
+  source: 'stored' | 'derived';
   type: 'recitation' | 'attendance' | 'fee' | 'system';
   title: string;
   message: string;
@@ -24,8 +27,10 @@ const typeConfig = {
 } as const;
 
 // Build real notifications from API data
-async function fetchRealNotifications(user: any): Promise<Notification[]> {
-  const notifs: Notification[] = [];
+type DerivedNotification = Omit<Notification, 'source'>;
+
+async function fetchRealNotifications(user: any): Promise<DerivedNotification[]> {
+  const notifs: DerivedNotification[] = [];
   const today = new Date().toISOString().slice(0, 10);
 
   try {
@@ -159,28 +164,67 @@ async function fetchRealNotifications(user: any): Promise<Notification[]> {
   return notifs.sort((a, b) => Number(a.read) - Number(b.read)).slice(0, 20);
 }
 
+/** نوع الإشعار المحفوظ → أيقونته وتسميته في هذه الصفحة */
+function storedType(t: string): Notification['type'] {
+  if (t === 'absentee_alert') return 'attendance';
+  if (t.startsWith('fee')) return 'fee';
+  if (t.startsWith('recitation')) return 'recitation';
+  return 'system';
+}
+
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [filter, setFilter]               = useState<'all' | 'unread'>('all');
+  // المحفوظ على الخادم: حالته تدوم، ويصل الجديد حيّاً عبر SSE
+  const stored = useNotifications();
+  // المشتقّ من النشاط (تسميع/حضور/رسوم): معروض للفائدة، ولا يُحفَظ على الخادم
+  const [derived, setDerived] = useState<Notification[]>([]);
+  const [loadingDerived, setLoadingDerived] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    setLoadingDerived(true);
     const data = await fetchRealNotifications(user);
-    setNotifications(data);
-    setLoading(false);
-  }, [user]);
+    setDerived(data.map(n => ({ ...n, source: 'derived' as const })));
+    setLoadingDerived(false);
+    stored.reload();
+  }, [user, stored.reload]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [user]);
+
+  const loading = loadingDerived || stored.loading;
+
+  const notifications: Notification[] = [
+    ...stored.items.map(n => ({
+      id: n.id,
+      source: 'stored' as const,
+      type: storedType(n.type),
+      title: n.title,
+      message: n.body,
+      date: new Date(n.created_at).toLocaleDateString('ar', { day: 'numeric', month: 'short' }),
+      read: n.read,
+    })),
+    ...derived,
+  ];
 
   const filtered    = notifications.filter(n => filter === 'all' || !n.read);
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markRead    = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  const markAllRead = ()           => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const remove      = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const markRead = (id: string) => {
+    const n = notifications.find(x => x.id === id);
+    if (n?.source === 'stored') stored.markRead(id);
+    else setDerived(prev => prev.map(d => (d.id === id ? { ...d, read: true } : d)));
+  };
+  const markAllRead = () => {
+    stored.markAllRead();
+    setDerived(prev => prev.map(d => ({ ...d, read: true })));
+  };
+  // المشتقّ يُخفى محلياً؛ والمحفوظ يُعلَّم مقروءاً بدل حذفه — لا نمحو سجلاً من الخادم من هنا
+  const remove = (id: string) => {
+    const n = notifications.find(x => x.id === id);
+    if (n?.source === 'stored') stored.markRead(id);
+    else setDerived(prev => prev.filter(d => d.id !== id));
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -283,10 +327,12 @@ export default function NotificationsPage() {
                         <CheckCircle2 className="w-3.5 h-3.5" /> تعليم كمقروء
                       </button>
                     )}
-                    <button onClick={() => remove(n.id)}
-                      className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
-                      <Trash2 className="w-3.5 h-3.5" /> حذف
-                    </button>
+                    {n.source === 'derived' && (
+                      <button onClick={() => remove(n.id)}
+                        className="text-xs font-bold text-[hsl(var(--ink-3))] hover:text-[hsl(var(--danger))] transition-colors flex items-center gap-1">
+                        <Trash2 className="w-3.5 h-3.5" /> إخفاء
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
