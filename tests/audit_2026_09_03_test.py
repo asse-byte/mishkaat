@@ -310,37 +310,49 @@ async def main():
         r = await c.delete(f"/api/recitations/{other_rec}", headers=H(parent))
         check("[أمن] وليّ الأمر ممنوع من حذف التسميع", r.status_code == 403, str(r.status_code))
 
-        # ---------- 12b. دورة التجديد (تعتمد عليها الواجهة كلياً) ----------
-        r = await c.post("/api/auth/login", data={"username": "parent1", "password": "Parent1234"})
-        tok = r.json()
-        check("[واجهة] الدخول يُصدر refresh_token", bool(tok.get("refresh_token")) and tok.get("expires_in"),
-              str(list(tok)))
-        old_refresh = tok["refresh_token"]
+        # ---------- 12b. دورة التجديد عبر كعكة httpOnly ----------
+        rl = await c.post("/api/auth/login", data={"username": "parent1", "password": "Parent1234"})
+        tok = rl.json()
+        check("[أمن] الدخول لا يُعيد توكن التجديد في الجسم",
+              tok.get("refresh_token") is None and bool(tok.get("access_token")), str(list(tok)))
 
-        r = await c.post("/api/auth/refresh", json={"refresh_token": old_refresh})
-        check("[واجهة] التجديد يُصدر زوجاً جديداً",
-              r.status_code == 200 and r.json()["access_token"] != tok["access_token"]
-              and r.json()["refresh_token"] != old_refresh, r.text[:150])
-        new_pair = r.json()
+        raw_cookie = " ".join(v for k, v in rl.headers.multi_items() if k.lower() == "set-cookie")
+        flat = raw_cookie.lower().replace(" ", "")
+        ck = rl.cookies.get("mishkaat_refresh")
+        check("[أمن] توكن التجديد وصل في كعكة", bool(ck), raw_cookie[:90])
+        check("[أمن] الكعكة httpOnly فلا تقرؤها JavaScript", "httponly" in flat, raw_cookie[:120])
+        check("[أمن] الكعكة SameSite=lax تمنع الطلب عبر المواقع", "samesite=lax" in flat, raw_cookie[:120])
+        check("[أمن] الكعكة مقصورة على /api/auth", "path=/api/auth" in flat, raw_cookie[:120])
+
+        # الكعكة وحدها تكفي — بلا أي جسم
+        r = await c.post("/api/auth/refresh", cookies={"mishkaat_refresh": ck})
+        check("[واجهة] التجديد يعمل بالكعكة وحدها",
+              r.status_code == 200 and r.json().get("access_token") not in (None, tok["access_token"]),
+              r.text[:150])
+        new_access = r.json()["access_token"]
+        new_ck = r.cookies.get("mishkaat_refresh")
+        check("[أمن] التدوير يُصدر كعكة جديدة", bool(new_ck) and new_ck != ck)
 
         # التدوير: القديم يُبطَل — وهذا سبب وجود single-flight في الواجهة
-        r = await c.post("/api/auth/refresh", json={"refresh_token": old_refresh})
+        r = await c.post("/api/auth/refresh", cookies={"mishkaat_refresh": ck})
         check("[أمن] توكن التجديد القديم يُبطَل بعد التدوير", r.status_code == 401, str(r.status_code))
 
-        # التوكن الجديد يعمل فعلاً
-        r = await c.get("/api/auth/me", headers={"Authorization": f"Bearer {new_pair['access_token']}"})
+        r = await c.get("/api/auth/me", headers=H(new_access))
         check("[واجهة] توكن الوصول المجدَّد صالح", r.status_code == 200, str(r.status_code))
 
         # توكن الوصول لا يصلح للتجديد (فصل الأنواع)
-        r = await c.post("/api/auth/refresh", json={"refresh_token": new_pair["access_token"]})
+        r = await c.post("/api/auth/refresh", cookies={"mishkaat_refresh": new_access})
         check("[أمن] توكن الوصول لا يُقبل كتوكن تجديد", r.status_code == 401, str(r.status_code))
 
         # الخروج يُبطل توكن التجديد فعلاً — وإلا بقي صالحاً 7 أيام بعد "الخروج"
-        r = await c.post("/api/auth/logout",
-                         headers={"Authorization": f"Bearer {new_pair['access_token']}"},
-                         json={"refresh_token": new_pair["refresh_token"]})
+        r = await c.post("/api/auth/logout", headers=H(new_access),
+                         cookies={"mishkaat_refresh": new_ck})
         check("الخروج ينجح", r.status_code == 200, r.text[:120])
-        r = await c.post("/api/auth/refresh", json={"refresh_token": new_pair["refresh_token"]})
+        check("[أمن] الخروج يمسح الكعكة من المتصفّح",
+              any("mishkaat_refresh" in v and ('max-age=0' in v.lower().replace(" ", "") or 'expires=' in v.lower())
+                  for k, v in r.headers.multi_items() if k.lower() == "set-cookie"),
+              " ".join(v for k, v in r.headers.multi_items() if k.lower() == "set-cookie")[:120])
+        r = await c.post("/api/auth/refresh", cookies={"mishkaat_refresh": new_ck})
         check("[أمن] الخروج يُبطل توكن التجديد", r.status_code == 401, str(r.status_code))
 
         # ---------- 13. سباق النقرة المزدوجة على كشف الحضور ----------

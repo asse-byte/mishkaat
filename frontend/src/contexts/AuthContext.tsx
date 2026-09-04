@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { ReactNode } from 'react';
-import { authApi, tokenStore, setSessionExpiredHandler } from '@/services/api';
+import { authApi, tokenStore, setSessionExpiredHandler, restoreSession } from '@/services/api';
 import type { User, UserRole } from '@/types';
 
 interface AuthContextType {
@@ -19,31 +19,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   /**
-   * [إصلاح 2026-09-03] الجلسة تُتحقَّق من الخادم عند الإقلاع.
+   * [إصلاح 2026-09-04] استعادة الجلسة من كعكة httpOnly لا من localStorage.
    *
-   * قبله: الدور يُقرأ من localStorage ويُصدَّق كما هو، ونداء getMe معطَّل بتعليق. فمن يفتح أدوات
-   * المطوّر ويكتب role: 'super_admin' يرى كل شاشات الإدارة. الخادم يظل يمنع البيانات (تحققتُ من
-   * ذلك في مراجعة الخادم)، لكن الواجهة تعرض شاشات ستفشل، وأزراراً لا تعمل، وقوائم فارغة بلا سبب.
-   * وكانت الجلسة المنتهية أو الملغاة تبدو صالحة حتى أول نداء يفشل.
+   * لم يعد هناك توكن محفوظ في المتصفّح تقرؤه JavaScript، فالإقلاع يبدأ بلا توكن
+   * في الذاكرة ويطلب واحداً من /auth/refresh — تصل الكعكة وحدها فيعود المستخدم
+   * إلى جلسته. فإن لم تكن هناك كعكة صالحة فلا جلسة، وهو التصرّف الصحيح.
    *
-   * بعده: الخادم هو مصدر الدور. النسخة المحفوظة تُعرض فوراً لتفادي وميض شاشة الدخول، ثم
-   * يُصحّحها ردّ /auth/me — أو تُمسح الجلسة إن رفضه الخادم.
+   * ويبقى ما كان: الخادم هو مصدر الدور، والنسخة المحفوظة للعرض السريع فقط.
    */
   const loadUser = useCallback(async () => {
-    const token = tokenStore.access();
-    if (!token) {
+    // عرض متفائل من النسخة المحفوظة (سرعة فقط — ليست مصدر ثقة ولا اعتماداً)
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try { setUser(JSON.parse(savedUser)); } catch { localStorage.removeItem('user'); }
+    }
+
+    // زائر لم يدخل قطّ: لا كعكة ولا ملف محفوظ، فلا داعي لنداء تجديد يعود 401
+    // على كل فتحة لصفحة عامة (صفحة الهبوط والتسجيل يراهما غير المسجَّلين).
+    if (!savedUser) {
       setIsLoading(false);
       return;
     }
 
-    // عرض متفائل من النسخة المحفوظة (سرعة فقط — ليست مصدر ثقة)
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch {
-        localStorage.removeItem('user');
-      }
+    const restored = await restoreSession();
+    if (!restored) {
+      tokenStore.clear();
+      setUser(null);
+      setIsLoading(false);
+      return;
     }
 
     try {
@@ -51,13 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.setItem('user', JSON.stringify(verified));
       setUser(verified);
     } catch (error: any) {
-      // 401 يعالجها معترض التجديد؛ ما يصل هنا يعني أن الجلسة انتهت فعلاً أو أن الحساب عُطّل
       const status = error?.response?.status;
       if (status === 401 || status === 403) {
         tokenStore.clear();
         setUser(null);
       }
-      // انقطاع شبكة عابر: نُبقي العرض المتفائل ولا نطرد المستخدم
+      // انقطاع شبكة عابر: نُبقي ما استعدناه ولا نطرد المستخدم
     } finally {
       setIsLoading(false);
     }
@@ -82,8 +84,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await authApi.login(username, password);
-      // يحفظ توكن التجديد أيضاً — بدونه تنتهي الجلسة بعد ساعة بلا رجعة
-      tokenStore.save(response);
+      // توكن الوصول إلى الذاكرة؛ وتوكن التجديد وصل في كعكة httpOnly لا تراها هذه الشيفرة
+      tokenStore.set(response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
       setUser(response.user);
     } finally {

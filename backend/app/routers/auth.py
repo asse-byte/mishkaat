@@ -4,6 +4,8 @@ from app.clock import utc_from_timestamp, utcnow
 
 from datetime import timedelta
 from fastapi import APIRouter
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Request
@@ -19,7 +21,7 @@ from app.common import _PHONE_SCOPED_ROLES, client_ip
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, MAX_LOGIN_ATTEMPTS, REFRESH_TOKEN_EXPIRE_DAYS, RESET_CODE_TTL_MINUTES, RESET_MAX_VERIFY_ATTEMPTS, SECRET_KEY, logger
 from app.db import db
 from app.models import AdminResetPasswordRequest, ChangePasswordRequest, ForgotPasswordRequest, LogoutBody, RefreshRequest, ResetPasswordRequest, Token, UpdateProfileRequest, UserResponse
-from app.security import _check_rate_limit, _check_reset_request_rate, _clear_attempts, _clear_attempts_for_account, _decode_and_verify, _record_failed_attempt, authenticate_user, create_access_token, create_refresh_token, get_current_user, get_password_hash, get_user_by_username, hash_reset_code, oauth2_scheme, revoke_jti, validate_password_complexity, verify_password
+from app.security import _check_rate_limit, _check_reset_request_rate, _clear_attempts, _clear_attempts_for_account, _decode_and_verify, _record_failed_attempt, authenticate_user, create_access_token, create_refresh_token, get_current_user, get_password_hash, get_user_by_username, hash_reset_code, oauth2_scheme, revoke_jti, validate_password_complexity, verify_password, REFRESH_COOKIE, set_refresh_cookie, clear_refresh_cookie
 
 router = APIRouter()
 
@@ -87,18 +89,32 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
         created_at=user["created_at"]
     )
 
-    return Token(
+    # [إصلاح 2026-09-04] توكن التجديد يخرج في كعكة httpOnly لا في جسم الاستجابة،
+    # فلا تصل إليه JavaScript ولا يُحفَظ في localStorage.
+    payload = Token(
         access_token=access_token,
         token_type="bearer",
         user=user_response,
-        refresh_token=refresh_token,
+        refresh_token=None,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+    resp = JSONResponse(content=jsonable_encoder(payload))
+    set_refresh_cookie(resp, refresh_token)
+    return resp
 
 @router.post("/api/auth/refresh", response_model=Token)
-async def refresh_access_token(body: RefreshRequest):
-    """تجديد التوكن باستخدام refresh token (مع تدوير وإلغاء القديم)"""
-    payload, user = await _decode_and_verify(body.refresh_token, expected_type="refresh")
+async def refresh_access_token(request: Request, body: Optional[RefreshRequest] = None):
+    """
+    تجديد التوكن (مع تدوير وإلغاء القديم).
+
+    [إصلاح 2026-09-04] المصدر الأول هو كعكة httpOnly. ويُقبل الجسم كذلك حتى لا
+    ينكسر عميل قديم أو غير متصفّحي (تطبيق جوال مثلاً) لا يملك الكعكة.
+    """
+    cookie_token = request.cookies.get(REFRESH_COOKIE)
+    token = cookie_token or (body.refresh_token if body else None)
+    if not token:
+        raise HTTPException(status_code=401, detail="لا يوجد توكن تجديد")
+    payload, user = await _decode_and_verify(token, expected_type="refresh")
     # Rotate: revoke the old refresh token jti
     old_jti = payload.get("jti")
     old_exp = utc_from_timestamp(payload["exp"]) if "exp" in payload else (utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
@@ -119,13 +135,16 @@ async def refresh_access_token(body: RefreshRequest):
         is_active=user["is_active"],
         created_at=user["created_at"],
     )
-    return Token(
+    out = Token(
         access_token=new_access,
         token_type="bearer",
         user=user_response,
-        refresh_token=new_refresh,
+        refresh_token=None,
         expires_in=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
+    resp = JSONResponse(content=jsonable_encoder(out))
+    set_refresh_cookie(resp, new_refresh)
+    return resp
 
 @router.get("/api/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
@@ -161,9 +180,11 @@ async def logout(
         pass
 
     # [AUDIT-2026-05-22 fix: also revoke the refresh token if the client supplied it]
-    if body and body.refresh_token:
+    # [إصلاح 2026-09-04] المصدر الأول هو الكعكة؛ والجسم يبقى مقبولاً لعميل غير متصفّحي.
+    refresh_raw = request.cookies.get(REFRESH_COOKIE) or (body.refresh_token if body else None)
+    if refresh_raw:
         try:
-            r_payload = jwt.decode(body.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
+            r_payload = jwt.decode(refresh_raw, SECRET_KEY, algorithms=[ALGORITHM])
             if r_payload.get("type") == "refresh" and r_payload.get("sub") == current_user["username"]:
                 r_jti = r_payload.get("jti")
                 r_exp = utc_from_timestamp(r_payload["exp"]) if "exp" in r_payload else (utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
@@ -179,7 +200,9 @@ async def logout(
         payload={"username": current_user["username"]},
         client_ip=client_ip(request),
     )
-    return {"message": "تم تسجيل الخروج بنجاح"}
+    resp = JSONResponse(content={"message": "تم تسجيل الخروج بنجاح"})
+    clear_refresh_cookie(resp)
+    return resp
 
 @router.post("/api/auth/change-password")
 async def change_password(
@@ -219,12 +242,15 @@ async def change_password(
     refreshed_user["user_version"] = next_version
     new_access, _ = create_access_token(refreshed_user)
     new_refresh, _ = create_refresh_token(refreshed_user)
-    return {
+    # التوكن الجديد يبقى في الجسم (يعيش في ذاكرة الصفحة)، أمّا توكن التجديد فيخرج
+    # في الكعكة وحدها — نفس مبدأ الدخول.
+    resp = JSONResponse(content={
         "message": "تم تغيير كلمة المرور بنجاح. تم تسجيل الخروج تلقائياً من الأجهزة الأخرى.",
         "access_token": new_access,
-        "refresh_token": new_refresh,
         "expires_in": ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-    }
+    })
+    set_refresh_cookie(resp, new_refresh)
+    return resp
 
 @router.post("/api/auth/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest, request: Request):

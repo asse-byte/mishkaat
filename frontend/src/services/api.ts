@@ -2,29 +2,41 @@ import axios from 'axios';
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { AuthResponse, User, DashboardStats, Student, Teacher, Halaqah, Center, Recitation, Attendance, Fee } from '@/types';
 
-const ACCESS_KEY = 'access_token';
-const REFRESH_KEY = 'refresh_token';
 const USER_KEY = 'user';
 
-/** مخزن التوكنات — نقطة واحدة للقراءة والكتابة والمسح */
+/**
+ * [إصلاح 2026-09-04] توكن الوصول في الذاكرة، وتوكن التجديد في كعكة httpOnly.
+ *
+ * كان الاثنان في localStorage — وكل ما فيه تقرؤه أي شيفرة تعمل في الصفحة.
+ * ثغرةُ XSS واحدة (في اعتمادية، في إعلان، في امتداد متصفّح) كانت تكفي لسرقة
+ * توكن تجديد صالح سبعة أيام، يُدوَّر بهدوء فيبقى المهاجم داخل الحساب حتى بعد
+ * أن يغيّر المالكُ كلمة مرورَه على جهاز آخر.
+ *
+ * الآن: توكن التجديد لا تراه JavaScript إطلاقاً (الخادم يضعه في كعكة httpOnly
+ * ويرسلها المتصفّح تلقائياً إلى /api/auth). وتوكن الوصول يعيش في متغيّر داخل
+ * الوحدة وحدها، فيزول بإغلاق التبويب — وعمره ساعة على أي حال.
+ *
+ * وبقاء الجلسة عبر إعادة التحميل لم يُفقد: عند الإقلاع بلا توكن في الذاكرة
+ * تُنادى /auth/refresh، فتصل الكعكة وحدها وتعيد توكن وصول جديداً.
+ */
+let accessToken: string | null = null;
+
 export const tokenStore = {
-  access: () => localStorage.getItem(ACCESS_KEY),
-  refresh: () => localStorage.getItem(REFRESH_KEY),
-  save(auth: Pick<AuthResponse, 'access_token' | 'refresh_token'>) {
-    localStorage.setItem(ACCESS_KEY, auth.access_token);
-    if (auth.refresh_token) {
-      localStorage.setItem(REFRESH_KEY, auth.refresh_token);
-    }
-  },
+  access: () => accessToken,
+  set(token: string | null) { accessToken = token; },
   clear() {
-    localStorage.removeItem(ACCESS_KEY);
-    localStorage.removeItem(REFRESH_KEY);
+    accessToken = null;
     localStorage.removeItem(USER_KEY);
+    // بقايا الإصدار السابق: توكنات كانت تُحفَظ في localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
   },
 };
 
 const api = axios.create({
   baseURL: '/api',
+  // لازم لإرسال كعكة توكن التجديد إلى /api/auth
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -56,12 +68,22 @@ const isAuthPath = (url?: string) => !!url && AUTH_PATHS.some((p) => url.include
 let refreshInFlight: Promise<string> | null = null;
 
 async function refreshAccessToken(): Promise<string> {
-  const refresh_token = tokenStore.refresh();
-  if (!refresh_token) throw new Error('no refresh token');
-  // axios خام لا يمرّ بمعترضات هذا العميل، وإلا لدار التجديد على نفسه عند فشله
-  const { data } = await axios.post<AuthResponse>('/api/auth/refresh', { refresh_token });
-  tokenStore.save(data);
+  // لا يُقرأ توكن تجديد من هنا: الكعكة httpOnly يرسلها المتصفّح وحده.
+  // axios خام لا يمرّ بمعترضات هذا العميل، وإلا لدار التجديد على نفسه عند فشله.
+  const { data } = await axios.post<AuthResponse>('/api/auth/refresh', {}, { withCredentials: true });
+  tokenStore.set(data.access_token);
   return data.access_token;
+}
+
+/** يُستدعى عند الإقلاع: يستعيد الجلسة من الكعكة وحدها */
+export async function restoreSession(): Promise<AuthResponse | null> {
+  try {
+    const { data } = await axios.post<AuthResponse>('/api/auth/refresh', {}, { withCredentials: true });
+    tokenStore.set(data.access_token);
+    return data;
+  } catch {
+    return null;
+  }
 }
 
 /** تُضبط من AuthProvider حتى يُفرَّغ حالة React أيضاً، لا التخزين فقط */
@@ -121,8 +143,8 @@ export const authApi = {
   // [إصلاح 2026-09-03] يُرسل توكن التجديد ليُبطله الخادم فعلاً.
   // بدونه يبقى التوكن صالحاً سبعة أيام بعد "الخروج" — وهو ما يعنيه الخروج على جهاز مشترك.
   logout: async (): Promise<void> => {
-    const refresh_token = tokenStore.refresh();
-    await api.post('/auth/logout', refresh_token ? { refresh_token } : {});
+    // الخادم يُبطل توكن التجديد ويمسح الكعكة؛ لا شيء يُرسَل من هنا
+    await api.post('/auth/logout', {});
   },
 
   getMe: async (): Promise<User> => {

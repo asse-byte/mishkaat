@@ -366,7 +366,8 @@ class DashboardStats(BaseModel):
 
 # [AUDIT-2026-05-22 fix: refresh-token rotation endpoint]
 class RefreshRequest(BaseModel):
-    refresh_token: str
+    # اختياري: المصدر الأول كعكة httpOnly، والجسم يبقى مقبولاً لعميل غير متصفّحي
+    refresh_token: Optional[str] = None
 
 class LogoutBody(BaseModel):
     refresh_token: Optional[str] = None

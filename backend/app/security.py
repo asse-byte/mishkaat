@@ -16,7 +16,7 @@ import hmac
 import jwt
 import secrets
 
-from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, ACCOUNT_LOCKOUT_MINUTES, ALGORITHM, BCRYPT_ROUNDS, LOCKOUT_MINUTES, MAX_ACCOUNT_ATTEMPTS, MAX_LOGIN_ATTEMPTS, REFRESH_TOKEN_EXPIRE_DAYS, REGISTER_MAX_PER_WINDOW, REGISTER_WINDOW_MINUTES, RESET_MAX_REQUESTS_PER_HOUR, SECRET_KEY, logger
+from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, ACCOUNT_LOCKOUT_MINUTES, ALGORITHM, BCRYPT_ROUNDS, LOCKOUT_MINUTES, MAX_ACCOUNT_ATTEMPTS, MAX_LOGIN_ATTEMPTS, REFRESH_TOKEN_EXPIRE_DAYS, REGISTER_MAX_PER_WINDOW, REGISTER_WINDOW_MINUTES, RESET_MAX_REQUESTS_PER_HOUR, SECRET_KEY, logger, IS_PRODUCTION
 from app.db import db
 
 
@@ -258,3 +258,39 @@ async def _check_register_rate(ip: str):
         {"$push": {"timestamps": now}, "$set": {"last_seen": now}},
         upsert=True,
     )
+
+# ============================ كعكة توكن التجديد ============================
+# [إصلاح 2026-09-04] توكن التجديد لم يعد يُسلَّم إلى JavaScript.
+#
+# كان يُعاد في جسم الاستجابة ويُحفَظ في localStorage — وكل ما في localStorage
+# تقرؤه أي شيفرة تعمل في الصفحة. ثغرةُ XSS واحدة (في اعتمادية، في إعلان، في
+# امتداد متصفّح) تكفي لسرقة توكن تجديد صالح **سبعة أيام**، يُدوَّر بهدوء فيبقى
+# المهاجم داخل الحساب حتى بعد أن يغيّر المالكُ كلمة مرورَه على جهاز آخر.
+#
+# صار يُسلَّم في كعكة httpOnly: المتصفّح يرسلها تلقائياً إلى /api/auth ولا
+# تستطيع أي شيفرة قراءتها. أمّا توكن الوصول فيبقى في الذاكرة وحدها (لا
+# localStorage)، وعمره ساعة، ويُجدَّد من الكعكة.
+#
+# Path مقصور على /api/auth: لا تُرسَل الكعكة مع كل نداء API، فتقلّ فرص التسريب
+# ولا تُستعمل مصادقةً ضمنية على مسارات أخرى (تلك تبقى برأس Bearer).
+# SameSite=lax يمنع إرسالها في طلبات من مواقع أخرى، وهو ما يحمي /auth/refresh
+# من التزوير عبر المواقع (CSRF) — والواجهة والـAPI على أصل واحد فلا يضرّها.
+REFRESH_COOKIE = "mishkaat_refresh"
+REFRESH_COOKIE_PATH = "/api/auth"
+
+
+def set_refresh_cookie(response, token: str) -> None:
+    """يضع توكن التجديد في كعكة httpOnly لا تقرؤها JavaScript."""
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=token,
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 24 * 3600,
+        httponly=True,
+        secure=IS_PRODUCTION,   # في التطوير http محلي، فلا تُشترط القناة المؤمَّنة
+        samesite="lax",
+        path=REFRESH_COOKIE_PATH,
+    )
+
+
+def clear_refresh_cookie(response) -> None:
+    response.delete_cookie(key=REFRESH_COOKIE, path=REFRESH_COOKIE_PATH)
