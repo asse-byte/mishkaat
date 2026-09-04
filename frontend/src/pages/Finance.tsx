@@ -40,6 +40,7 @@ export default function Finance() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [center, setCenter]     = useState<Center | null>(null);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
 
   // Forms
   const [showFeeForm, setShowFeeForm]         = useState(false);
@@ -158,9 +159,17 @@ export default function Finance() {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm('حذف هذا المصروف؟')) return;
-    await api.delete(`/expenses/${id}`);
-    await loadData();
+    // المصروف قيدٌ ماليّ لا يُمحى: يُبطَل ويبقى في السجل ويخرج من المجاميع.
+    // والسبب مطلوب — إبطال بلا سبب يُفقد السجلَّ فائدته عند أي مراجعة لاحقة.
+    const reason = prompt('سبب إبطال هذا المصروف؟ (يبقى القيد في السجل ويخرج من المجاميع)');
+    if (reason === null) return;
+    if (!reason.trim()) { setError('يجب ذكر سبب الإبطال'); return; }
+    try {
+      await api.delete(`/expenses/${id}`, { params: { reason: reason.trim() } });
+      await loadData();
+    } catch (e: any) {
+      setError(e.response?.data?.detail || 'تعذّر إبطال المصروف');
+    }
   };
 
   const handleTriggerPrint = (voucher: typeof printVoucher) => {
@@ -185,6 +194,16 @@ export default function Finance() {
 
   return (
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
+
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 p-3 rounded-[var(--radius-sm)] bg-[hsl(var(--danger-wash))] border border-[hsl(var(--danger)/.3)] text-[hsl(var(--danger))] text-sm"
+        >
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="font-bold shrink-0" aria-label="إغلاق">×</button>
+        </div>
+      )}
       
       {/* Dynamic CSS Print Styling */}
       <style>{`

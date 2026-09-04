@@ -170,3 +170,8 @@ async def scoped_student_ids(center_id: Optional[str], cap: int = 20000) -> List
         return []
     rows = await db.students.find({"center_id": center_id}, {"_id": 1}).to_list(cap)
     return [str(r["_id"]) for r in rows]
+
+# [إصلاح 2026-09-04] المصروف لم يعد يُمحى.
+# "$ne": True لا "== False" — فالصفوف القديمة لا تحمل الحقل إطلاقاً وشرطُ
+# المساواة بـ False كان سيُخفيها كلها من كل مجموع.
+NOT_VOIDED = {"voided": {"$ne": True}}

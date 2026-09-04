@@ -243,6 +243,34 @@ async def main():
                               headers={"X-Forwarded-For": f"10.0.0.{_}"})
         check("[أمن] القفل على الحساب يصمد أمام تدوير العناوين", rr.status_code == 429, str(rr.status_code))
 
+        # ---------- 11ب. إبطال المصروف بدل محوه ----------
+        r = await c.post("/api/expenses", headers=H(mgr), json={
+            "title": "كهرباء", "amount": 30000, "date": "2026-09-01", "center_id": center_id})
+        check("إنشاء مصروف", r.status_code == 200, r.text[:120])
+        exp_id = r.json()["id"]
+
+        r = await c.get(f"/api/finance/summary?from=2026-09-01&to=2026-09-30", headers=H(mgr))
+        before = r.json()["costs"]["expenses"]
+
+        r = await c.delete(f"/api/expenses/{exp_id}?reason=قيد مكرر", headers=H(mgr))
+        check("[مبدأ] الحذف صار إبطالاً", r.status_code == 200 and r.json().get("voided") is True, r.text[:150])
+
+        raw = await server.db.expenses.find_one({"_id": server.ObjectId(exp_id)})
+        check("[مبدأ] الصفّ المالي باقٍ في السجل", raw is not None)
+        check("[مبدأ] الإبطال يسجّل من ومتى ولماذا",
+              raw.get("voided") is True and raw.get("voided_by") and raw.get("voided_at")
+              and raw.get("void_reason") == "قيد مكرر", str({k: raw.get(k) for k in ("voided","voided_by","void_reason")}))
+
+        r = await c.get(f"/api/finance/summary?from=2026-09-01&to=2026-09-30", headers=H(mgr))
+        after = r.json()["costs"]["expenses"]
+        check("[مبدأ] المُبطَل خرج من المجموع", after == before - 30000, f"before={before} after={after}")
+
+        r = await c.get("/api/expenses", headers=H(mgr))
+        check("[مبدأ] المُبطَل خارج القائمة", all(e["id"] != exp_id for e in r.json()))
+
+        r = await c.delete(f"/api/expenses/{exp_id}?reason=مرة أخرى", headers=H(mgr))
+        check("[مبدأ] الإبطال المكرر مرفوض", r.status_code == 409, str(r.status_code))
+
         # ---------- 12. حذف التسميع (كان زراً وهمياً) ----------
         # الواجهة كانت تنادي PUT /recitations/{id} — نقطة لا وجود لها — وتبتلع الـ404 بصمت
         r = await c.post("/api/recitations", headers=H(mgr), json={

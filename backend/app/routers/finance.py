@@ -3,14 +3,14 @@
 from app.clock import utcnow
 
 from datetime import datetime
-from fastapi import APIRouter
+from fastapi import APIRouter, Request
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Query
 from typing import Optional
 
 from app.audit import write_audit_log
-from app.common import check_student_access, parse_date_boundary, safe_object_id, scoped_student_ids, serialize_doc
+from app.common import check_student_access, parse_date_boundary, safe_object_id, scoped_student_ids, serialize_doc, NOT_VOIDED, client_ip
 from app.db import db
 from app.models import ExpenseCreate, FeeCreate, FeeStatus, SalaryCreate
 from app.security import get_current_user
@@ -241,7 +241,10 @@ async def create_salary(salary: SalaryCreate, current_user: dict = Depends(get_c
         payload={"teacher_id": salary.teacher_id, "amount": salary.amount, "month": salary.month}
     )
     
-    doc = salary_dict.copy()
+    # [إصلاح 2026-09-04] insert_one يحقن _id في القاموس المُمرَّر إليه نفسه، فكانت
+    # النسخة تحمل ObjectId لا يعرف FastAPI ترميزه — وإضافة الراتب كان يفشل بـ500 دائماً.
+    # نُسقِط _id صراحةً بدل الاتّكال على أن القاموس لم يُمَسّ.
+    doc = {k: v for k, v in salary_dict.items() if k != "_id"}
     doc["id"] = str(result.inserted_id)
     doc["created_at"] = doc["created_at"].isoformat()
     return doc
@@ -259,7 +262,7 @@ async def get_expenses(current_user: dict = Depends(get_current_user)):
         if not current_user.get("center_id"):
             return []
         query["center_id"] = current_user["center_id"]
-    expenses = await db.expenses.find(query).sort("created_at", -1).to_list(200)
+    expenses = await db.expenses.find({**query, **NOT_VOIDED}).sort("created_at", -1).to_list(200)
     result = []
     for e in expenses:
         doc = serialize_doc(e)
@@ -289,14 +292,22 @@ async def create_expense(expense: ExpenseCreate, current_user: dict = Depends(ge
         payload={"title": expense.title, "amount": expense.amount, "category": expense.category}
     )
     
-    doc = exp_dict.copy()
+    # [إصلاح 2026-09-04] insert_one يحقن _id في القاموس المُمرَّر إليه نفسه، فكانت
+    # النسخة تحمل ObjectId لا يعرف FastAPI ترميزه — وإضافة المصروف كان يفشل بـ500 دائماً.
+    # نُسقِط _id صراحةً بدل الاتّكال على أن القاموس لم يُمَسّ.
+    doc = {k: v for k, v in exp_dict.items() if k != "_id"}
     doc["id"] = str(result.inserted_id)
     doc["created_at"] = doc["created_at"].isoformat()
     return doc
 
 @router.delete("/api/expenses/{expense_id}")
-async def delete_expense(expense_id: str, current_user: dict = Depends(get_current_user)):
-    """حذف مصروف"""
+async def delete_expense(
+    expense_id: str,
+    request: Request,
+    reason: Optional[str] = Query(None, max_length=300, description="سبب الإبطال"),
+    current_user: dict = Depends(get_current_user),
+):
+    """إبطال مصروف (لا يُمحى — يبقى في السجل ويخرج من المجاميع)"""
     if current_user["role"] not in ["admin", "center_manager"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
         
@@ -308,17 +319,34 @@ async def delete_expense(expense_id: str, current_user: dict = Depends(get_curre
         
     if current_user["role"] != "admin" and expense.get("center_id") != current_user.get("center_id"):
         raise HTTPException(status_code=403, detail="غير مصرح لك بحذف مصروف لمركز آخر")
-        
-    await db.expenses.delete_one({"_id": exp_obj_id})
-    
+
+    if expense.get("voided"):
+        raise HTTPException(status_code=409, detail="هذا المصروف مُبطَل مسبقاً")
+
+    # [إصلاح 2026-09-04] كان delete_one يمحو الصفّ فعلياً.
+    # المصروف قيدٌ ماليّ يدخل صافي الربح: محوُه يغيّر أرقام فترة ماضية بلا أثر
+    # يُراجَع، ويخالف مبدأ المشروع في أن السجل المالي يُصحَّح ولا يُمحى. صار
+    # إبطالاً موثَّقاً: الصفّ يبقى، ويخرج من كل مجموع، ويُسجَّل من أبطله ومتى ولماذا.
+    await db.expenses.update_one(
+        {"_id": exp_obj_id},
+        {"$set": {
+            "voided": True,
+            "voided_at": utcnow(),
+            "voided_by": str(current_user["_id"]),
+            "void_reason": (reason or "").strip() or None,
+        }},
+    )
+
     await write_audit_log(
         actor_id=str(current_user["_id"]),
         center_id=expense.get("center_id", "system"),
         action="delete_expense",
-        payload={"expense_id": expense_id, "title": expense.get("title"), "amount": expense.get("amount")}
+        payload={"expense_id": expense_id, "title": expense.get("title"),
+                 "amount": expense.get("amount"), "reason": (reason or "").strip() or None},
+        client_ip=client_ip(request),
     )
-    
-    return {"message": "تم حذف المصروف"}
+
+    return {"message": "تم إبطال المصروف", "voided": True}
 
 # ==================== Financial Summary (إضافة 2026-09-03) ====================
 
@@ -391,7 +419,7 @@ async def get_finance_summary(
 
     center_scope = {"center_id": scope_center} if scope_center else {}
     salaries = await _sum_amounts(db.salaries, {**center_scope, **window("created_at")})
-    expenses = await _sum_amounts(db.expenses, {**center_scope, **window("created_at")})
+    expenses = await _sum_amounts(db.expenses, {**center_scope, **window("created_at"), **NOT_VOIDED})
 
     return {
         "center_id": scope_center,

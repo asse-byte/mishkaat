@@ -11,7 +11,7 @@ from fastapi import Request
 import sys
 
 from app.audit import write_audit_log
-from app.common import client_ip, safe_object_id, serialize_doc
+from app.common import client_ip, safe_object_id, serialize_doc, NOT_VOIDED
 from app.config import DB_NAME
 from app.db import db
 from app.routers.finance import _sum_amounts
@@ -519,7 +519,7 @@ async def super_get_global_stats(current_user: dict = Depends(get_current_user))
     # Financial aggregate in FCFA (الجمع داخل قاعدة البيانات — انظر _sum_amounts)
     total_fees_fcfa = await _sum_amounts(db.fees, {"status": "paid"})
     total_salaries_fcfa = await _sum_amounts(db.salaries, {})
-    total_expenses_fcfa = await _sum_amounts(db.expenses, {})
+    total_expenses_fcfa = await _sum_amounts(db.expenses, dict(NOT_VOIDED))
 
     global_balance_fcfa = total_fees_fcfa - total_salaries_fcfa - total_expenses_fcfa
 
