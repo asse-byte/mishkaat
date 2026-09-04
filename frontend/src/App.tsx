@@ -5,6 +5,7 @@ Arabic: هذا المشروع ملكية خاصة وسري للغاية. جمي�
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import type { UserRole } from '@/types';
 import { LoadingPage } from '@/components/ui/loading';
 import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
@@ -32,8 +33,25 @@ import BulkMessages from '@/pages/BulkMessages';
 import { NotFoundPage, ForbiddenPage } from '@/pages/ErrorPages';
 import DashboardLayout from '@/components/layout/DashboardLayout';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuth();
+/**
+ * [إصلاح 2026-09-03] حراسة المسارات بالأدوار.
+ *
+ * قبله: ProtectedRoute تفحص "هل سجّل الدخول؟" فقط. أي مستخدم — طالب أو وليّ أمر — يكتب
+ * /finance أو /audit-logs في شريط العنوان فتُفتح له الصفحة. الخادم يمنع البيانات (403)،
+ * لكن الصفحة تُرسم ثم تفشل نداءاتها، فيرى المستخدم شاشة مكسورة بدل رسالة واضحة.
+ * وصفحة ForbiddenPage كانت موجودة في المشروع ولا يستدعيها أي حارس.
+ *
+ * قائمة الأدوار هنا تطابق ما يسمح به الخادم فعلاً، لا ما تعرضه القائمة الجانبية —
+ * حتى لا نمنع مستخدماً كان الخادم سيخدمه.
+ */
+function ProtectedRoute({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles?: UserRole[];
+}) {
+  const { isAuthenticated, isLoading, hasRole } = useAuth();
 
   if (isLoading) {
     return <LoadingPage />;
@@ -43,8 +61,20 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/login" replace />;
   }
 
+  if (roles && !hasRole(roles)) {
+    return <DashboardLayout><ForbiddenPage /></DashboardLayout>;
+  }
+
   return <DashboardLayout>{children}</DashboardLayout>;
 }
+
+// الأدوار المسموح لها فعلاً في الخادم بالنقاط التي تعتمد عليها كل صفحة
+const MANAGEMENT: UserRole[] = ['admin', 'super_admin', 'center_manager'];
+const FINANCE: UserRole[] = ['admin', 'center_manager'];            // /expenses و/salaries تمنع super_admin
+const AUDIT: UserRole[] = ['admin', 'super_admin'];
+const STAFF: UserRole[] = ['admin', 'super_admin', 'center_manager', 'teacher'];
+const ATTENDANCE: UserRole[] = ['admin', 'center_manager', 'teacher'];
+const PLANS: UserRole[] = ['admin', 'center_manager', 'teacher'];
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -82,7 +112,7 @@ function AppRoutes() {
       <Route
         path="/centers"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={MANAGEMENT}>
             <Centers />
           </ProtectedRoute>
         }
@@ -90,7 +120,7 @@ function AppRoutes() {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={FINANCE}>
             <Reports />
           </ProtectedRoute>
         }
@@ -98,7 +128,7 @@ function AppRoutes() {
       <Route
         path="/students"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={STAFF}>
             <Students />
           </ProtectedRoute>
         }
@@ -122,7 +152,7 @@ function AppRoutes() {
       <Route
         path="/teachers"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={MANAGEMENT}>
             <Teachers />
           </ProtectedRoute>
         }
@@ -130,7 +160,7 @@ function AppRoutes() {
       <Route
         path="/halaqat"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={STAFF}>
             <Halaqat />
           </ProtectedRoute>
         }
@@ -146,7 +176,7 @@ function AppRoutes() {
       <Route
         path="/attendance"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={ATTENDANCE}>
             <Attendance />
           </ProtectedRoute>
         }
@@ -154,7 +184,7 @@ function AppRoutes() {
       <Route
         path="/finance"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={FINANCE}>
             <Finance />
           </ProtectedRoute>
         }
@@ -162,7 +192,7 @@ function AppRoutes() {
       <Route
         path="/review-plans"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={PLANS}>
             <ReviewPlans />
           </ProtectedRoute>
         }
@@ -170,7 +200,7 @@ function AppRoutes() {
       <Route
         path="/academic-schedules"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={STAFF}>
             <AcademicSchedules />
           </ProtectedRoute>
         }
@@ -218,7 +248,7 @@ function AppRoutes() {
       <Route
         path="/audit-logs"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={AUDIT}>
             <AuditLogPage />
           </ProtectedRoute>
         }

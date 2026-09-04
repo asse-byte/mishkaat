@@ -1,6 +1,6 @@
 ﻿/*
-English: This project is proprietary and confidential. All rights reserved to Abdoul Malick Cisse (Copyright Â© 2026).
-Arabic: Ù‡Ø°Ø§ Ø§Ù„Ù…Ø´Ø±ÙˆØ¹ Ù…Ù„ÙƒÙŠØ© Ø®Ø§ØµØ© ÙˆØ³Ø±ÙŠ Ù„Ù„ØºØ§ÙŠØ©. Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø­Ù‚ÙˆÙ‚ Ù…Ø­ÙÙˆØ¸Ø© Ù„Ù€ Ø¹Ø¨Ø¯ Ø§Ù„Ù…Ø§Ù„Ùƒ Ø³ÙŠØ³ÙŠ (Ø­Ù‚ÙˆÙ‚ Ø§Ù„Ù†Ø´Ø± Â© 2026).
+English: This project is proprietary and confidential. All rights reserved to Abdoul Malick Cisse (Copyright © 2026).
+Arabic: هذا المشروع ملكية خاصة وسري للغاية. جميع الحقوق محفوظة لـ عبد المالك سيسي (حقوق النشر © 2026).
 */
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading';
@@ -20,13 +20,13 @@ interface Student { id: string; name: string; }
 interface Teacher { id: string; name: string; }
 interface Center { id: string; name: string; currency?: string; address?: string; phone?: string; }
 
-const feeTypeLabels: Record<string, string> = { monthly: 'Ø´Ù‡Ø±ÙŠ', annual: 'Ø³Ù†ÙˆÙŠ', registration: 'ØªØ³Ø¬ÙŠÙ„' };
+const feeTypeLabels: Record<string, string> = { monthly: 'شهري', annual: 'سنوي', registration: 'تسجيل' };
 const feeStatusLabels: Record<string, { text: string; cls: string }> = {
-  pending: { text: 'Ù…Ø¹Ù„Ù‚', cls: 'bg-amber-100 text-amber-700' },
-  paid:    { text: 'Ù…Ø¯ÙÙˆØ¹', cls: 'bg-emerald-100 text-emerald-700' },
-  overdue: { text: 'Ù…ØªØ£Ø®Ø±', cls: 'bg-red-100 text-red-700' },
+  pending: { text: 'معلق', cls: 'bg-amber-100 text-amber-700' },
+  paid:    { text: 'مدفوع', cls: 'bg-emerald-100 text-emerald-700' },
+  overdue: { text: 'متأخر', cls: 'bg-red-100 text-red-700' },
 };
-const expenseCategories = ['Ø¥ÙŠØ¬Ø§Ø±', 'ÙƒÙ‡Ø±Ø¨Ø§Ø¡ ÙˆÙ…Ø§Ø¡', 'Ù…Ø³ØªÙ„Ø²Ù…Ø§Øª', 'ØµÙŠØ§Ù†Ø©', 'Ù†Ø´Ø§Ø·Ø§Øª', 'Ù…ØªÙ†ÙˆØ¹'];
+const expenseCategories = ['إيجار', 'كهرباء وماء', 'مستلزمات', 'صيانة', 'نشاطات', 'متنوع'];
 
 type Tab = 'fees' | 'salaries' | 'expenses';
 
@@ -40,6 +40,7 @@ export default function Finance() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [center, setCenter]     = useState<Center | null>(null);
   const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState('');
 
   // Forms
   const [showFeeForm, setShowFeeForm]         = useState(false);
@@ -158,9 +159,17 @@ export default function Finance() {
   };
 
   const handleDeleteExpense = async (id: string) => {
-    if (!confirm('Ø­Ø°Ù Ù‡Ø°Ø§ Ø§Ù„Ù…ØµØ±ÙˆÙØŸ')) return;
-    await api.delete(`/expenses/${id}`);
-    await loadData();
+    // المصروف قيدٌ ماليّ لا يُمحى: يُبطَل ويبقى في السجل ويخرج من المجاميع.
+    // والسبب مطلوب — إبطال بلا سبب يُفقد السجلَّ فائدته عند أي مراجعة لاحقة.
+    const reason = prompt('سبب إبطال هذا المصروف؟ (يبقى القيد في السجل ويخرج من المجاميع)');
+    if (reason === null) return;
+    if (!reason.trim()) { setError('يجب ذكر سبب الإبطال'); return; }
+    try {
+      await api.delete(`/expenses/${id}`, { params: { reason: reason.trim() } });
+      await loadData();
+    } catch (e: any) {
+      setError(e.response?.data?.detail || 'تعذّر إبطال المصروف');
+    }
   };
 
   const handleTriggerPrint = (voucher: typeof printVoucher) => {
@@ -185,6 +194,16 @@ export default function Finance() {
 
   return (
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
+
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start justify-between gap-3 p-3 rounded-[var(--radius-sm)] bg-[hsl(var(--danger-wash))] border border-[hsl(var(--danger)/.3)] text-[hsl(var(--danger))] text-sm"
+        >
+          <span>{error}</span>
+          <button onClick={() => setError('')} className="font-bold shrink-0" aria-label="إغلاق">×</button>
+        </div>
+      )}
       
       {/* Dynamic CSS Print Styling */}
       <style>{`
@@ -214,44 +233,44 @@ export default function Finance() {
       {/* Printable Receipt layout */}
       {printVoucher && (
         <div id="print-section" className="hidden print:block" dir="rtl">
-          <div className="border-4 border-double border-[hsl(152,45%,38%)] p-6 rounded-2xl flex flex-col justify-between h-[90vh] text-center">
+          <div className="border-4 border-double border-[hsl(152,45%,38%)] p-6 rounded-[var(--radius)] flex flex-col justify-between h-[90vh] text-center">
             
             {/* Header */}
             <div>
-              <div className="text-xs font-bold text-[hsl(152,45%,38%)]">Ø§Ù„Ù…Ù…Ù„ÙƒØ© Ø§Ù„Ù…ØºØ±Ø¨ÙŠØ© / Ø§Ù„Ø´Ø¤ÙˆÙ† Ø§Ù„Ø¥Ø³Ù„Ø§Ù…ÙŠØ© Ø§Ù„Ù…Ø¹ØªÙ…Ø¯Ø©</div>
-              <h1 className="text-xl font-extrabold text-[hsl(152,45%,38%)] mt-2">Ø³Ù†Ø¯ Ø¥ÙŠØµØ§Ù„ Ù…Ø§Ù„ÙŠ Ø±Ø³Ù…ÙŠ</h1>
-              <p className="text-[10px] text-gray-500 mt-1">Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„ØªØ­ÙÙŠØ¸ ÙˆØ§Ù„ØªØ¹Ù„ÙŠÙ… Ø§Ù„Ø£ÙƒØ§Ø¯ÙŠÙ…ÙŠ Ø§Ù„Ù…ØªÙƒØ§Ù…Ù„</p>
+              <div className="text-xs font-bold text-[hsl(152,45%,38%)]">المملكة المغربية / الشؤون الإسلامية المعتمدة</div>
+              <h1 className="text-xl font-extrabold text-[hsl(152,45%,38%)] mt-2">سند إيصال مالي رسمي</h1>
+              <p className="text-[10px] text-gray-500 mt-1">إدارة التحفيظ والتعليم الأكاديمي المتكامل</p>
             </div>
 
             {/* Voucher Details */}
             <div className="my-6 space-y-4 text-right px-6 text-sm">
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">Ø§Ø³Ù… Ø§Ù„Ù…Ø±ÙƒØ²:</span>
-                <span className="font-bold text-gray-800">{center?.name || 'Ù…Ø±ÙƒØ² ØªØ­ÙÙŠØ¸ Ù…Ø¹ØªÙ…Ø¯'}</span>
+                <span className="text-gray-500 font-semibold">اسم المركز:</span>
+                <span className="font-bold text-gray-800">{center?.name || 'مركز تحفيظ معتمد'}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">Ø±Ù‚Ù… Ø§Ù„Ø³Ù†Ø¯ Ø§Ù„Ù…Ø§Ù„ÙŠ:</span>
+                <span className="text-gray-500 font-semibold">رقم السند المالي:</span>
                 <span className="font-mono font-bold text-gray-800" dir="ltr">#{printVoucher.refId.slice(-8).toUpperCase()}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">Ù†ÙˆØ¹ Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„Ù…Ø§Ù„ÙŠØ©:</span>
+                <span className="text-gray-500 font-semibold">نوع الحركة المالية:</span>
                 <span className="font-bold text-gray-800">{printVoucher.title}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">Ø§Ù„Ù…Ø³ØªÙÙŠØ¯ / Ø§Ù„Ø¹Ù…ÙŠÙ„:</span>
+                <span className="text-gray-500 font-semibold">المستفيد / العميل:</span>
                 <span className="font-bold text-emerald-800">{printVoucher.targetName}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">Ø§Ù„ØªØ§Ø±ÙŠØ®:</span>
+                <span className="text-gray-500 font-semibold">التاريخ:</span>
                 <span className="font-semibold text-gray-800">{printVoucher.date}</span>
               </div>
               <div className="flex justify-between border-b pb-2 bg-emerald-50 p-2 rounded-lg">
-                <span className="text-emerald-800 font-bold">Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø¯ÙÙˆØ¹:</span>
-                <span className="font-black text-emerald-800 text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
+                <span className="text-emerald-800 font-bold">المبلغ المدفوع:</span>
+                <span className="font-bold text-emerald-800 text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
               </div>
               {printVoucher.notes && (
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-gray-500 font-semibold">Ù…Ù„Ø§Ø­Ø¸Ø§Øª:</span>
+                  <span className="text-gray-500 font-semibold">ملاحظات:</span>
                   <span className="font-medium text-gray-700">{printVoucher.notes}</span>
                 </div>
               )}
@@ -268,21 +287,21 @@ export default function Finance() {
             {/* Stamp and Signatures */}
             <div className="grid grid-cols-3 gap-6 px-4 pt-4 border-t border-gray-100 text-xs">
               <div>
-                <span className="text-gray-500 block mb-6">ØªÙˆÙ‚ÙŠØ¹ Ø§Ù„Ù…Ø³ØªÙ„Ù…</span>
+                <span className="text-gray-500 block mb-6">توقيع المستلم</span>
                 <div className="h-6 border-b border-gray-200"></div>
               </div>
               <div>
-                <span className="text-gray-500 block mb-6">Ø®Ø§ØªÙ… Ø§Ù„Ù…Ø±ÙƒØ² Ø§Ù„Ø±Ø³Ù…ÙŠ</span>
+                <span className="text-gray-500 block mb-6">خاتم المركز الرسمي</span>
                 <div className="h-6 border-b border-gray-200"></div>
               </div>
               <div>
-                <span className="text-gray-500 block mb-6">ØªÙˆÙ‚ÙŠØ¹ Ø§Ù„Ù…Ø¯ÙŠØ± Ø§Ù„Ù…Ø³Ø¤ÙˆÙ„</span>
+                <span className="text-gray-500 block mb-6">توقيع المدير المسؤول</span>
                 <div className="h-6 border-b border-gray-200"></div>
               </div>
             </div>
 
             <div className="text-[9px] text-gray-400">
-              Ø§Ù„Ù†Ø¸Ø§Ù… Ù…Ø­Ù…ÙŠ ÙˆÙ…ÙˆØ«Ù‚ Ù‚Ø§Ù†ÙˆÙ†ÙŠØ§Ù‹ Ø¨Ø§Ø³Ù… Ø§Ù„Ù…Ø·ÙˆØ± Ø§Ù„Ø±Ø³Ù…ÙŠ Abdoul Malick Cisse Â© 2026
+              النظام محمي وموثق قانونياً باسم المطور الرسمي Abdoul Malick Cisse © 2026
             </div>
           </div>
         </div>
@@ -292,58 +311,56 @@ export default function Finance() {
       <div className="print:hidden space-y-6">
 
         {/* Header */}
-        <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-          <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-          <div className="relative z-10 flex items-center justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black mb-1">Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø§Ù„ÙŠØ©</h1>
-              <p className="text-white/70 text-sm">Ø±Ø³ÙˆÙ… Ø§Ù„Ø·Ù„Ø§Ø¨ Â· Ø±ÙˆØ§ØªØ¨ Ø§Ù„Ù…Ø­ÙØ¸ÙŠÙ† Â· Ù…ØµØ±ÙˆÙØ§Øª Ø§Ù„Ù…Ø±ÙƒØ²</p>
-            </div>
-            <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-              <Wallet className="w-7 h-7 text-white" />
-            </div>
-          </div>
+              <h1 className="text-2xl font-bold mb-1">الإدارة المالية</h1>
+              <p className="text-sm text-[hsl(var(--ink-3))]">رسوم الطلاب · رواتب المحفظين · مصروفات المركز</p>
+            </div>          </div>
         </div>
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
+          {/* كانت أربع لوحات مشبعة ونصاً أبيض — وإحداها نص أبيض على بطاقة بيضاء (خانة فارغة).
+              الآن على نظام البطاقات: اللون شريط رمزي، والمبلغ هو البطل. */}
           {[
-            { label: 'Ø±Ø³ÙˆÙ… Ù…Ø­ØµÙŽÙ‘Ù„Ø©',   val: formatCurrency(summary.totalFees),    icon: TrendingUp,   cls: 'gradient-primary' },
-            { label: 'Ø±Ø³ÙˆÙ… Ù…Ø¹Ù„Ù‚Ø©',    val: formatCurrency(summary.pendingFees),  icon: AlertCircle,  cls: 'gradient-gold' },
-            { label: 'Ø±ÙˆØ§ØªØ¨ Ù…Ø¯ÙÙˆØ¹Ø©',  val: formatCurrency(summary.totalSalaries),icon: GraduationCap,cls: 'stat-card-teal' },
-            { label: 'Ù…ØµØ±ÙˆÙØ§Øª',       val: formatCurrency(summary.totalExpenses), icon: TrendingDown, cls: 'bg-[hsl(0,60%,45%)]' },
+            { label: 'رسوم محصَّلة',  val: formatCurrency(summary.totalFees),     icon: TrendingUp,    tone: 'stat-card-green' },
+            { label: 'رسوم معلقة',   val: formatCurrency(summary.pendingFees),   icon: AlertCircle,   tone: 'stat-card-amber' },
+            { label: 'رواتب مدفوعة', val: formatCurrency(summary.totalSalaries), icon: GraduationCap, tone: 'stat-card-blue' },
+            { label: 'مصروفات',      val: formatCurrency(summary.totalExpenses), icon: TrendingDown,  tone: 'stat-card-rose' },
           ].map(s => (
-            <div key={s.label} className={`rounded-2xl p-4 text-white ${s.cls} shadow-sm`}>
-              <s.icon className="w-5 h-5 mb-2 opacity-80" />
-              <p className="text-sm font-black leading-tight" dir="ltr">{s.val}</p>
-              <p className="text-white/75 text-xs mt-1">{s.label}</p>
+            <div key={s.label} className={`${s.tone} p-4`}>
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <span className="eyebrow">{s.label}</span>
+                <s.icon className="w-4 h-4 text-[hsl(var(--ink-3))] shrink-0" strokeWidth={1.75} />
+              </div>
+              <p className="num-display text-lg text-[hsl(var(--ink))] amount" dir="ltr">{s.val}</p>
             </div>
           ))}
         </div>
 
         {/* Net balance */}
-        <div className={`rounded-2xl p-5 flex items-center justify-between ${summary.net >= 0 ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
+        <div className={`rounded-[var(--radius)] p-5 flex items-center justify-between ${summary.net >= 0 ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.net >= 0 ? 'bg-emerald-500' : 'stat-card-rose'}`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.net >= 0 ? 'bg-[hsl(var(--ok))]' : 'stat-card-rose'}`}>
               <Landmark className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className={`font-black text-lg ${summary.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">
+              <p className={`font-bold text-lg ${summary.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">
                 {formatCurrency(Math.abs(summary.net))}
               </p>
               <p className={`text-sm ${summary.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                {summary.net >= 0 ? 'ØµØ§ÙÙŠ Ø§Ù„Ø±Ø¨Ø­ Ø§Ù„Ù…Ø§Ù„ÙŠ Ù„Ù„Ù…Ø±ÙƒØ²' : 'Ø¹Ø¬Ø² ÙÙŠ Ø§Ù„Ù…ÙŠØ²Ø§Ù†ÙŠØ© Ø§Ù„Ù…Ø§Ù„ÙŠØ©'}
+                {summary.net >= 0 ? 'صافي الربح المالي للمركز' : 'عجز في الميزانية المالية'}
               </p>
             </div>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 p-1 bg-[hsl(var(--muted))] rounded-2xl">
+        <div className="flex gap-2 p-1 bg-[hsl(var(--muted))] rounded-[var(--radius)]">
           {([
-            { id: 'fees', label: 'Ø±Ø³ÙˆÙ… Ø§Ù„Ø·Ù„Ø§Ø¨', icon: Users },
-            { id: 'salaries', label: 'Ø±ÙˆØ§ØªØ¨ Ø§Ù„Ù…Ø­ÙØ¸ÙŠÙ†', icon: GraduationCap },
-            { id: 'expenses', label: 'Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª', icon: Receipt },
+            { id: 'fees', label: 'رسوم الطلاب', icon: Users },
+            { id: 'salaries', label: 'رواتب المحفظين', icon: GraduationCap },
+            { id: 'expenses', label: 'المصروفات', icon: Receipt },
           ] as const).map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
@@ -358,78 +375,78 @@ export default function Finance() {
         {tab === 'fees' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><Users className="w-4 h-4 text-[hsl(var(--primary))]" />Ø±Ø³ÙˆÙ… Ø§Ù„Ø·Ù„Ø§Ø¨</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><Users className="w-4 h-4 text-[hsl(var(--primary))]" />رسوم الطلاب</h3>
               <button onClick={() => setShowFeeForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
-                <Plus className="w-4 h-4" />Ø¥Ø¶Ø§ÙØ© Ø±Ø³ÙˆÙ…
+                <Plus className="w-4 h-4" />إضافة رسوم
               </button>
             </div>
             {showFeeForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ø·Ø§Ù„Ø¨ *</label>
+                    <label className="text-sm font-semibold block mb-1">الطالب *</label>
                     <select value={feeForm.student_id} onChange={e => setFeeForm({...feeForm, student_id: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
-                      <option value="">Ø§Ø®ØªØ± Ø§Ù„Ø·Ø§Ù„Ø¨</option>
+                      <option value="">اختر الطالب</option>
                       {students.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ù…Ø¨Ù„Øº *</label>
+                    <label className="text-sm font-semibold block mb-1">المبلغ *</label>
                     <input type="number" placeholder="0" dir="ltr" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ù†ÙˆØ¹ Ø§Ù„Ø±Ø³ÙˆÙ…</label>
+                    <label className="text-sm font-semibold block mb-1">نوع الرسوم</label>
                     <select value={feeForm.fee_type} onChange={e => setFeeForm({...feeForm, fee_type: e.target.value as any})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
-                      <option value="monthly">Ø´Ù‡Ø±ÙŠ</option>
-                      <option value="annual">Ø³Ù†ÙˆÙŠ</option>
-                      <option value="registration">ØªØ³Ø¬ÙŠÙ„</option>
+                      <option value="monthly">شهري</option>
+                      <option value="annual">سنوي</option>
+                      <option value="registration">تسجيل</option>
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">ØªØ§Ø±ÙŠØ® Ø§Ù„Ø§Ø³ØªØ­Ù‚Ø§Ù‚</label>
+                    <label className="text-sm font-semibold block mb-1">تاريخ الاستحقاق</label>
                     <input type="date" value={feeForm.due_date} onChange={e => setFeeForm({...feeForm, due_date: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label>
-                    <input placeholder="Ø§Ø®ØªÙŠØ§Ø±ÙŠ" value={feeForm.notes} onChange={e => setFeeForm({...feeForm, notes: e.target.value})}
+                    <label className="text-sm font-semibold block mb-1">ملاحظات</label>
+                    <input placeholder="اختياري" value={feeForm.notes} onChange={e => setFeeForm({...feeForm, notes: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleAddFee} disabled={submitting}
                     className="flex-1 gradient-primary text-white font-bold py-2.5 rounded-xl text-sm hover:opacity-90 disabled:opacity-60">
-                    {submitting ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...' : 'Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø±Ø³ÙˆÙ…'}
+                    {submitting ? 'جاري الحفظ...' : 'إضافة الرسوم'}
                   </button>
-                  <button onClick={() => setShowFeeForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">Ø¥Ù„ØºØ§Ø¡</button>
+                  <button onClick={() => setShowFeeForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">إلغاء</button>
                 </div>
               </div>
             )}
             <div className="space-y-2">
               {fees.length === 0 ? (
-                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><DollarSign className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±Ø³ÙˆÙ… Ù…Ø³Ø¬ÙŽÙ‘Ù„Ø©</p></div>
+                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><DollarSign className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد رسوم مسجَّلة</p></div>
               ) : fees.map(fee => (
-                <div key={fee.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={fee.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm">
-                      {(fee.student_name || 'Ø·').charAt(0)}
+                    <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                      {(fee.student_name || 'ط').charAt(0)}
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-[hsl(var(--foreground))]">{fee.student_name || 'Ø·Ø§Ù„Ø¨'}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">{feeTypeLabels[fee.fee_type]} Â· {fee.due_date}</p>
+                      <p className="font-bold text-sm text-[hsl(var(--foreground))]">{fee.student_name || 'طالب'}</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">{feeTypeLabels[fee.fee_type]} · {fee.due_date}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <p className="font-black text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(fee.amount)}</p>
+                    <p className="font-bold text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(fee.amount)}</p>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${feeStatusLabels[fee.status]?.cls}`}>
                       {feeStatusLabels[fee.status]?.text}
                     </span>
                     {fee.status === 'pending' && (
                       <button onClick={() => handlePayFee(fee.id)}
-                        className="p-1.5 rounded-lg gradient-primary text-white hover:opacity-80 transition-all" title="ØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ø¯ÙØ¹">
+                        className="p-1.5 rounded-lg gradient-primary text-white hover:opacity-80 transition-all" title="تسجيل الدفع">
                         <CheckCircle2 className="w-4 h-4" />
                       </button>
                     )}
@@ -437,15 +454,15 @@ export default function Finance() {
                       <button
                         onClick={() => handleTriggerPrint({
                           type: 'fee',
-                          title: `Ø±Ø³ÙˆÙ… Ø¯Ø±Ø§Ø³ÙŠØ© (${feeTypeLabels[fee.fee_type]})`,
-                          targetName: fee.student_name || 'Ø·Ø§Ù„Ø¨ Ù…Ø¹ØªÙ…Ø¯',
+                          title: `رسوم دراسية (${feeTypeLabels[fee.fee_type]})`,
+                          targetName: fee.student_name || 'طالب معتمد',
                           amount: fee.amount,
                           date: fee.due_date,
                           notes: fee.notes,
                           refId: fee.id,
                         })}
                         className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-all"
-                        title="Ø·Ø¨Ø§Ø¹Ø© Ø¥ÙŠØµØ§Ù„ Ø§Ù„Ø±Ø³ÙˆÙ…"
+                        title="طباعة إيصال الرسوم"
                       >
                         <Printer className="w-4 h-4" />
                       </button>
@@ -461,78 +478,78 @@ export default function Finance() {
         {tab === 'salaries' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />Ø±ÙˆØ§ØªØ¨ Ø§Ù„Ù…Ø­ÙØ¸ÙŠÙ†</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />رواتب المحفظين</h3>
               <button onClick={() => setShowSalaryForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
-                <Plus className="w-4 h-4" />ØµØ±Ù Ø±Ø§ØªØ¨
+                <Plus className="w-4 h-4" />صرف راتب
               </button>
             </div>
             {showSalaryForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ù…Ø­ÙØ¸ *</label>
+                    <label className="text-sm font-semibold block mb-1">المحفظ *</label>
                     <select value={salaryForm.teacher_id} onChange={e => setSalaryForm({...salaryForm, teacher_id: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
-                      <option value="">Ø§Ø®ØªØ± Ø§Ù„Ù…Ø­ÙØ¸</option>
+                      <option value="">اختر المحفظ</option>
                       {teachers.map(t => <option key={t.id} value={t.id}>{(t as any).name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ù…Ø¨Ù„Øº *</label>
+                    <label className="text-sm font-semibold block mb-1">المبلغ *</label>
                     <input type="number" placeholder="0" dir="ltr" value={salaryForm.amount} onChange={e => setSalaryForm({...salaryForm, amount: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ø´Ù‡Ø±</label>
+                    <label className="text-sm font-semibold block mb-1">الشهر</label>
                     <input type="month" value={salaryForm.month} onChange={e => setSalaryForm({...salaryForm, month: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div className="col-span-2">
-                    <label className="text-sm font-semibold block mb-1">Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label>
-                    <input placeholder="Ø§Ø®ØªÙŠØ§Ø±ÙŠ" value={salaryForm.notes} onChange={e => setSalaryForm({...salaryForm, notes: e.target.value})}
+                    <label className="text-sm font-semibold block mb-1">ملاحظات</label>
+                    <input placeholder="اختياري" value={salaryForm.notes} onChange={e => setSalaryForm({...salaryForm, notes: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleAddSalary} disabled={submitting}
                     className="flex-1 gradient-primary text-white font-bold py-2.5 rounded-xl text-sm hover:opacity-90 disabled:opacity-60">
-                    {submitting ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...' : 'ØµØ±Ù Ø§Ù„Ø±Ø§ØªØ¨'}
+                    {submitting ? 'جاري الحفظ...' : 'صرف الراتب'}
                   </button>
-                  <button onClick={() => setShowSalaryForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">Ø¥Ù„ØºØ§Ø¡</button>
+                  <button onClick={() => setShowSalaryForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">إلغاء</button>
                 </div>
               </div>
             )}
             <div className="space-y-2">
               {salaries.length === 0 ? (
-                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><GraduationCap className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>Ù„Ø§ ØªÙˆØ¬Ø¯ Ø±ÙˆØ§ØªØ¨ Ù…Ø³Ø¬ÙŽÙ‘Ù„Ø©</p></div>
+                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><GraduationCap className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد رواتب مسجَّلة</p></div>
               ) : salaries.map(sal => (
-                <div key={sal.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={sal.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 gradient-gold rounded-xl flex items-center justify-center text-white font-black text-sm">
-                      {(sal.teacher_name || 'Ù…').charAt(0)}
+                    <div className="w-10 h-10 gradient-gold rounded-xl flex items-center justify-center text-white font-bold text-sm">
+                      {(sal.teacher_name || 'م').charAt(0)}
                     </div>
                     <div>
-                      <p className="font-bold text-sm text-[hsl(var(--foreground))]">{sal.teacher_name || 'Ù…Ø­ÙØ¸'}</p>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">Ø´Ù‡Ø±: {sal.month}</p>
+                      <p className="font-bold text-sm text-[hsl(var(--foreground))]">{sal.teacher_name || 'محفظ'}</p>
+                      <p className="text-xs text-[hsl(var(--muted-foreground))]">شهر: {sal.month}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-left">
-                      <p className="font-black text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(sal.amount)}</p>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Ù…Ø¯ÙÙˆØ¹</span>
+                      <p className="font-bold text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(sal.amount)}</p>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">مدفوع</span>
                     </div>
                     <button
                       onClick={() => handleTriggerPrint({
                         type: 'salary',
-                        title: 'Ù…Ø³ÙŠØ± Ø±ÙˆØ§ØªØ¨ Ù…ÙˆØ¸ÙÙŠÙ† ÙˆÙ…Ø­ÙØ¸ÙŠÙ†',
-                        targetName: sal.teacher_name || 'Ù…Ø­ÙØ¸ Ù…Ø¹ØªÙ…Ø¯',
+                        title: 'مسير رواتب موظفين ومحفظين',
+                        targetName: sal.teacher_name || 'محفظ معتمد',
                         amount: sal.amount,
                         date: sal.month,
                         notes: sal.notes,
                         refId: sal.id,
                       })}
                       className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-all"
-                      title="Ø·Ø¨Ø§Ø¹Ø© Ø³Ù†Ø¯ ØµØ±Ù Ø§Ù„Ø±Ø§ØªØ¨"
+                      title="طباعة سند صرف الراتب"
                     >
                       <Printer className="w-4 h-4" />
                     </button>
@@ -547,57 +564,57 @@ export default function Finance() {
         {tab === 'expenses' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><Receipt className="w-4 h-4 text-[hsl(var(--primary))]" />Ù…ØµØ±ÙˆÙØ§Øª Ø§Ù„Ù…Ø±ÙƒØ²</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><Receipt className="w-4 h-4 text-[hsl(var(--primary))]" />مصروفات المركز</h3>
               <button onClick={() => setShowExpenseForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
-                <Plus className="w-4 h-4" />Ø¥Ø¶Ø§ÙØ© Ù…ØµØ±ÙˆÙ
+                <Plus className="w-4 h-4" />إضافة مصروف
               </button>
             </div>
             {showExpenseForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
-                    <label className="text-sm font-semibold block mb-1">Ø¹Ù†ÙˆØ§Ù† Ø§Ù„Ù…ØµØ±ÙˆÙ *</label>
-                    <input placeholder="Ù…Ø«Ø§Ù„: Ø¥ÙŠØ¬Ø§Ø± Ø§Ù„Ù‚Ø§Ø¹Ø©" value={expenseForm.title} onChange={e => setExpenseForm({...expenseForm, title: e.target.value})}
+                    <label className="text-sm font-semibold block mb-1">عنوان المصروف *</label>
+                    <input placeholder="مثال: إيجار القاعة" value={expenseForm.title} onChange={e => setExpenseForm({...expenseForm, title: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„Ù…Ø¨Ù„Øº *</label>
+                    <label className="text-sm font-semibold block mb-1">المبلغ *</label>
                     <input type="number" placeholder="0" dir="ltr" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„ØªØµÙ†ÙŠÙ</label>
+                    <label className="text-sm font-semibold block mb-1">التصنيف</label>
                     <select value={expenseForm.category} onChange={e => setExpenseForm({...expenseForm, category: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
-                      <option value="">Ø§Ø®ØªØ± Ø§Ù„ØªØµÙ†ÙŠÙ</option>
+                      <option value="">اختر التصنيف</option>
                       {expenseCategories.map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ø§Ù„ØªØ§Ø±ÙŠØ®</label>
+                    <label className="text-sm font-semibold block mb-1">التاريخ</label>
                     <input type="date" value={expenseForm.date} onChange={e => setExpenseForm({...expenseForm, date: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
-                    <label className="text-sm font-semibold block mb-1">Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label>
-                    <input placeholder="Ø§Ø®ØªÙŠØ§Ø±ÙŠ" value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})}
+                    <label className="text-sm font-semibold block mb-1">ملاحظات</label>
+                    <input placeholder="اختياري" value={expenseForm.notes} onChange={e => setExpenseForm({...expenseForm, notes: e.target.value})}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                 </div>
                 <div className="flex gap-2">
                   <button onClick={handleAddExpense} disabled={submitting}
                     className="flex-1 gradient-primary text-white font-bold py-2.5 rounded-xl text-sm hover:opacity-90 disabled:opacity-60">
-                    {submitting ? 'Ø¬Ø§Ø±ÙŠ Ø§Ù„Ø­ÙØ¸...' : 'Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ù…ØµØ±ÙˆÙ'}
+                    {submitting ? 'جاري الحفظ...' : 'إضافة المصروف'}
                   </button>
-                  <button onClick={() => setShowExpenseForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">Ø¥Ù„ØºØ§Ø¡</button>
+                  <button onClick={() => setShowExpenseForm(false)} className="px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] text-sm font-semibold">إلغاء</button>
                 </div>
               </div>
             )}
             <div className="space-y-2">
               {expenses.length === 0 ? (
-                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><Receipt className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…ØµØ±ÙˆÙØ§Øª Ù…Ø³Ø¬ÙŽÙ‘Ù„Ø©</p></div>
+                <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><Receipt className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد مصروفات مسجَّلة</p></div>
               ) : expenses.map(exp => (
-                <div key={exp.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={exp.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                       <TrendingDown className="w-5 h-5 text-red-500" />
@@ -611,11 +628,11 @@ export default function Finance() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-black text-red-600" dir="ltr">{formatCurrency(exp.amount)}</p>
+                    <p className="font-bold text-red-600" dir="ltr">{formatCurrency(exp.amount)}</p>
                     <button
                       onClick={() => handleTriggerPrint({
                         type: 'expense',
-                        title: `ÙØ§ØªÙˆØ±Ø© Ù…ØµØ±ÙˆÙØ§Øª (${exp.category || 'Ù…ØªÙ†ÙˆØ¹'})`,
+                        title: `فاتورة مصروفات (${exp.category || 'متنوع'})`,
                         targetName: exp.title,
                         amount: exp.amount,
                         date: exp.date,
@@ -623,7 +640,7 @@ export default function Finance() {
                         refId: exp.id,
                       })}
                       className="p-1.5 rounded-lg bg-blue-50 text-blue-600 border border-blue-200 hover:bg-blue-100 transition-all"
-                      title="Ø·Ø¨Ø§Ø¹Ø© Ø§Ù„ÙØ§ØªÙˆØ±Ø©"
+                      title="طباعة الفاتورة"
                     >
                       <Printer className="w-4 h-4" />
                     </button>

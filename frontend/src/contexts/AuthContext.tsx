@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { authApi } from '@/services/api';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import type { ReactNode } from 'react';
+import { authApi, tokenStore, setSessionExpiredHandler, restoreSession } from '@/services/api';
 import type { User, UserRole } from '@/types';
 
 interface AuthContextType {
@@ -17,34 +18,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  /**
+   * [إصلاح 2026-09-04] استعادة الجلسة من كعكة httpOnly لا من localStorage.
+   *
+   * لم يعد هناك توكن محفوظ في المتصفّح تقرؤه JavaScript، فالإقلاع يبدأ بلا توكن
+   * في الذاكرة ويطلب واحداً من /auth/refresh — تصل الكعكة وحدها فيعود المستخدم
+   * إلى جلسته. فإن لم تكن هناك كعكة صالحة فلا جلسة، وهو التصرّف الصحيح.
+   *
+   * ويبقى ما كان: الخادم هو مصدر الدور، والنسخة المحفوظة للعرض السريع فقط.
+   */
   const loadUser = useCallback(async () => {
-    const token = localStorage.getItem('access_token');
+    // عرض متفائل من النسخة المحفوظة (سرعة فقط — ليست مصدر ثقة ولا اعتماداً)
     const savedUser = localStorage.getItem('user');
-    
-    if (token && savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-        // Optionally verify token with backend
-        // const userData = await authApi.getMe();
-        // setUser(userData);
-      } catch (error) {
-        console.error('Failed to load user:', error);
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-      }
+    if (savedUser) {
+      try { setUser(JSON.parse(savedUser)); } catch { localStorage.removeItem('user'); }
     }
-    setIsLoading(false);
+
+    // زائر لم يدخل قطّ: لا كعكة ولا ملف محفوظ، فلا داعي لنداء تجديد يعود 401
+    // على كل فتحة لصفحة عامة (صفحة الهبوط والتسجيل يراهما غير المسجَّلين).
+    if (!savedUser) {
+      setIsLoading(false);
+      return;
+    }
+
+    const restored = await restoreSession();
+    if (!restored) {
+      tokenStore.clear();
+      setUser(null);
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      const verified = await authApi.getMe();
+      localStorage.setItem('user', JSON.stringify(verified));
+      setUser(verified);
+    } catch (error: any) {
+      const status = error?.response?.status;
+      if (status === 401 || status === 403) {
+        tokenStore.clear();
+        setUser(null);
+      }
+      // انقطاع شبكة عابر: نُبقي ما استعدناه ولا نطرد المستخدم
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
 
+  // انتهاء الجلسة قد يقع داخل معترض axios؛ هذا يُفرّغ حالة React أيضاً لا التخزين وحده
+  useEffect(() => {
+    setSessionExpiredHandler(() => {
+      setUser(null);
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    });
+    return () => setSessionExpiredHandler(null);
+  }, []);
+
   const login = async (username: string, password: string) => {
     setIsLoading(true);
     try {
       const response = await authApi.login(username, password);
-      localStorage.setItem('access_token', response.access_token);
+      // توكن الوصول إلى الذاكرة؛ وتوكن التجديد وصل في كعكة httpOnly لا تراها هذه الشيفرة
+      tokenStore.set(response.access_token);
       localStorage.setItem('user', JSON.stringify(response.user));
       setUser(response.user);
     } finally {
@@ -58,8 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
+      tokenStore.clear();
       setUser(null);
     }
   };

@@ -134,7 +134,7 @@ export default function AdminDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
           <BookOpen className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -177,10 +177,10 @@ export default function AdminDashboard() {
 
       {/* System Health & Security Monitor */}
       {sysStatus && (
-        <div className="bg-[hsl(var(--card))] rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-6">
+        <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm p-6 space-y-6">
           <div className="flex items-center justify-between border-b pb-3">
             <div>
-              <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
+              <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-800">
                 <span className="text-xl">🛡️</span>
                 مراقبة أمان النظام وتشغيل قاعدة البيانات
               </h3>
@@ -191,9 +191,9 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Connection Status Card */}
-            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex items-center gap-4">
+            <div className="p-5 rounded-[var(--radius)] bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex items-center gap-4">
               <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${sysStatus.db_connected ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                <div className={`w-3.5 h-3.5 rounded-full ${sysStatus.db_connected ? 'bg-emerald-600 animate-pulse' : 'bg-rose-600'}`} />
+                <div className={`w-3.5 h-3.5 rounded-full ${sysStatus.db_connected ? 'bg-[hsl(var(--ok))] animate-pulse' : 'bg-[hsl(var(--danger))]'}`} />
               </div>
               <div className="flex-1 min-w-0">
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block">قاعدة البيانات الموحدة</span>
@@ -205,10 +205,10 @@ export default function AdminDashboard() {
             </div>
 
             {/* Login successes progress */}
-            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
+            <div className="p-5 rounded-[var(--radius)] bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
               <div>
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الناجحة</span>
-                <div className="flex items-center justify-between font-mono font-black text-emerald-600 text-lg">
+                <div className="flex items-center justify-between font-mono font-bold text-emerald-600 text-lg">
                   <span>{sysStatus.login_attempts.success} عملية</span>
                   <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
                     {sysStatus.login_attempts.total > 0 
@@ -219,17 +219,17 @@ export default function AdminDashboard() {
               </div>
               <div className="w-full bg-[hsl(var(--border))] h-2 rounded-full overflow-hidden mt-3">
                 <div 
-                  className="bg-emerald-600 h-full rounded-full" 
+                  className="bg-[hsl(var(--ok))] h-full rounded-full" 
                   style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.success / sysStatus.login_attempts.total) * 100 : 0}%` }} 
                 />
               </div>
             </div>
 
             {/* Login failures progress */}
-            <div className="p-5 rounded-2xl bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
+            <div className="p-5 rounded-[var(--radius)] bg-[hsl(var(--muted))] border border-[hsl(var(--border))] flex flex-col justify-between">
               <div>
                 <span className="text-xs text-[hsl(var(--muted-foreground))] font-bold block mb-1">عمليات تسجيل الدخول الفاشلة</span>
-                <div className="flex items-center justify-between font-mono font-black text-rose-600 text-lg">
+                <div className="flex items-center justify-between font-mono font-bold text-rose-600 text-lg">
                   <span>{sysStatus.login_attempts.failed} محاولة</span>
                   <span className="text-xs font-bold text-[hsl(var(--muted-foreground))]">
                     {sysStatus.login_attempts.total > 0 
@@ -240,7 +240,7 @@ export default function AdminDashboard() {
               </div>
               <div className="w-full bg-[hsl(var(--border))] h-2 rounded-full overflow-hidden mt-3">
                 <div 
-                  className="bg-rose-600 h-full rounded-full" 
+                  className="bg-[hsl(var(--danger))] h-full rounded-full" 
                   style={{ width: `${sysStatus.login_attempts.total > 0 ? (sysStatus.login_attempts.failed / sysStatus.login_attempts.total) * 100 : 0}%` }} 
                 />
               </div>
@@ -251,19 +251,19 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4 border-t border-[hsl(var(--border))]/60">
             <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي محاولات الدخول</span>
-              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.login_attempts.total}</span>
+              <span className="font-mono font-bold text-lg text-[hsl(var(--foreground))]">{sysStatus.login_attempts.total}</span>
             </div>
             <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">حسابات محظورة مؤقتاً (Rate-limits)</span>
-              <span className="font-mono font-black text-lg text-amber-600">{sysStatus.login_attempts.active_locks} نشطة</span>
+              <span className="font-mono font-bold text-lg text-amber-600">{sysStatus.login_attempts.active_locks} نشطة</span>
             </div>
             <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">محاولات تسجيل المراكز</span>
-              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.public_register_attempts} محاولة</span>
+              <span className="font-mono font-bold text-lg text-[hsl(var(--foreground))]">{sysStatus.public_register_attempts} محاولة</span>
             </div>
             <div className="text-center p-3 bg-[hsl(var(--muted))]/50 rounded-xl">
               <span className="text-[10px] font-bold text-[hsl(var(--muted-foreground))] block">إجمالي سجل النشاط المشفّر</span>
-              <span className="font-mono font-black text-lg text-[hsl(var(--foreground))]">{sysStatus.total_audit_logs} حدث</span>
+              <span className="font-mono font-bold text-lg text-[hsl(var(--foreground))]">{sysStatus.total_audit_logs} حدث</span>
             </div>
           </div>
         </div>
@@ -290,10 +290,10 @@ export default function AdminDashboard() {
           .sort((a, b) => b.score - a.score);
 
         return (
-          <div className="bg-[hsl(var(--card))] rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
+          <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-800">
                   <span className="text-xl">🏆</span>
                   تصنيف وتقييم المراكز الأكثر التزاماً وتميزاً
                 </h3>
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
                         <td className="py-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden">
-                              <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${center.score}%` }} />
+                              <div className="bg-[hsl(var(--ok))] h-full rounded-full" style={{ width: `${center.score}%` }} />
                             </div>
                             <span className="text-xs font-mono font-bold text-emerald-700">{center.score}%</span>
                           </div>
@@ -372,9 +372,9 @@ export default function AdminDashboard() {
 
       {/* Add form */}
       {showAddForm && (
-        <div className="bg-[hsl(var(--card))] rounded-3xl border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 animate-slide-in-up">
+        <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 animate-slide-in-up">
           <div className="flex items-center justify-between mb-5 border-b border-[hsl(var(--border))] pb-3">
-            <h3 className="text-lg font-black text-[hsl(var(--foreground))] flex items-center gap-2">
+            <h3 className="text-lg font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
               <Plus className="w-5 h-5 text-[hsl(var(--primary))]" />
               تسجيل مركز جديد
             </h3>
@@ -426,7 +426,7 @@ export default function AdminDashboard() {
       {/* Centers list */}
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <h3 className="text-lg font-black text-[hsl(var(--foreground))] flex items-center gap-2">
+          <h3 className="text-lg font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
             <Building2 className="w-5 h-5 text-[hsl(var(--primary))]" />
             قائمة المراكز المسجلة
           </h3>
@@ -434,19 +434,19 @@ export default function AdminDashboard() {
         </div>
 
         {filtered.length === 0 ? (
-          <div className="text-center py-16 rounded-3xl bg-white border-2 border-dashed border-[hsl(var(--border))]">
+          <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
             <Building2 className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
             <p className="text-[hsl(var(--muted-foreground))] font-medium">لا توجد مراكز مطابقة</p>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger">
             {filtered.map(center => (
-              <div key={center.id} className="bg-[hsl(var(--card))] rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden hover:shadow-xl transition-all stat-card">
+              <div key={center.id} className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden hover:shadow-xl transition-all stat-card">
                 {/* Card header */}
                 <div className="gradient-primary p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h4 className="font-black text-white text-base leading-snug">{center.name}</h4>
+                      <h4 className="font-bold text-white text-base leading-snug">{center.name}</h4>
                       <div className="flex items-center gap-1.5 mt-1 text-white/70 text-xs">
                         <MapPin className="w-3 h-3" />
                         <span>{center.address}</span>
@@ -465,7 +465,7 @@ export default function AdminDashboard() {
                       </button>
                       <button
                         onClick={() => handleDelete(center.id)}
-                        className="p-1.5 rounded-lg bg-white/15 hover:bg-red-500/60 transition-colors text-white"
+                        className="p-1.5 rounded-lg bg-white/15 hover:bg-[hsl(var(--danger))]/60 transition-colors text-white"
                         title="حذف المركز"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -483,7 +483,7 @@ export default function AdminDashboard() {
                   ].map(s => (
                     <div key={s.label} className="p-3 text-center">
                       <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
-                      <p className="text-xl font-black text-[hsl(var(--foreground))]">{s.val}</p>
+                      <p className="text-xl font-bold text-[hsl(var(--foreground))]">{s.val}</p>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.label}</p>
                     </div>
                   ))}
@@ -517,12 +517,12 @@ export default function AdminDashboard() {
       {/* Center Details Modal */}
       {selectedCenter && (
         <div className="modal-overlay" onClick={() => setSelectedCenter(null)}>
-          <div className="bg-[hsl(var(--card))] rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             {/* Modal header */}
             <div className="gradient-primary p-6 rounded-t-3xl">
               <div className="flex items-start justify-between">
                 <div>
-                  <h2 className="text-xl font-black text-white mb-1">{selectedCenter.name}</h2>
+                  <h2 className="text-xl font-bold text-white mb-1">{selectedCenter.name}</h2>
                   <SeqBadge id={selectedCenter.id} />
                 </div>
                 <div className="flex gap-2">
@@ -535,7 +535,7 @@ export default function AdminDashboard() {
                       <Save className="w-4 h-4" />
                     </button>
                   )}
-                  <button onClick={() => handleDelete(selectedCenter.id)} title="حذف" className="p-2 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white transition-colors">
+                  <button onClick={() => handleDelete(selectedCenter.id)} title="حذف" className="p-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
                   <button onClick={() => setSelectedCenter(null)} title="إغلاق" className="p-2 rounded-xl bg-white/15 hover:bg-white/25 text-white transition-colors">
@@ -557,9 +557,9 @@ export default function AdminDashboard() {
                       { icon: GraduationCap, val: selectedCenter.teachers_count, label: 'محفظ', cls: 'bg-blue-50 text-blue-700' },
                       { icon: BookOpen, val: selectedCenter.halaqat_count, label: 'حلقة', cls: 'bg-amber-50 text-amber-700' },
                     ].map(s => (
-                      <div key={s.label} className={`rounded-2xl p-4 text-center ${s.cls}`}>
+                      <div key={s.label} className={`rounded-[var(--radius)] p-4 text-center ${s.cls}`}>
                         <s.icon className="w-5 h-5 mx-auto mb-1" />
-                        <p className="text-2xl font-black">{s.val}</p>
+                        <p className="text-2xl font-bold">{s.val}</p>
                         <p className="text-xs font-medium">{s.label}</p>
                       </div>
                     ))}
@@ -567,7 +567,7 @@ export default function AdminDashboard() {
 
                   {/* Edit form / info */}
                   {editMode ? (
-                    <div className="space-y-3 p-4 rounded-2xl border-2 border-[hsl(var(--primary))/20] bg-[hsl(var(--primary-light))]">
+                    <div className="space-y-3 p-4 rounded-[var(--radius)] border-2 border-[hsl(var(--primary))/20] bg-[hsl(var(--primary-light))]">
                       <h4 className="font-bold text-[hsl(var(--foreground))] mb-3">تعديل بيانات المركز</h4>
                       {([
                         { label: 'اسم المركز', key: 'name' },
@@ -625,7 +625,7 @@ export default function AdminDashboard() {
                   {/* Teachers list */}
                   {selectedCenter.teachers_list && selectedCenter.teachers_list.length > 0 && (
                     <div>
-                      <h4 className="font-black text-[hsl(var(--foreground))] mb-3 flex items-center gap-2">
+                      <h4 className="font-bold text-[hsl(var(--foreground))] mb-3 flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />
                         المحفظون ({selectedCenter.teachers_list.length})
                       </h4>
@@ -633,7 +633,7 @@ export default function AdminDashboard() {
                         {selectedCenter.teachers_list.map((t: any) => (
                           <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border border-[hsl(var(--border))] bg-[hsl(var(--muted))/40]">
                             <div className="flex items-center gap-3">
-                              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-black text-sm">
+                              <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-sm">
                                 {t.name.charAt(0)}
                               </div>
                               <div>

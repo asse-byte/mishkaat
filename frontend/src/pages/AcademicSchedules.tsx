@@ -155,17 +155,11 @@ export default function AcademicSchedules() {
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
 
       {/* Header banner */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">الجدول الدراسي الأكاديمي الأسبوعي</h1>
-            <p className="text-white/70 text-sm">مواءمة وتنسيق الحصص الشرعية والقرآنية ومواد اللغات والرياضيات</p>
-          </div>
-          <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-            <Calendar className="w-7 h-7 text-white" />
-          </div>
-        </div>
+            <h1 className="text-2xl font-bold mb-1">الجدول الدراسي الأكاديمي الأسبوعي</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">مواءمة وتنسيق الحصص الشرعية والقرآنية ومواد اللغات والرياضيات</p>
+          </div>        </div>
       </div>
 
       {/* Actions and search bar */}
@@ -209,13 +203,13 @@ export default function AcademicSchedules() {
       {/* Add / Edit Schedule Form Modal */}
       {showAddForm && (
         <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between text-white">
-              <h3 className="text-lg font-black flex items-center gap-2">
+              <h3 className="text-lg font-bold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[hsl(var(--gold))]" />
                 {editingId ? 'تعديل حصة مجدولة' : 'إضافة حصة دراسية جديدة'}
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-white/70 hover:text-white">
+              <button onClick={() => setShowAddForm(false)} className="text-[hsl(var(--ink-3))] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -318,7 +312,7 @@ export default function AcademicSchedules() {
 
       {/* Interactive visual layout of Schedules */}
       {filteredSchedules.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-20 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
           <Calendar className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-35" />
           <p className="text-[hsl(var(--muted-foreground))] font-semibold">لا توجد حصص دراسية مجدولة ليوم {selectedDay}</p>
         </div>
@@ -329,7 +323,7 @@ export default function AcademicSchedules() {
             return (
               <div
                 key={sched.id}
-                className="bg-white rounded-3xl border border-[hsl(var(--border))] overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all stat-card"
+                className="bg-white rounded-[var(--radius-lg)] border border-[hsl(var(--border))] overflow-hidden flex flex-col justify-between hover:shadow-xl transition-all stat-card"
               >
                 <div className={`p-4 ${isLanguage ? 'gradient-gold text-white' : 'gradient-primary text-white'}`}>
                   <div className="flex items-start justify-between">
@@ -337,7 +331,7 @@ export default function AcademicSchedules() {
                       <span className="text-[10px] uppercase font-bold badge-gold text-white px-2 py-0.5 rounded-md">
                         {isLanguage ? 'مادة لغات أكاديمية' : 'مادة شرعية / حفظ'}
                       </span>
-                      <h3 className="text-lg font-black mt-1 leading-snug">{sched.subject}</h3>
+                      <h3 className="text-lg font-bold mt-1 leading-snug">{sched.subject}</h3>
                     </div>
                     {isEditable && (
                       <div className="flex gap-1">
@@ -350,7 +344,7 @@ export default function AcademicSchedules() {
                         </button>
                         <button
                           onClick={() => handleDelete(sched.id)}
-                          className="p-1.5 rounded-lg bg-white/10 hover:bg-red-500/50 text-white transition-colors"
+                          className="p-1.5 rounded-lg bg-white/10 hover:bg-[hsl(var(--danger))]/50 text-white transition-colors"
                           title="حذف"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

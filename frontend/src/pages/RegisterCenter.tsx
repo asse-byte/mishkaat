@@ -4,7 +4,7 @@ import { BookOpen, User, Building, MapPin, Phone, ArrowRight, CheckCircle2 } fro
 import axios, { AxiosError } from 'axios';
 
 // Get API URL from env or use relative path (assuming proxy is setup in vite.config.ts)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 const RegisterCenter = () => {
   const navigate = useNavigate();
@@ -71,12 +71,12 @@ const RegisterCenter = () => {
       {/* Right Form Section */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-4 sm:px-6 lg:px-12 py-12">
         <div className="mb-8">
-          <Link to="/" className="inline-flex items-center gap-2 text-emerald-600 hover:text-emerald-700 font-medium mb-6 transition-colors">
+          <Link to="/" className="inline-flex items-center gap-2 text-[hsl(var(--lamp-strong))] hover:text-[hsl(var(--lamp-strong))] font-medium mb-6 transition-colors">
             <ArrowRight className="w-4 h-4" />
             <span>العودة للرئيسية</span>
           </Link>
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
+            <div className="w-12 h-12 bg-[hsl(var(--niche))] rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
               <BookOpen className="w-7 h-7 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-slate-800">إنشاء حساب لمركز جديد</h1>
@@ -91,22 +91,22 @@ const RegisterCenter = () => {
         )}
 
         {success ? (
-          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-8 text-center shadow-sm">
-            <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <div className="bg-emerald-50 border border-emerald-200 rounded-[var(--radius)] p-8 text-center shadow-sm">
+            <div className="w-16 h-16 bg-emerald-100 text-[hsl(var(--lamp-strong))] rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <h2 className="text-2xl font-bold text-slate-800 mb-2">تم التسجيل بنجاح!</h2>
             <p className="text-slate-600 mb-6">جاري توجيهك لصفحة تسجيل الدخول...</p>
-            <Link to="/login" className="px-6 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors inline-block">
+            <Link to="/login" className="px-6 py-2 bg-[hsl(var(--niche))] text-white rounded-lg hover:bg-[hsl(var(--niche))] transition-colors inline-block">
               الانتقال لتسجيل الدخول
             </Link>
           </div>
         ) : (
           <form className="space-y-6" onSubmit={handleSubmit}>
             {/* Center Data */}
-            <div className="space-y-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="space-y-4 bg-white p-6 rounded-[var(--radius)] border border-slate-200 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <Building className="w-5 h-5 text-emerald-600" />
+                <Building className="w-5 h-5 text-[hsl(var(--lamp-strong))]" />
                 <span>بيانات المركز</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -118,7 +118,7 @@ const RegisterCenter = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">المدينة / الحي *</label>
                   <div className="relative">
                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <MapPin className="h-4 w-4 text-slate-400" />
+                        <MapPin className="h-4 w-4 text-[hsl(var(--ink-3))]" />
                      </div>
                      <input type="text" name="centerAddress" value={formData.centerAddress} onChange={handleChange} className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all" placeholder="مثال: الرياض، العقيق" required />
                   </div>
@@ -127,9 +127,9 @@ const RegisterCenter = () => {
             </div>
 
             {/* Manager Data */}
-            <div className="space-y-4 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+            <div className="space-y-4 bg-white p-6 rounded-[var(--radius)] border border-slate-200 shadow-sm">
               <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-                <User className="w-5 h-5 text-emerald-600" />
+                <User className="w-5 h-5 text-[hsl(var(--lamp-strong))]" />
                 <span>بيانات ومعلومات الدخول لمدير المركز</span>
               </h3>
               
@@ -149,7 +149,7 @@ const RegisterCenter = () => {
                   <label className="block text-sm font-medium text-slate-700 mb-1">رقم الجوال *</label>
                   <div className="relative">
                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                        <Phone className="h-4 w-4 text-slate-400" />
+                        <Phone className="h-4 w-4 text-[hsl(var(--ink-3))]" />
                      </div>
                      <input type="tel" dir="ltr" name="managerPhone" value={formData.managerPhone} onChange={handleChange} className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-right" placeholder="05XXXXXXXX" required />
                   </div>
@@ -161,23 +161,23 @@ const RegisterCenter = () => {
               </div>
             </div>
 
-            <button type="submit" disabled={loading} className={`w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-200 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}>
+            <button type="submit" disabled={loading} className={`w-full bg-[hsl(var(--niche))] hover:bg-[hsl(var(--niche))] text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-200 transition-all ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:-translate-y-0.5'}`}>
               {loading ? 'جاري إنشاء المركز...' : 'تأكيد وتسجيل المركز'}
             </button>
           </form>
         )}
         
         <p className="mt-8 text-center text-slate-500 text-sm">
-          بالتسجيل فإنك توافق على <a href="#" className="text-emerald-600 hover:underline">الشروط والأحكام</a> الخاصة بالمشكاة.
+          بالتسجيل فإنك توافق على <a href="#" className="text-[hsl(var(--lamp-strong))] hover:underline">الشروط والأحكام</a> الخاصة بالمشكاة.
           <br /><br />
-          لديك حساب بالفعل؟ <Link to="/login" className="text-emerald-600 font-bold hover:underline">تسجيل الدخول</Link>
+          لديك حساب بالفعل؟ <Link to="/login" className="text-[hsl(var(--lamp-strong))] font-bold hover:underline">تسجيل الدخول</Link>
         </p>
       </div>
 
       {/* Left Info Section */}
-      <div className="hidden lg:flex w-1/2 bg-emerald-900 text-white p-12 flex-col justify-between relative overflow-hidden">
+      <div className="hidden lg:flex w-1/2 bg-[hsl(var(--niche))] text-white p-12 flex-col justify-between relative overflow-hidden">
         <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/arabesque.png')] opacity-10" />
-        <div className="absolute top-0 left-0 w-96 h-96 bg-emerald-600 rounded-full blur-[100px] opacity-40 -translate-x-1/2 -translate-y-1/2" />
+        <div className="absolute top-0 left-0 w-96 h-96 bg-[hsl(var(--niche))] rounded-full blur-[100px] opacity-40 -translate-x-1/2 -translate-y-1/2" />
         
         <div className="relative z-10 max-w-lg">
           <h2 className="text-4xl font-bold mb-6 leading-tight">انضم إلى شبكة من المراكز التي تخدم كتاب الله بدقة واحترافية.</h2>

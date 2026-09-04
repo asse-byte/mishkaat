@@ -10,31 +10,56 @@
     <meta property="og:description" content="نظام المشكاة هو منصة متكاملة وسحابية لإدارة مراكز ودور تحفيظ القرآن الكريم بموثوقية وأمان.">
     <meta property="og:type" content="website">
     <meta name="theme-color" content="#16a34a">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Mishkaat - المشكاة">
     <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
     <link rel="manifest" href="/manifest.json">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700;800&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&family=Amiri:wght@400;700&display=swap" rel="stylesheet">
     <title>المشكاة | نظام إدارة دور القرآن الكريم</title>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Register Service Worker for PWA
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered:', registration);
-            })
-            .catch((error) => {
-              console.log('SW registration failed:', error);
-            });
-        });
+      // Clean up and unregister Service Worker in local development to prevent aggressive caching of garbled text
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.startsWith('10.')) {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            if (registrations.length > 0) {
+              console.log('Development mode: Unregistering active Service Workers to clear cached assets.');
+              for (let registration of registrations) {
+                registration.unregister();
+              }
+              // Clear caches
+              if ('caches' in window) {
+                caches.keys().then((keys) => {
+                  Promise.all(keys.map(key => caches.delete(key))).then(() => {
+                    console.log('Caches cleared. Reloading page...');
+                    window.location.reload();
+                  });
+                });
+              } else {
+                window.location.reload();
+              }
+            }
+          });
+        }
+      } else {
+        // Production: Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then((registration) => {
+                console.log('SW registered:', registration);
+              })
+              .catch((error) => {
+                console.log('SW registration failed:', error);
+              });
+          });
+        }
       }
     </script>
   </body>

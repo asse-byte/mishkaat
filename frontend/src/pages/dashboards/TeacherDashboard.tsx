@@ -106,7 +106,7 @@ export default function TeacherDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
           <GraduationCap className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -154,11 +154,11 @@ export default function TeacherDashboard() {
 
       <div className="grid lg:grid-cols-5 gap-5">
         {/* Recent Recitations */}
-        <div className="lg:col-span-3 bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="lg:col-span-3 bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-[hsl(var(--primary))]" />
-              <h3 className="font-black text-[hsl(var(--foreground))]">آخر التسميعات</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))]">آخر التسميعات</h3>
             </div>
             <Link to="/recitations" className="text-xs text-[hsl(var(--primary))] font-bold flex items-center gap-1 hover:underline">
               عرض الكل <ChevronRight className="w-3 h-3" />
@@ -175,7 +175,7 @@ export default function TeacherDashboard() {
               </div>
             ) : recentRecitations.map((r, i) => (
               <div key={r.id || i} className="flex items-center gap-4 px-5 py-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
+                <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                   {(r.student_name || 'ط').charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -196,11 +196,11 @@ export default function TeacherDashboard() {
         </div>
 
         {/* Top Students */}
-        <div className="lg:col-span-2 bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="lg:col-span-2 bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-[hsl(var(--gold))]" />
-              <h3 className="font-black text-[hsl(var(--foreground))]">المتميزون</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))]">المتميزون</h3>
             </div>
             <Link to="/students" className="text-xs text-[hsl(var(--primary))] font-bold flex items-center gap-1 hover:underline">
               الكل <ChevronRight className="w-3 h-3" />
@@ -215,7 +215,7 @@ export default function TeacherDashboard() {
               />
             ) : topStudents.map((s, i) => (
               <div key={s.id} className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0 ${
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0 ${
                   i === 0 ? 'gradient-gold' : i === 1 ? 'bg-[hsl(var(--navy-mid))]' : 'gradient-primary'
                 }`}>
                   {i + 1}
@@ -244,7 +244,7 @@ export default function TeacherDashboard() {
           { label: 'خطط مراجعة',   icon: TrendingUp, href: '/review-plans', cls: 'btn-outline-teal' },
         ].map(a => (
           <button key={a.href} onClick={() => navigate(a.href)}
-            className={`${a.cls} rounded-2xl p-5 text-center hoverable-card flex flex-col items-center justify-center transition-all shadow-md min-h-[100px]`}>
+            className={`${a.cls} rounded-[var(--radius)] p-5 text-center hoverable-card flex flex-col items-center justify-center transition-all shadow-md min-h-[100px]`}>
             <a.icon className="w-6 h-6 mb-2" />
             <span className="text-sm font-bold">{a.label}</span>
           </button>

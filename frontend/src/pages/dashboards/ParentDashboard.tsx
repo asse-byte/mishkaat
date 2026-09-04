@@ -105,7 +105,7 @@ export default function ParentDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
           <BookOpen className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -125,7 +125,7 @@ export default function ParentDashboard() {
 
       {/* Children cards */}
       <div>
-        <h3 className="text-lg font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+        <h3 className="text-lg font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
           <span>أبنائي</span>
           <span className="badge-gold text-xs px-2.5 py-1 rounded-full">{children.length}</span>
         </h3>
@@ -138,16 +138,16 @@ export default function ParentDashboard() {
         ) : (
           <div className="grid md:grid-cols-2 gap-5 stagger">
             {children.map(child => (
-              <div key={child.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card hoverable-card">
+              <div key={child.id} className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card hoverable-card">
                 {/* card header */}
                 <div className="gradient-primary p-5">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center text-3xl font-black text-white shadow-sm">
+                    <div className="w-16 h-16 rounded-[var(--radius)] bg-[hsl(var(--lamp-wash))] border border-[hsl(var(--lamp-line))] flex items-center justify-center text-3xl font-bold text-[hsl(var(--lamp-strong))]">
                       {child.name.charAt(0)}
                     </div>
                     <div>
-                      <h4 className="text-xl font-black text-white">{child.name}</h4>
-                      <p className="text-white/70 text-sm">
+                      <h4 className="text-xl font-bold text-white">{child.name}</h4>
+                      <p className="text-sm text-[hsl(var(--ink-3))]">
                         {child.halaqah_name || 'لم تُحدَّد الحلقة'} · 
                         {child.student_type === 'reviewing' ? ' مراجعة' : ' حفظ'}
                       </p>
@@ -164,7 +164,7 @@ export default function ParentDashboard() {
                   ].map(s => (
                     <div key={s.label} className="p-4 text-center">
                       <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
-                      <p className="font-black text-[hsl(var(--foreground))] text-base amount">{s.val}</p>
+                      <p className="font-bold text-[hsl(var(--foreground))] text-base amount">{s.val}</p>
                       <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.label}</p>
                     </div>
                   ))}
@@ -188,10 +188,10 @@ export default function ParentDashboard() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Recent Recitations */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" />
-            <h3 className="font-black text-[hsl(var(--foreground))]">آخر التسميعات</h3>
+            <h3 className="font-bold text-[hsl(var(--foreground))]">آخر التسميعات</h3>
           </div>
           <div className="divide-y divide-[hsl(var(--border))]">
             {recentRecs.length === 0 ? (
@@ -204,7 +204,7 @@ export default function ParentDashboard() {
               </div>
             ) : recentRecs.map((r, i) => (
               <div key={i} className="flex items-center gap-4 px-5 py-4 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
-                <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
+                <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                   {(r.student_name || 'ط').charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -227,10 +227,10 @@ export default function ParentDashboard() {
         </div>
 
         {/* Fees */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center gap-2">
             <DollarSign className="w-5 h-5 text-[hsl(var(--gold))]" />
-            <h3 className="font-black text-[hsl(var(--foreground))]">حالة المدفوعات</h3>
+            <h3 className="font-bold text-[hsl(var(--foreground))]">حالة المدفوعات</h3>
           </div>
           <div className="p-5 space-y-3">
             {fees.length === 0 ? (
@@ -240,7 +240,7 @@ export default function ParentDashboard() {
                 description="لا توجد رسوم دراسية معلقة أو مسجلة لهذا الحساب حالياً."
               />
             ) : fees.map(fee => (
-              <div key={fee.id} className="flex items-center justify-between p-4 rounded-2xl bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors">
+              <div key={fee.id} className="flex items-center justify-between p-4 rounded-[var(--radius)] bg-[hsl(var(--muted))] hover:bg-[hsl(var(--border))] transition-colors">
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${
                     fee.status === 'paid' ? 'bg-emerald-100' : 'bg-amber-100'}`}>
@@ -257,7 +257,7 @@ export default function ParentDashboard() {
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-[hsl(var(--foreground))] text-sm amount" dir="ltr">{FCFA(fee.amount)}</p>
+                  <p className="font-bold text-[hsl(var(--foreground))] text-sm amount" dir="ltr">{FCFA(fee.amount)}</p>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                     fee.status === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                     {fee.status === 'paid' ? '✅ مدفوع' : '⏳ معلق'}

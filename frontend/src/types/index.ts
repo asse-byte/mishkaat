@@ -139,6 +139,10 @@ export interface AuthResponse {
   access_token: string;
   token_type: string;
   user: User;
+  // [إصلاح 2026-09-03] الخادم يُصدر هذين منذ البداية ولم تكن الواجهة تعرفهما،
+  // فكان المستخدم يُطرَد إلى شاشة الدخول عند انتهاء صلاحية التوكن (ساعة) بلا تجديد.
+  refresh_token?: string | null;
+  expires_in?: number | null;
 }
 
 export interface ApiError {

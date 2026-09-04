@@ -1,8 +1,42 @@
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import type { AuthResponse, User, DashboardStats, Student, Teacher, Halaqah, Center, Recitation, Attendance, Fee } from '@/types';
+
+const USER_KEY = 'user';
+
+/**
+ * [إصلاح 2026-09-04] توكن الوصول في الذاكرة، وتوكن التجديد في كعكة httpOnly.
+ *
+ * كان الاثنان في localStorage — وكل ما فيه تقرؤه أي شيفرة تعمل في الصفحة.
+ * ثغرةُ XSS واحدة (في اعتمادية، في إعلان، في امتداد متصفّح) كانت تكفي لسرقة
+ * توكن تجديد صالح سبعة أيام، يُدوَّر بهدوء فيبقى المهاجم داخل الحساب حتى بعد
+ * أن يغيّر المالكُ كلمة مرورَه على جهاز آخر.
+ *
+ * الآن: توكن التجديد لا تراه JavaScript إطلاقاً (الخادم يضعه في كعكة httpOnly
+ * ويرسلها المتصفّح تلقائياً إلى /api/auth). وتوكن الوصول يعيش في متغيّر داخل
+ * الوحدة وحدها، فيزول بإغلاق التبويب — وعمره ساعة على أي حال.
+ *
+ * وبقاء الجلسة عبر إعادة التحميل لم يُفقد: عند الإقلاع بلا توكن في الذاكرة
+ * تُنادى /auth/refresh، فتصل الكعكة وحدها وتعيد توكن وصول جديداً.
+ */
+let accessToken: string | null = null;
+
+export const tokenStore = {
+  access: () => accessToken,
+  set(token: string | null) { accessToken = token; },
+  clear() {
+    accessToken = null;
+    localStorage.removeItem(USER_KEY);
+    // بقايا الإصدار السابق: توكنات كانت تُحفَظ في localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+  },
+};
 
 const api = axios.create({
   baseURL: '/api',
+  // لازم لإرسال كعكة توكن التجديد إلى /api/auth
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -10,23 +44,87 @@ const api = axios.create({
 
 // Request interceptor to add auth token
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
+  const token = tokenStore.access();
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
   return config;
 });
 
-// Response interceptor for error handling
+/**
+ * [إصلاح 2026-09-03] تجديد صامت للتوكن.
+ *
+ * قبله: الواجهة تحفظ توكن الوصول وحده وتتجاهل refresh_token تماماً، فكان كل مستخدم يُقذَف إلى
+ * شاشة الدخول كل ساعة في منتصف عمله. والمعترض القديم كان يمسح الجلسة عند أي 401 — بما فيها 401
+ * الناتجة عن كلمة مرور خاطئة في شاشة الدخول نفسها.
+ *
+ * بعده: أول 401 على طلب عادي تُطلق تجديداً واحداً (single-flight: الطلبات المتزامنة تنتظر النتيجة
+ * نفسها ولا تستهلك كل واحدة توكن تجديد — والخادم يُدوّر توكن التجديد ويُبطل القديم، فتجديدان
+ * متوازيان كانا سيُبطلان أحدهما الآخر ويُخرجان المستخدم).
+ */
+const AUTH_PATHS = ['/auth/login', '/auth/refresh', '/auth/logout'];
+const isAuthPath = (url?: string) => !!url && AUTH_PATHS.some((p) => url.includes(p));
+
+let refreshInFlight: Promise<string> | null = null;
+
+async function refreshAccessToken(): Promise<string> {
+  // لا يُقرأ توكن تجديد من هنا: الكعكة httpOnly يرسلها المتصفّح وحده.
+  // axios خام لا يمرّ بمعترضات هذا العميل، وإلا لدار التجديد على نفسه عند فشله.
+  const { data } = await axios.post<AuthResponse>('/api/auth/refresh', {}, { withCredentials: true });
+  tokenStore.set(data.access_token);
+  return data.access_token;
+}
+
+/** يُستدعى عند الإقلاع: يستعيد الجلسة من الكعكة وحدها */
+export async function restoreSession(): Promise<AuthResponse | null> {
+  try {
+    const { data } = await axios.post<AuthResponse>('/api/auth/refresh', {}, { withCredentials: true });
+    tokenStore.set(data.access_token);
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+/** تُضبط من AuthProvider حتى يُفرَّغ حالة React أيضاً، لا التخزين فقط */
+let onSessionExpired: (() => void) | null = null;
+export const setSessionExpiredHandler = (fn: (() => void) | null) => {
+  onSessionExpired = fn;
+};
+
+function endSession() {
+  tokenStore.clear();
+  if (onSessionExpired) {
+    onSessionExpired();
+  } else if (window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+}
+
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+  async (error: AxiosError) => {
+    const original = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined;
+
+    // 403 ليست انتهاء جلسة بل نقص صلاحية — إخراج المستخدم عندها خطأ
+    if (error.response?.status !== 401 || !original || original._retried || isAuthPath(original.url)) {
+      return Promise.reject(error);
     }
-    return Promise.reject(error);
+
+    original._retried = true;
+    try {
+      if (!refreshInFlight) {
+        refreshInFlight = refreshAccessToken().finally(() => {
+          refreshInFlight = null;
+        });
+      }
+      const token = await refreshInFlight;
+      original.headers.Authorization = `Bearer ${token}`;
+      return api(original);
+    } catch {
+      endSession();
+      return Promise.reject(error);
+    }
   }
 );
 
@@ -41,11 +139,14 @@ export const authApi = {
     });
     return response.data;
   },
-  
+
+  // [إصلاح 2026-09-03] يُرسل توكن التجديد ليُبطله الخادم فعلاً.
+  // بدونه يبقى التوكن صالحاً سبعة أيام بعد "الخروج" — وهو ما يعنيه الخروج على جهاز مشترك.
   logout: async (): Promise<void> => {
-    await api.post('/auth/logout');
+    // الخادم يُبطل توكن التجديد ويمسح الكعكة؛ لا شيء يُرسَل من هنا
+    await api.post('/auth/logout', {});
   },
-  
+
   getMe: async (): Promise<User> => {
     const response = await api.get<User>('/auth/me');
     return response.data;
@@ -54,8 +155,10 @@ export const authApi = {
 
 // Dashboard endpoints
 export const dashboardApi = {
-  getStats: async (role: string): Promise<DashboardStats> => {
-    const response = await api.get<DashboardStats>(`/dashboard/${role}`);
+  // [إصلاح 2026-09-03] كان `/dashboard/${role}` — مسار لا وجود له في الخادم (404 مؤكدة).
+  // الخادم يستنتج الدور من التوكن ويردّ إحصاءات النطاق المناسب.
+  getStats: async (): Promise<DashboardStats> => {
+    const response = await api.get<DashboardStats>('/dashboard/stats');
     return response.data;
   },
 };
@@ -67,8 +170,9 @@ export const centersApi = {
     return response.data;
   },
   
+  // [إصلاح 2026-09-03] المسار الحقيقي هو /centers/{id}/details
   getById: async (id: string): Promise<Center> => {
-    const response = await api.get<Center>(`/centers/${id}`);
+    const response = await api.get<Center>(`/centers/${id}/details`);
     return response.data;
   },
   
@@ -121,11 +225,6 @@ export const teachersApi = {
     return response.data;
   },
   
-  getById: async (id: string): Promise<Teacher> => {
-    const response = await api.get<Teacher>(`/teachers/${id}`);
-    return response.data;
-  },
-  
   create: async (data: Partial<Teacher>): Promise<Teacher> => {
     const response = await api.post<Teacher>('/teachers', data);
     return response.data;
@@ -145,11 +244,6 @@ export const teachersApi = {
 export const halaqatApi = {
   getAll: async (): Promise<Halaqah[]> => {
     const response = await api.get<Halaqah[]>('/halaqat');
-    return response.data;
-  },
-  
-  getById: async (id: string): Promise<Halaqah> => {
-    const response = await api.get<Halaqah>(`/halaqat/${id}`);
     return response.data;
   },
   
@@ -184,10 +278,10 @@ export const recitationsApi = {
     const response = await api.post<Recitation>('/recitations', data);
     return response.data;
   },
-  
-  update: async (id: string, data: Partial<Recitation>): Promise<Recitation> => {
-    const response = await api.put<Recitation>(`/recitations/${id}`, data);
-    return response.data;
+
+  // حذف ناعم: يبقى السجل في قاعدة البيانات ويخرج من كل حساب ودرجة
+  remove: async (id: string): Promise<void> => {
+    await api.delete(`/recitations/${id}`);
   },
 };
 
@@ -213,11 +307,7 @@ export const attendanceApi = {
     const response = await api.post<Attendance>('/attendance', data);
     return response.data;
   },
-  
-  update: async (id: string, data: Partial<Attendance>): Promise<Attendance> => {
-    const response = await api.put<Attendance>(`/attendance/${id}`, data);
-    return response.data;
-  },
+
 };
 
 // Fees endpoints
@@ -234,11 +324,6 @@ export const feesApi = {
   
   create: async (data: Partial<Fee>): Promise<Fee> => {
     const response = await api.post<Fee>('/fees', data);
-    return response.data;
-  },
-  
-  update: async (id: string, data: Partial<Fee>): Promise<Fee> => {
-    const response = await api.put<Fee>(`/fees/${id}`, data);
     return response.data;
   },
   

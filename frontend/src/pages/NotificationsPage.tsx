@@ -5,9 +5,12 @@ import {
   UserCheck, DollarSign, AlertCircle, RefreshCw,
 } from 'lucide-react';
 import api from '@/services/api';
+import { useNotifications } from '@/contexts/NotificationsContext';
 
 interface Notification {
   id: string;
+  /** stored = محفوظ على الخادم ويُعلَّم كمقروء هناك؛ derived = مشتقّ من نشاط، محلّي فقط */
+  source: 'stored' | 'derived';
   type: 'recitation' | 'attendance' | 'fee' | 'system';
   title: string;
   message: string;
@@ -24,8 +27,10 @@ const typeConfig = {
 } as const;
 
 // Build real notifications from API data
-async function fetchRealNotifications(user: any): Promise<Notification[]> {
-  const notifs: Notification[] = [];
+type DerivedNotification = Omit<Notification, 'source'>;
+
+async function fetchRealNotifications(user: any): Promise<DerivedNotification[]> {
+  const notifs: DerivedNotification[] = [];
   const today = new Date().toISOString().slice(0, 10);
 
   try {
@@ -159,53 +164,90 @@ async function fetchRealNotifications(user: any): Promise<Notification[]> {
   return notifs.sort((a, b) => Number(a.read) - Number(b.read)).slice(0, 20);
 }
 
+/** نوع الإشعار المحفوظ → أيقونته وتسميته في هذه الصفحة */
+function storedType(t: string): Notification['type'] {
+  if (t === 'absentee_alert') return 'attendance';
+  if (t.startsWith('fee')) return 'fee';
+  if (t.startsWith('recitation')) return 'recitation';
+  return 'system';
+}
+
 export default function NotificationsPage() {
   const { user } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [loading, setLoading]             = useState(true);
-  const [filter, setFilter]               = useState<'all' | 'unread'>('all');
+  // المحفوظ على الخادم: حالته تدوم، ويصل الجديد حيّاً عبر SSE
+  const stored = useNotifications();
+  // المشتقّ من النشاط (تسميع/حضور/رسوم): معروض للفائدة، ولا يُحفَظ على الخادم
+  const [derived, setDerived] = useState<Notification[]>([]);
+  const [loadingDerived, setLoadingDerived] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'unread'>('all');
 
   const load = useCallback(async () => {
     if (!user) return;
-    setLoading(true);
+    setLoadingDerived(true);
     const data = await fetchRealNotifications(user);
-    setNotifications(data);
-    setLoading(false);
-  }, [user]);
+    setDerived(data.map(n => ({ ...n, source: 'derived' as const })));
+    setLoadingDerived(false);
+    stored.reload();
+  }, [user, stored.reload]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); }, [user]);
+
+  const loading = loadingDerived || stored.loading;
+
+  const notifications: Notification[] = [
+    ...stored.items.map(n => ({
+      id: n.id,
+      source: 'stored' as const,
+      type: storedType(n.type),
+      title: n.title,
+      message: n.body,
+      date: new Date(n.created_at).toLocaleDateString('ar', { day: 'numeric', month: 'short' }),
+      read: n.read,
+    })),
+    ...derived,
+  ];
 
   const filtered    = notifications.filter(n => filter === 'all' || !n.read);
   const unreadCount = notifications.filter(n => !n.read).length;
 
-  const markRead    = (id: string) => setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  const markAllRead = ()           => setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  const remove      = (id: string) => setNotifications(prev => prev.filter(n => n.id !== id));
+  const markRead = (id: string) => {
+    const n = notifications.find(x => x.id === id);
+    if (n?.source === 'stored') stored.markRead(id);
+    else setDerived(prev => prev.map(d => (d.id === id ? { ...d, read: true } : d)));
+  };
+  const markAllRead = () => {
+    stored.markAllRead();
+    setDerived(prev => prev.map(d => ({ ...d, read: true })));
+  };
+  // المشتقّ يُخفى محلياً؛ والمحفوظ يُعلَّم مقروءاً بدل حذفه — لا نمحو سجلاً من الخادم من هنا
+  const remove = (id: string) => {
+    const n = notifications.find(x => x.id === id);
+    if (n?.source === 'stored') stored.markRead(id);
+    else setDerived(prev => prev.filter(d => d.id !== id));
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1 flex items-center gap-2">
+            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
               <Bell className="w-6 h-6" /> الإشعارات
             </h1>
-            <p className="text-white/70 text-sm">
+            <p className="text-sm text-[hsl(var(--ink-3))]">
               {unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}
             </p>
           </div>
           <button onClick={load}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+            className="btn-primary text-sm">
             <RefreshCw className="w-4 h-4" /> تحديث
           </button>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between gap-4 bg-white rounded-2xl p-4 shadow-sm border border-[hsl(var(--border))]">
+      <div className="flex items-center justify-between gap-4 bg-white rounded-[var(--radius)] p-4 shadow-sm border border-[hsl(var(--border))]">
         <div className="flex gap-2">
           {(['all', 'unread'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -227,14 +269,14 @@ export default function NotificationsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-48">
           <div className="text-center">
-            <div className="w-12 h-12 gradient-primary rounded-2xl mx-auto mb-3 flex items-center justify-center animate-pulse-soft">
+            <div className="w-12 h-12 gradient-primary rounded-[var(--radius)] mx-auto mb-3 flex items-center justify-center animate-pulse-soft">
               <Bell className="w-6 h-6 text-white" />
             </div>
             <p className="text-sm text-[hsl(var(--muted-foreground))]">جاري تحميل الإشعارات...</p>
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
+        <div className="text-center py-16 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
           <Bell className="w-14 h-14 mx-auto mb-3 opacity-30" />
           <p className="font-medium">لا توجد إشعارات {filter === 'unread' ? 'غير مقروءة' : ''}</p>
           <p className="text-sm mt-1">ستظهر هنا الإشعارات المرتبطة بنشاطك في النظام</p>
@@ -246,13 +288,13 @@ export default function NotificationsPage() {
             const Icon = cfg.icon;
             return (
               <div key={n.id}
-                className={`flex items-start gap-4 p-5 rounded-2xl border transition-all stat-card ${
+                className={`flex items-start gap-4 p-5 rounded-[var(--radius)] border transition-all stat-card ${
                   n.read
                     ? 'bg-white border-[hsl(var(--border))]'
                     : 'bg-[hsl(var(--primary-light))]/40 border-[hsl(var(--primary))]/20 shadow-sm'
                 }`}>
                 {/* Icon */}
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${cfg.bg}`}>
+                <div className={`w-12 h-12 rounded-[var(--radius)] flex items-center justify-center shrink-0 ${cfg.bg}`}>
                   <Icon className={`w-5 h-5 ${cfg.color}`} />
                 </div>
 
@@ -261,7 +303,7 @@ export default function NotificationsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className={`font-black text-sm ${!n.read ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
+                        <h3 className={`font-bold text-sm ${!n.read ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
                           {n.title}
                         </h3>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>
@@ -285,10 +327,12 @@ export default function NotificationsPage() {
                         <CheckCircle2 className="w-3.5 h-3.5" /> تعليم كمقروء
                       </button>
                     )}
-                    <button onClick={() => remove(n.id)}
-                      className="text-xs font-bold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1">
-                      <Trash2 className="w-3.5 h-3.5" /> حذف
-                    </button>
+                    {n.source === 'derived' && (
+                      <button onClick={() => remove(n.id)}
+                        className="text-xs font-bold text-[hsl(var(--ink-3))] hover:text-[hsl(var(--danger))] transition-colors flex items-center gap-1">
+                        <Trash2 className="w-3.5 h-3.5" /> إخفاء
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

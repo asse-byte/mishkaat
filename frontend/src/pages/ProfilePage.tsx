@@ -62,9 +62,9 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+      <div className="flex justify-between items-center bg-white p-6 rounded-[var(--radius)] shadow-sm border border-[hsl(var(--border))]">
         <div className="flex items-center gap-5">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700 shadow-inner">
+          <div className="w-16 h-16 rounded-[var(--radius)] bg-emerald-100 flex items-center justify-center text-emerald-700 shadow-inner">
             <User className="w-8 h-8" />
           </div>
           <div>
@@ -115,7 +115,7 @@ export default function ProfilePage() {
           </button>
         </div>
 
-        <div className="md:col-span-3 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+        <div className="md:col-span-3 bg-white p-6 md:p-8 rounded-[var(--radius)] shadow-sm border border-[hsl(var(--border))]">
           {activeTab === 'info' ? (
             <form onSubmit={handleProfileUpdate} className="space-y-6">
               <h2 className="text-xl font-bold mb-6 flex items-center gap-2">

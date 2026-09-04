@@ -21,17 +21,17 @@ interface ReportData {
 }
 
 const REPORT_TYPES = [
-  { id: 'attendance',  label: 'ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø­Ø¶ÙˆØ± ÙˆØ§Ù„ØºÙŠØ§Ø¨',   icon: Calendar,     cls: 'gradient-primary' },
-  { id: 'recitations', label: 'ØªÙ‚Ø±ÙŠØ± Ø§Ù„ØªØ³Ù…ÙŠØ¹',           icon: BookOpen,     cls: 'gradient-gold' },
-  { id: 'financial',   label: 'Ø§Ù„ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ù…Ø§Ù„ÙŠ',           icon: DollarSign,   cls: 'stat-card-teal' },
-  { id: 'students',    label: 'ØªÙ‚Ø±ÙŠØ± Ø§Ù„Ø·Ù„Ø§Ø¨',            icon: Users,        cls: 'bg-[hsl(152,45%,38%)]' },
+  { id: 'attendance',  label: 'تقرير الحضور والغياب',   icon: Calendar,     cls: 'stat-card-teal' },
+  { id: 'recitations', label: 'تقرير التسميع',           icon: BookOpen,     cls: 'stat-card-amber' },
+  { id: 'financial',   label: 'التقرير المالي',           icon: DollarSign,   cls: 'stat-card-teal' },
+  { id: 'students',    label: 'تقرير الطلاب',            icon: Users,        cls: 'stat-card-green' },
 ];
 
 function PrintButton({ onClick }: { onClick: () => void }) {
   return (
     <button onClick={onClick}
       className="flex items-center gap-2 gradient-primary text-white font-bold px-5 py-2.5 rounded-xl hover:opacity-90 transition-all shadow-md text-sm">
-      <Printer className="w-4 h-4" /> Ø·Ø¨Ø§Ø¹Ø© Ø§Ù„ØªÙ‚Ø±ÙŠØ±
+      <Printer className="w-4 h-4" /> طباعة التقرير
     </button>
   );
 }
@@ -56,7 +56,7 @@ export default function Reports() {
         api.get('/fees').catch(() => ({ data: [] })),
       ]);
       setData({
-        center_name: user?.name || 'Ø§Ù„Ù…Ø±ÙƒØ²',
+        center_name: user?.name || 'المركز',
         generated_at: new Date().toLocaleString('ar-SA'),
         students:    stuResp.data || [],
         teachers:    tchResp.data || [],
@@ -78,15 +78,15 @@ export default function Reports() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
           <FileText className="w-8 h-8 text-white" />
         </div>
-        <p className="text-[hsl(var(--muted-foreground))] font-medium">Ø¬Ø§Ø±ÙŠ ØªØ­Ù…ÙŠÙ„ Ø¨ÙŠØ§Ù†Ø§Øª Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±...</p>
+        <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري تحميل بيانات التقارير...</p>
       </div>
     </div>
   );
 
-  // â”€â”€ Computed values â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Computed values ──────────────────────────────────────────
   const filteredAtt = data?.attendance.filter(a =>
     (!filterHalaqah || a.halaqah_id === filterHalaqah) &&
     (!filterMonth || a.date?.startsWith(filterMonth))
@@ -126,13 +126,11 @@ export default function Reports() {
   return (
     <div className="space-y-6 animate-fade-in print:space-y-4">
 
-      {/* Header â€” hidden when printing */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary print:hidden">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      {/* Header — hidden when printing */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 print:hidden">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">Ø¥ØµØ¯Ø§Ø± Ø§Ù„ØªÙ‚Ø§Ø±ÙŠØ±</h1>
-            <p className="text-white/70 text-sm">ØªÙ‚Ø§Ø±ÙŠØ± Ø´Ø§Ù…Ù„Ø© Ù‚Ø§Ø¨Ù„Ø© Ù„Ù„Ø·Ø¨Ø§Ø¹Ø© ÙˆØ§Ù„ØªØµØ¯ÙŠØ±</p>
+            <h1 className="text-2xl font-bold mb-1">إصدار التقارير</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">تقارير شاملة قابلة للطباعة والتصدير</p>
           </div>
           <PrintButton onClick={handlePrint} />
         </div>
@@ -142,10 +140,11 @@ export default function Reports() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">
         {REPORT_TYPES.map(rt => (
           <button key={rt.id} onClick={() => setActiveReport(rt.id)}
-            className={`rounded-2xl p-4 flex flex-col items-center gap-2 text-center font-bold text-sm transition-all stat-card ${
+            aria-pressed={activeReport === rt.id}
+            className={`card p-4 flex flex-col items-center gap-2 text-center font-semibold text-sm transition-colors ${
               activeReport === rt.id
-                ? `${rt.cls} text-white shadow-lg`
-                : 'bg-white border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]'}`}>
+                ? 'border-[hsl(var(--lamp))] bg-[hsl(var(--lamp-wash))] text-[hsl(var(--ink))]'
+                : 'text-[hsl(var(--ink-3))] hover:border-[hsl(var(--lamp))] hover:text-[hsl(var(--ink))]'}`}>
             <rt.icon className="w-6 h-6" />
             <span>{rt.label}</span>
           </button>
@@ -153,62 +152,62 @@ export default function Reports() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))] print:hidden">
+      <div className="card p-5 print:hidden">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold mb-1.5">Ø§Ù„Ø­Ù„Ù‚Ø©</label>
-            <select value={filterHalaqah} onChange={e => setFilterHalaqah(e.target.value)} title="Ø§Ù„Ø­Ù„Ù‚Ø©" className="form-input">
-              <option value="">ÙƒÙ„ Ø§Ù„Ø­Ù„Ù‚Ø§Øª</option>
+            <label className="block text-sm font-semibold text-[hsl(var(--ink-2))] mb-1.5">الحلقة</label>
+            <select value={filterHalaqah} onChange={e => setFilterHalaqah(e.target.value)} title="الحلقة" className="form-input">
+              <option value="">كل الحلقات</option>
               {(data?.halaqat || []).map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1.5">Ø§Ù„Ø´Ù‡Ø±</label>
+            <label className="block text-sm font-semibold text-[hsl(var(--ink-2))] mb-1.5">الشهر</label>
             <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="form-input" dir="ltr" />
           </div>
         </div>
       </div>
 
-      {/* â”€â”€ PRINT HEADER (shown only when printing) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── PRINT HEADER (shown only when printing) ─────────── */}
       <div className="hidden print:block text-center border-b-2 border-gray-200 pb-4 mb-6">
-        <h1 className="text-3xl font-black text-gray-900">Ù…Ø±ÙƒØ² {data?.center_name} Ù„ØªØ­ÙÙŠØ¸ Ø§Ù„Ù‚Ø±Ø¢Ù† Ø§Ù„ÙƒØ±ÙŠÙ…</h1>
+        <h1 className="text-3xl font-bold text-gray-900">مركز {data?.center_name} لتحفيظ القرآن الكريم</h1>
         <h2 className="text-xl font-bold text-gray-700 mt-1">
           {REPORT_TYPES.find(r => r.id === activeReport)?.label}
         </h2>
-        <p className="text-sm text-gray-500 mt-1">ØªØ§Ø±ÙŠØ® Ø§Ù„Ø¥ØµØ¯Ø§Ø±: {data?.generated_at}</p>
-        {filterMonth && <p className="text-sm text-gray-500">Ø§Ù„ÙØªØ±Ø©: {filterMonth}</p>}
+        <p className="text-sm text-gray-500 mt-1">تاريخ الإصدار: {data?.generated_at}</p>
+        {filterMonth && <p className="text-sm text-gray-500">الفترة: {filterMonth}</p>}
       </div>
 
-      {/* â”€â”€ ATTENDANCE REPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── ATTENDANCE REPORT ─────────────────────────────── */}
       {activeReport === 'attendance' && (
         <div className="space-y-5">
           {/* KPI cards */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ø­Ø¶ÙˆØ±', val: filteredAtt.length, cls: 'gradient-primary' },
-              { label: 'Ø§Ù„Ø­Ø§Ø¶Ø±ÙˆÙ†',             val: attPresent,         cls: 'bg-emerald-600' },
-              { label: 'Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±',          val: `${attRate}%`,      cls: attRate >= 80 ? 'bg-emerald-600' : attRate >= 60 ? 'gradient-gold' : 'bg-red-600' },
+              { label: 'إجمالي سجلات الحضور', val: filteredAtt.length, cls: 'stat-card-teal' },
+              { label: 'الحاضرون',             val: attPresent,         cls: 'stat-card-green' },
+              { label: 'نسبة الحضور',          val: `${attRate}%`,      cls: attRate >= 80 ? 'stat-card-green' : attRate >= 60 ? 'stat-card-amber' : 'stat-card-rose' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Per-halaqah */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-[hsl(var(--primary))]" /> Ø§Ù„Ø­Ø¶ÙˆØ± Ø­Ø³Ø¨ Ø§Ù„Ø­Ù„Ù‚Ø©
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-[hsl(var(--primary))]" /> الحضور حسب الحلقة
             </h3>
             <table className="w-full text-sm text-right">
               <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                 <tr>
-                  <th className="px-4 py-3 rounded-r-xl font-bold">Ø§Ù„Ø­Ù„Ù‚Ø©</th>
-                  <th className="px-4 py-3 font-bold">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø³Ø¬Ù„Ø§Øª</th>
-                  <th className="px-4 py-3 font-bold">Ø§Ù„Ø­Ø§Ø¶Ø±ÙˆÙ†</th>
-                  <th className="px-4 py-3 font-bold">Ø§Ù„ØºØ§Ø¦Ø¨ÙˆÙ†</th>
-                  <th className="px-4 py-3 rounded-l-xl font-bold">Ù†Ø³Ø¨Ø© Ø§Ù„Ø­Ø¶ÙˆØ±</th>
+                  <th className="px-4 py-3 rounded-r-xl font-bold">الحلقة</th>
+                  <th className="px-4 py-3 font-bold">إجمالي السجلات</th>
+                  <th className="px-4 py-3 font-bold">الحاضرون</th>
+                  <th className="px-4 py-3 font-bold">الغائبون</th>
+                  <th className="px-4 py-3 rounded-l-xl font-bold">نسبة الحضور</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[hsl(var(--border))]">
@@ -221,9 +220,9 @@ export default function Reports() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-emerald-500' : h.rate >= 60 ? 'bg-amber-500' : 'stat-card-rose'}`} style={{ width: `${h.rate}%` }} />
+                          <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-[hsl(var(--ok))]' : h.rate >= 60 ? 'bg-[hsl(var(--warn))]' : 'bg-[hsl(var(--danger))]'}`} style={{ width: `${h.rate}%` }} />
                         </div>
-                        <span className={`font-black text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
+                        <span className={`font-bold text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
                       </div>
                     </td>
                   </tr>
@@ -233,67 +232,67 @@ export default function Reports() {
           </div>
 
           {/* Individual records */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4">Ø³Ø¬Ù„ Ø§Ù„Ø­Ø¶ÙˆØ± Ø§Ù„ØªÙØµÙŠÙ„ÙŠ ({filteredAtt.length} Ø³Ø¬Ù„)</h3>
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4">سجل الحضور التفصيلي ({filteredAtt.length} سجل)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                   <tr>
-                    <th className="px-4 py-3 font-bold rounded-r-xl">Ø§Ù„Ø·Ø§Ù„Ø¨</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ø­Ù„Ù‚Ø©</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„ØªØ§Ø±ÙŠØ®</th>
-                    <th className="px-4 py-3 font-bold rounded-l-xl">Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                    <th className="px-4 py-3 font-bold rounded-r-xl">الطالب</th>
+                    <th className="px-4 py-3 font-bold">الحلقة</th>
+                    <th className="px-4 py-3 font-bold">التاريخ</th>
+                    <th className="px-4 py-3 font-bold rounded-l-xl">الحالة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
                   {filteredAtt.slice(0, 50).map((a: any, i: number) => (
                     <tr key={a.id || i} className="hover:bg-[hsl(var(--muted))]/20">
-                      <td className="px-4 py-2.5 font-medium">{a.student_name || 'â€”'}</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || 'â€”'}</td>
+                      <td className="px-4 py-2.5 font-medium">{a.student_name || '—'}</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || '—'}</td>
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{new Date(a.date || Date.now()).toLocaleDateString('ar-SA')}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${a.status==='present'?'bg-emerald-100 text-emerald-700':a.status==='absent'?'bg-red-100 text-red-700':a.status==='late'?'bg-amber-100 text-amber-700':'bg-blue-100 text-blue-700'}`}>
-                          {a.status==='present'?'Ø­Ø§Ø¶Ø±':a.status==='absent'?'ØºØ§Ø¦Ø¨':a.status==='late'?'Ù…ØªØ£Ø®Ø±':'Ù…Ø¹Ø°ÙˆØ±'}
+                          {a.status==='present'?'حاضر':a.status==='absent'?'غائب':a.status==='late'?'متأخر':'معذور'}
                         </span>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
-              {filteredAtt.length > 50 && <p className="text-center text-xs text-[hsl(var(--muted-foreground))] mt-3">Ø¹Ø±Ø¶ Ø£ÙˆÙ„ 50 Ø³Ø¬Ù„ Ù…Ù† {filteredAtt.length}</p>}
+              {filteredAtt.length > 50 && <p className="text-center text-xs text-[hsl(var(--muted-foreground))] mt-3">عرض أول 50 سجل من {filteredAtt.length}</p>}
             </div>
           </div>
         </div>
       )}
 
-      {/* â”€â”€ RECITATIONS REPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── RECITATIONS REPORT ────────────────────────────── */}
       {activeReport === 'recitations' && (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„ØªØ³Ù…ÙŠØ¹Ø§Øª', val: filteredRec.length, cls: 'gradient-primary' },
-              { label: 'ØªÙ‚ÙŠÙŠÙ… Ù…Ù…ØªØ§Ø²',      val: recExcellent,       cls: 'gradient-gold' },
-              { label: 'Ù…ØªÙˆØ³Ø· Ø§Ù„Ø£Ø®Ø·Ø§Ø¡',    val: recAvgMistakes,     cls: 'stat-card-teal' },
+              { label: 'إجمالي التسميعات', val: filteredRec.length, cls: 'stat-card-teal' },
+              { label: 'تقييم ممتاز',      val: recExcellent,       cls: 'stat-card-amber' },
+              { label: 'متوسط الأخطاء',    val: recAvgMistakes,     cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Per-halaqah recitation */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" /> Ø§Ù„ØªØ³Ù…ÙŠØ¹ Ø­Ø³Ø¨ Ø§Ù„Ø­Ù„Ù‚Ø©
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+              <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" /> التسميع حسب الحلقة
             </h3>
             <table className="w-full text-sm text-right">
               <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                 <tr>
-                  <th className="px-4 py-3 font-bold rounded-r-xl">Ø§Ù„Ø­Ù„Ù‚Ø©</th>
-                  <th className="px-4 py-3 font-bold">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„ØªØ³Ù…ÙŠØ¹Ø§Øª</th>
-                  <th className="px-4 py-3 font-bold">Ù…Ù…ØªØ§Ø²</th>
-                  <th className="px-4 py-3 font-bold rounded-l-xl">Ù†Ø³Ø¨Ø© Ø§Ù„Ù…Ù…ØªØ§Ø²</th>
+                  <th className="px-4 py-3 font-bold rounded-r-xl">الحلقة</th>
+                  <th className="px-4 py-3 font-bold">إجمالي التسميعات</th>
+                  <th className="px-4 py-3 font-bold">ممتاز</th>
+                  <th className="px-4 py-3 font-bold rounded-l-xl">نسبة الممتاز</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[hsl(var(--border))]">
@@ -302,7 +301,7 @@ export default function Reports() {
                     <td className="px-4 py-3 font-bold">{h.name}</td>
                     <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
                     <td className="px-4 py-3 text-emerald-600 font-bold">{h.excellent}</td>
-                    <td className="px-4 py-3 font-black text-[hsl(var(--primary))]">{h.rate}%</td>
+                    <td className="px-4 py-3 font-bold text-[hsl(var(--primary))]">{h.rate}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -310,29 +309,29 @@ export default function Reports() {
           </div>
 
           {/* All recitations */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4">Ø³Ø¬Ù„ Ø§Ù„ØªØ³Ù…ÙŠØ¹ Ø§Ù„ØªÙØµÙŠÙ„ÙŠ</h3>
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4">سجل التسميع التفصيلي</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                   <tr>
-                    <th className="px-4 py-3 font-bold rounded-r-xl">Ø§Ù„Ø·Ø§Ù„Ø¨</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ø³ÙˆØ±Ø©</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ù†ÙˆØ¹</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„ØªÙ‚ÙŠÙŠÙ…</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ø£Ø®Ø·Ø§Ø¡</th>
-                    <th className="px-4 py-3 font-bold rounded-l-xl">Ø§Ù„ØªØ§Ø±ÙŠØ®</th>
+                    <th className="px-4 py-3 font-bold rounded-r-xl">الطالب</th>
+                    <th className="px-4 py-3 font-bold">السورة</th>
+                    <th className="px-4 py-3 font-bold">النوع</th>
+                    <th className="px-4 py-3 font-bold">التقييم</th>
+                    <th className="px-4 py-3 font-bold">الأخطاء</th>
+                    <th className="px-4 py-3 font-bold rounded-l-xl">التاريخ</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
                   {filteredRec.slice(0, 50).map((r: any, i: number) => (
                     <tr key={r.id || i} className="hover:bg-[hsl(var(--muted))]/20">
-                      <td className="px-4 py-2.5 font-medium">{r.student_name || 'â€”'}</td>
-                      <td className="px-4 py-2.5">{r.surah_name} ({r.start_ayah}â€“{r.end_ayah})</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{r.recitation_type === 'new' ? 'Ø¬Ø¯ÙŠØ¯' : 'Ù…Ø±Ø§Ø¬Ø¹Ø©'}</td>
+                      <td className="px-4 py-2.5 font-medium">{r.student_name || '—'}</td>
+                      <td className="px-4 py-2.5">{r.surah_name} ({r.start_ayah}–{r.end_ayah})</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{r.recitation_type === 'new' ? 'جديد' : 'مراجعة'}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${r.evaluation==='excellent'?'bg-emerald-100 text-emerald-700':r.evaluation==='good'?'bg-blue-100 text-blue-700':r.evaluation==='acceptable'?'bg-amber-100 text-amber-700':'bg-red-100 text-red-700'}`}>
-                          {r.evaluation==='excellent'?'Ù…Ù…ØªØ§Ø²':r.evaluation==='good'?'Ø¬ÙŠØ¯':r.evaluation==='acceptable'?'Ù…Ù‚Ø¨ÙˆÙ„':'ØªØ­Ø³ÙŠÙ†'}
+                          {r.evaluation==='excellent'?'ممتاز':r.evaluation==='good'?'جيد':r.evaluation==='acceptable'?'مقبول':'تحسين'}
                         </span>
                       </td>
                       <td className="px-4 py-2.5 text-center font-bold">{r.mistakes_count}</td>
@@ -346,45 +345,45 @@ export default function Reports() {
         </div>
       )}
 
-      {/* â”€â”€ FINANCIAL REPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── FINANCIAL REPORT ──────────────────────────────── */}
       {activeReport === 'financial' && (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø­ØµÙŽÙ‘Ù„',  val: FCFA(totalPaid), cls: 'gradient-primary' },
-              { label: 'Ø±Ø³ÙˆÙ… Ù…Ø¹Ù„Ù‚Ø©',       val: FCFA(totalPend), cls: 'gradient-gold' },
-              { label: 'ØµØ§ÙÙŠ Ø§Ù„Ø¥ÙŠØ±Ø§Ø¯Ø§Øª',   val: FCFA(totalPaid - totalPend), cls: 'stat-card-teal' },
+              { label: 'إجمالي المحصَّل',  val: FCFA(totalPaid), cls: 'stat-card-teal' },
+              { label: 'رسوم معلقة',       val: FCFA(totalPend), cls: 'stat-card-amber' },
+              { label: 'صافي الإيرادات',   val: FCFA(totalPaid - totalPend), cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-xl font-black" dir="ltr">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+                <p className="num-display text-xl text-[hsl(var(--ink))] amount" dir="ltr">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-[hsl(var(--gold))]" /> ØªÙØ§ØµÙŠÙ„ Ø§Ù„Ø±Ø³ÙˆÙ…
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+              <DollarSign className="w-5 h-5 text-[hsl(var(--gold))]" /> تفاصيل الرسوم
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                   <tr>
-                    <th className="px-4 py-3 font-bold rounded-r-xl">Ø§Ù„Ø·Ø§Ù„Ø¨</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ù…Ø¨Ù„Øº</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ø´Ù‡Ø±</th>
-                    <th className="px-4 py-3 font-bold rounded-l-xl">Ø§Ù„Ø­Ø§Ù„Ø©</th>
+                    <th className="px-4 py-3 font-bold rounded-r-xl">الطالب</th>
+                    <th className="px-4 py-3 font-bold">المبلغ</th>
+                    <th className="px-4 py-3 font-bold">الشهر</th>
+                    <th className="px-4 py-3 font-bold rounded-l-xl">الحالة</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
                   {(data?.fees || []).map((f: any, i: number) => (
                     <tr key={f.id || i} className="hover:bg-[hsl(var(--muted))]/20">
-                      <td className="px-4 py-2.5 font-medium">{f.student_name || 'â€”'}</td>
+                      <td className="px-4 py-2.5 font-medium">{f.student_name || '—'}</td>
                       <td className="px-4 py-2.5 font-bold" dir="ltr">{FCFA(f.amount || 0)}</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{f.month || f.due_date?.slice(0, 7) || 'â€”'}</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{f.month || f.due_date?.slice(0, 7) || '—'}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${f.status==='paid'?'bg-emerald-100 text-emerald-700':'bg-amber-100 text-amber-700'}`}>
-                          {f.status==='paid' ? 'Ù…Ø¯ÙÙˆØ¹' : 'Ù…Ø¹Ù„Ù‚'}
+                          {f.status==='paid' ? 'مدفوع' : 'معلق'}
                         </span>
                       </td>
                     </tr>
@@ -396,35 +395,35 @@ export default function Reports() {
         </div>
       )}
 
-      {/* â”€â”€ STUDENTS REPORT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+      {/* ── STUDENTS REPORT ───────────────────────────────── */}
       {activeReport === 'students' && (
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø·Ù„Ø§Ø¨',    val: data?.students.length || 0, cls: 'gradient-primary' },
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ø­ÙØ¸ÙŠÙ†',  val: data?.teachers.length || 0, cls: 'gradient-gold' },
-              { label: 'Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ø­Ù„Ù‚Ø§Øª',   val: data?.halaqat.length || 0,  cls: 'stat-card-teal' },
+              { label: 'إجمالي الطلاب',    val: data?.students.length || 0, cls: 'stat-card-teal' },
+              { label: 'إجمالي المحفظين',  val: data?.teachers.length || 0, cls: 'stat-card-amber' },
+              { label: 'إجمالي الحلقات',   val: data?.halaqat.length || 0,  cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
-              <Users className="w-5 h-5 text-[hsl(var(--primary))]" /> Ù‚Ø§Ø¦Ù…Ø© Ø§Ù„Ø·Ù„Ø§Ø¨ Ø§Ù„ÙƒØ§Ù…Ù„Ø©
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+              <Users className="w-5 h-5 text-[hsl(var(--primary))]" /> قائمة الطلاب الكاملة
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
                   <tr>
                     <th className="px-4 py-3 font-bold rounded-r-xl">#</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ø³Ù… Ø§Ù„Ø·Ø§Ù„Ø¨</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„Ø­Ù„Ù‚Ø©</th>
-                    <th className="px-4 py-3 font-bold">Ø§Ù„ØªÙ‚Ø¯Ù…</th>
-                    <th className="px-4 py-3 font-bold rounded-l-xl">ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØ³Ø¬ÙŠÙ„</th>
+                    <th className="px-4 py-3 font-bold">اسم الطالب</th>
+                    <th className="px-4 py-3 font-bold">الحلقة</th>
+                    <th className="px-4 py-3 font-bold">التقدم</th>
+                    <th className="px-4 py-3 font-bold rounded-l-xl">تاريخ التسجيل</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
@@ -432,7 +431,7 @@ export default function Reports() {
                     <tr key={s.id || i} className="hover:bg-[hsl(var(--muted))]/20">
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{i + 1}</td>
                       <td className="px-4 py-2.5 font-bold text-[hsl(var(--foreground))]">{s.name}</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{s.halaqah_name || 'â€”'}</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{s.halaqah_name || '—'}</td>
                       <td className="px-4 py-2.5">
                         <div className="flex items-center gap-2">
                           <div className="w-20 h-1.5 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
@@ -442,7 +441,7 @@ export default function Reports() {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">
-                        {s.enrollment_date ? new Date(s.enrollment_date).toLocaleDateString('ar-SA') : 'â€”'}
+                        {s.enrollment_date ? new Date(s.enrollment_date).toLocaleDateString('ar-SA') : '—'}
                       </td>
                     </tr>
                   ))}

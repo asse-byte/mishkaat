@@ -42,21 +42,21 @@ export default function Rankings() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <h1 className="text-2xl font-black mb-1">نظام الترتيب الذكي</h1>
-        <p className="text-white/70 text-sm">تقييم الطلاب بناءً على معادلة رياضية ذكية للحضور والتسميع والمراجعة</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
+        <h1 className="text-2xl font-bold mb-1">نظام الترتيب الذكي</h1>
+        <p className="text-sm text-[hsl(var(--ink-3))]">تقييم الطلاب بناءً على معادلة رياضية ذكية للحضور والتسميع والمراجعة</p>
       </div>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Best Students */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-emerald-100">
-          <h3 className="font-black text-emerald-700 mb-4 flex items-center gap-2">
+        <div className="card p-5">
+          <h3 className="font-bold text-emerald-700 mb-4 flex items-center gap-2">
             <Trophy className="w-5 h-5" /> أفضل الطلاب (85% فما فوق)
           </h3>
           <div className="space-y-3">
             {bestStudents.length === 0 ? <p className="text-sm text-slate-500">لا يوجد طلاب في هذه الفئة حالياً.</p> : null}
             {bestStudents.map((s, idx) => (
-              <div key={s.id} className="flex justify-between items-center p-3 rounded-2xl bg-emerald-50 border border-emerald-100">
+              <div key={s.id} className="flex justify-between items-center p-3 rounded-[var(--radius)] bg-emerald-50 border border-emerald-100">
                 <div className="flex gap-3 items-center">
                   <div className="w-8 h-8 rounded-full bg-emerald-200 text-emerald-800 font-bold flex items-center justify-center text-sm">{idx + 1}</div>
                   <div>
@@ -65,7 +65,7 @@ export default function Rankings() {
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-emerald-600 text-lg">{s.score}%</p>
+                  <p className="font-bold text-emerald-600 text-lg">{s.score}%</p>
                   <Link to={`/analytics/${s.id}`} className="text-[10px] text-emerald-700 bg-emerald-200 px-2 py-1 rounded-full hover:bg-emerald-300">تحليل الأداء</Link>
                 </div>
               </div>
@@ -74,14 +74,14 @@ export default function Rankings() {
         </div>
 
         {/* Weak Students */}
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-red-100">
-          <h3 className="font-black text-red-600 mb-4 flex items-center gap-2">
+        <div className="card p-5">
+          <h3 className="font-bold text-red-600 mb-4 flex items-center gap-2">
             <Activity className="w-5 h-5" /> الطلاب الضعفاء (أقل من 65%)
           </h3>
           <div className="space-y-3">
             {weakStudents.length === 0 ? <p className="text-sm text-slate-500">لا يوجد طلاب في هذه الفئة حالياً.</p> : null}
             {weakStudents.map((s, idx) => (
-              <div key={s.id} className="flex justify-between items-center p-3 rounded-2xl bg-red-50 border border-red-100">
+              <div key={s.id} className="flex justify-between items-center p-3 rounded-[var(--radius)] bg-red-50 border border-red-100">
                 <div className="flex gap-3 items-center">
                   <div className="w-8 h-8 rounded-full bg-red-200 text-red-800 font-bold flex items-center justify-center text-sm">{idx + 1}</div>
                   <div>
@@ -90,7 +90,7 @@ export default function Rankings() {
                   </div>
                 </div>
                 <div className="text-left">
-                  <p className="font-black text-red-600 text-lg">{s.score}%</p>
+                  <p className="font-bold text-red-600 text-lg">{s.score}%</p>
                   <Link to={`/analytics/${s.id}`} className="text-[10px] text-red-700 bg-red-200 px-2 py-1 rounded-full hover:bg-red-300">تحليل الأداء</Link>
                 </div>
               </div>
@@ -101,8 +101,8 @@ export default function Rankings() {
 
       {/* Average Students */}
       {avgStudents.length > 0 && (
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 mt-6">
-          <h3 className="font-black text-slate-700 mb-4">بقية الطلاب</h3>
+      <div className="card p-5 mt-6">
+          <h3 className="font-bold text-slate-700 mb-4">بقية الطلاب</h3>
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-right">
               <thead className="bg-slate-50 text-slate-500">

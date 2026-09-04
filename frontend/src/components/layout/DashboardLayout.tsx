@@ -27,32 +27,44 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
+import { NotificationsProvider, useNotifications } from '@/contexts/NotificationsContext';
+
+/* المجموعات: أربع عشرة وجهة في قائمة مسطّحة واحدة تجعل "لوحة التحكم" (يومية)
+   و"الإعدادات" (شهرية) متساويتين في الوزن. التجميع يعيد ترتيب الأولوية. */
+type NavGroup = 'daily' | 'manage' | 'system';
+
+const GROUP_LABEL: Record<NavGroup, string> = {
+  daily:  'العمل اليومي',
+  manage: 'الإدارة',
+  system: 'النظام',
+};
 
 interface NavItem {
   title: string;
   href: string;
   icon: React.ElementType;
   roles: UserRole[];
+  group: NavGroup;
 }
 
 const navItems: NavItem[] = [
-  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
-  { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'] },
-  { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'] },
-  { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'] },
-  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'] },
-  { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'] },
-  { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'] },
-  { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'] },
-  { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'] },
-  { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'] },
-  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'] },
-  { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'] },
-  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'] },
-  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'] },
-  { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'] },
-  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
-  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'] },
+  { title: 'لوحة التحكم', href: '/dashboard',    icon: LayoutDashboard, roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'daily' },
+  { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'], group: 'manage' },
+  { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'], group: 'manage' },
+  { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'], group: 'daily' },
+  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'], group: 'daily' },
+  { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'], group: 'daily' },
+  { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'], group: 'manage' },
+  { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'], group: 'manage' },
+  { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
+  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },
+  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
+  { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
+  { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
+  { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
 ];
 
 const roleLabels: Record<UserRole, string> = {
@@ -65,6 +77,17 @@ const roleLabels: Record<UserRole, string> = {
 };
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const { user: currentUser } = useAuth();
+  return (
+    <NotificationsProvider enabled={!!currentUser && currentUser.role !== 'admin'}>
+      <DashboardShell>{children}</DashboardShell>
+    </NotificationsProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: React.ReactNode }) {
+  // عدّاد الإشعارات غير المقروءة — مشترك مع صفحة الإشعارات، وقناة SSE واحدة
+  const { unread } = useNotifications();
   const { user, logout, hasRole } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -127,8 +150,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-black text-white text-sm leading-tight">نظام المشكاة</h1>
-                <p className="text-white/45 text-[10px] font-bold tracking-widest" dir="ltr">MISHKAAT</p>
+                <h1 className="font-bold text-white text-sm leading-tight">نظام المشكاة</h1>
+                <p className="text-white/50 text-[10px] font-semibold tracking-widest" dir="ltr">MISHKAAT</p>
               </div>
             </div>
             <button
@@ -142,9 +165,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User card */}
           {user && (
-            <div className="m-4 p-4 rounded-2xl bg-white/6 border border-white/8">
+            <div className="m-4 p-4 rounded-[var(--radius)] bg-white/6 border border-white/8">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-white font-black text-sm shadow-lg">
+                <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {getInitials(user.name)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -158,25 +181,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           )}
 
           {/* Nav */}
-          <nav className="flex-1 px-3 py-2 space-y-0.5 overflow-y-auto">
-            {filteredNavItems.map(item => {
-              const isActive = location.pathname === item.href;
+          <nav className="flex-1 px-3 py-2 overflow-y-auto">
+            {(['daily', 'manage', 'system'] as const).map(group => {
+              const items = filteredNavItems.filter(i => i.group === group);
+              if (items.length === 0) return null;
               return (
-                <Link
-                  key={item.href}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={cn(
-                    'nav-item flex items-center gap-3 px-4 py-3 text-sm font-medium transition-all',
-                    isActive
-                      ? 'active text-white shadow-lg'
-                      : 'text-white/60 hover:text-white'
-                  )}
-                >
-                  <item.icon className="w-4.5 h-4.5 shrink-0 w-5 h-5" />
-                  <span className="flex-1">{item.title}</span>
-                  {isActive && <ChevronLeft className="w-4 h-4 opacity-60" />}
-                </Link>
+                <div key={group}>
+                  <p className="nav-group-label">{GROUP_LABEL[group]}</p>
+                  <div className="space-y-0.5">
+                    {items.map(item => {
+                      const isActive = location.pathname === item.href;
+                      return (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          onClick={() => setSidebarOpen(false)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={cn(
+                            'nav-item flex items-center gap-3 px-4 py-2.5 text-sm',
+                            isActive ? 'active' : 'text-white/60 hover:text-white'
+                          )}
+                        >
+                          <item.icon className="w-[18px] h-[18px] shrink-0" strokeWidth={1.75} />
+                          <span className="flex-1">{item.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
               );
             })}
           </nav>
@@ -187,7 +219,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={handleLogout}
               aria-label="تسجيل الخروج من النظام"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-                         text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                         text-white/60 hover:text-red-400 hover:bg-[hsl(var(--danger))]/10 transition-all"
             >
               <LogOut className="w-5 h-5" aria-hidden="true" />
               <span>تسجيل الخروج</span>
@@ -230,16 +262,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {user?.role !== 'admin' && (
                 <Link
                   to="/notifications"
-                  aria-label="الإشعارات"
+                  aria-label={unread > 0 ? `الإشعارات — ${unread} غير مقروء` : "الإشعارات"}
                   className="relative p-2 rounded-xl hover:bg-[hsl(var(--muted))] transition-colors text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 >
                   <Bell className="w-5 h-5" aria-hidden="true" />
-                  <span className="absolute top-2 left-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" aria-hidden="true" />
+                  {/* كانت النقطة الحمراء ظاهرة دائماً بلا علاقة بوجود شيء غير مقروء —
+                      شارةٌ تقول «لديك جديد» في كل الأحوال تُعلِّم المستخدمَ تجاهلَها.
+                      صارت تظهر عند وجود غير مقروء فعلاً، وتحمل عددَه. */}
+                  {unread > 0 && (
+                    <span className="absolute -top-0.5 -left-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center text-[10px] font-bold rounded-full bg-[hsl(var(--danger))] text-white border-2 border-[hsl(var(--surface))] tabular-nums">
+                      {unread > 99 ? '99+' : unread}
+                    </span>
+                  )}
                 </Link>
               )}
               {user && (
                 <Link to="/profile">
-                  <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-black text-xs shadow-md">
+                  <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-xs shadow-md">
                     {getInitials(user.name)}
                   </div>
                 </Link>

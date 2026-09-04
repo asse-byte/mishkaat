@@ -22,9 +22,9 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-10">
-      <div className="flex justify-between items-center bg-white p-6 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+      <div className="flex justify-between items-center bg-white p-6 rounded-[var(--radius)] shadow-sm border border-[hsl(var(--border))]">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gray-100 flex items-center justify-center text-gray-700 shadow-inner">
+          <div className="w-14 h-14 rounded-[var(--radius)] bg-gray-100 flex items-center justify-center text-gray-700 shadow-inner">
             <Settings className="w-7 h-7" />
           </div>
           <div>
@@ -73,7 +73,7 @@ export default function SettingsPage() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-[hsl(var(--border))]">
+        <div className="flex-1 bg-white p-6 md:p-8 rounded-[var(--radius)] shadow-sm border border-[hsl(var(--border))]">
           {activeTab === 'general' && (
             <div className="space-y-6 animate-fade-in">
               <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">إعدادات عامة</h2>
