@@ -1,5 +1,7 @@
 """خطط المراجعة."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from fastapi import Depends
@@ -77,7 +79,7 @@ async def create_review_plan(plan: ReviewPlanCreate, current_user: dict = Depend
             raise HTTPException(status_code=403, detail="المعلم لا ينتمي لمركزك")
 
     data = plan.model_dump(exclude_none=True)
-    data["created_at"] = datetime.utcnow()
+    data["created_at"] = utcnow()
     data["created_by"] = str(current_user["_id"])
     result = await db.review_plans.insert_one(data)
     data["id"] = str(result.inserted_id)

@@ -1,5 +1,7 @@
 """المحفّظون وتقييماتهم."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from fastapi import Depends
@@ -69,7 +71,7 @@ async def get_teachers(
         mine = halaqat_by_teacher.get(doc["id"], [])
         doc["halaqat"] = [h["name"] for h in mine]
         doc["students_count"] = sum(students_per_halaqah.get(str(h["_id"]), 0) for h in mine)
-        doc["hire_date"] = doc.get("hire_date", datetime.utcnow())
+        doc["hire_date"] = doc.get("hire_date", utcnow())
         if isinstance(doc["hire_date"], datetime):
             doc["hire_date"] = doc["hire_date"].isoformat()
         result.append(doc)
@@ -97,7 +99,7 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
         "work_schedule": teacher.work_schedule,
         "salary": teacher.salary,
         "is_active": True,
-        "hire_date": datetime.utcnow(),
+        "hire_date": utcnow(),
     }
     hire_date = teacher_dict["hire_date"]
     
@@ -118,7 +120,7 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
             "hashed_password": get_password_hash(teacher.password),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         }
         user_result = await db.users.insert_one(user_data)
         user_id = str(user_result.inserted_id)
@@ -284,7 +286,7 @@ async def create_teacher_evaluation(
     eval_dict = evaluation.model_dump()
     eval_dict["center_id"] = center_id
     eval_dict["tpi"] = tpi
-    eval_dict["created_at"] = datetime.utcnow()
+    eval_dict["created_at"] = utcnow()
     
     result = await db.teacher_evaluations.insert_one(eval_dict)
     

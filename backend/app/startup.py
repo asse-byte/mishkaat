@@ -1,9 +1,10 @@
 """تهيئة الفهارس والحسابات الأولى."""
 
+from app.clock import utcnow
+
 from pymongo.errors import OperationFailure
 
 from bson import ObjectId
-from datetime import datetime
 import os
 import secrets
 
@@ -156,7 +157,7 @@ async def startup_event():
             "hashed_password": get_password_hash(admin_password),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow(),
+            "created_at": utcnow(),
         })
         print(f"[SUCCESS] Admin user provisioned (password source: {password_source})")
 
@@ -186,7 +187,7 @@ async def startup_event():
             "hashed_password": get_password_hash(super_admin_pass),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow(),
+            "created_at": utcnow(),
         })
         print("[SUCCESS] Super Admin user provisioned")
 
@@ -205,7 +206,7 @@ async def startup_event():
             "hashed_password": get_password_hash("manager123"),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         },
         {
             "username": "teacher1",
@@ -216,7 +217,7 @@ async def startup_event():
             "hashed_password": get_password_hash("teacher123"),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         },
         {
             "username": "student1",
@@ -227,7 +228,7 @@ async def startup_event():
             "hashed_password": get_password_hash("student123"),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         },
         {
             "username": "parent1",
@@ -237,7 +238,7 @@ async def startup_event():
             "hashed_password": get_password_hash("parent123"),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         }
     ]
     for u in default_users:
@@ -263,7 +264,7 @@ async def startup_event():
                 "manager_id": manager_id,
                 "manager_name": "أحمد محمد - مدير المركز",
                 "is_active": True,
-                "created_at": datetime.utcnow()
+                "created_at": utcnow()
             },
             {
                 "name": "مركز الفجر للتحفيظ",
@@ -272,7 +273,7 @@ async def startup_event():
                 "manager_id": None,
                 "manager_name": "عمر خالد سعيد",
                 "is_active": True,
-                "created_at": datetime.utcnow()
+                "created_at": utcnow()
             },
             {
                 "name": "مركز الهدى القرآني",
@@ -281,7 +282,7 @@ async def startup_event():
                 "manager_id": None,
                 "manager_name": "محمد سعيد أحمد",
                 "is_active": True,
-                "created_at": datetime.utcnow()
+                "created_at": utcnow()
             },
         ]
         result = await db.centers.insert_many(default_centers)
@@ -312,7 +313,7 @@ async def startup_event():
                 "center_id": center_ids[0],
                 "specialization": "حفص عن عاصم",
                 "is_active": True,
-                "hire_date": datetime.utcnow()
+                "hire_date": utcnow()
             },
             {
                 "name": "الشيخ عبدالله محمود",
@@ -320,7 +321,7 @@ async def startup_event():
                 "center_id": center_ids[0],
                 "specialization": "ورش عن نافع",
                 "is_active": True,
-                "hire_date": datetime.utcnow()
+                "hire_date": utcnow()
             },
             {
                 "name": "الشيخ إبراهيم سعيد",
@@ -328,7 +329,7 @@ async def startup_event():
                 "center_id": center_ids[0],
                 "specialization": "حفص عن عاصم",
                 "is_active": True,
-                "hire_date": datetime.utcnow()
+                "hire_date": utcnow()
             },
         ]
         teacher_result = await db.teachers.insert_many(default_teachers)
@@ -415,7 +416,7 @@ async def startup_event():
                 "memorization_plan": "plan_3_years",
                 "student_type": "memorizing",
                 "is_active": True,
-                "enrollment_date": datetime.utcnow(),
+                "enrollment_date": utcnow(),
                 "progress": 17,
                 "current_surah": "البقرة",
                 "current_ayah": 150,
@@ -431,7 +432,7 @@ async def startup_event():
                 "memorization_plan": "plan_4_years",
                 "student_type": "memorizing",
                 "is_active": True,
-                "enrollment_date": datetime.utcnow(),
+                "enrollment_date": utcnow(),
                 "progress": 12,
                 "current_surah": "آل عمران",
                 "current_ayah": 50,
@@ -447,7 +448,7 @@ async def startup_event():
                 "memorization_plan": "plan_review",
                 "student_type": "reviewing",
                 "is_active": True,
-                "enrollment_date": datetime.utcnow(),
+                "enrollment_date": utcnow(),
                 "progress": 100,
                 "current_surah": "الفاتحة",
                 "current_ayah": 1,
@@ -463,7 +464,7 @@ async def startup_event():
                 "memorization_plan": "plan_2_years",
                 "student_type": "memorizing",
                 "is_active": True,
-                "enrollment_date": datetime.utcnow(),
+                "enrollment_date": utcnow(),
                 "progress": 25,
                 "current_surah": "النساء",
                 "current_ayah": 80,
@@ -479,7 +480,7 @@ async def startup_event():
                 "memorization_plan": "plan_5_years",
                 "student_type": "memorizing",
                 "is_active": True,
-                "enrollment_date": datetime.utcnow(),
+                "enrollment_date": utcnow(),
                 "progress": 8,
                 "current_surah": "البقرة",
                 "current_ayah": 50,

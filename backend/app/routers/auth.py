@@ -1,6 +1,7 @@
 """المصادقة وكلمات المرور."""
 
-from datetime import datetime
+from app.clock import utc_from_timestamp, utcnow
+
 from datetime import timedelta
 from fastapi import APIRouter
 from fastapi import Depends
@@ -100,7 +101,7 @@ async def refresh_access_token(body: RefreshRequest):
     payload, user = await _decode_and_verify(body.refresh_token, expected_type="refresh")
     # Rotate: revoke the old refresh token jti
     old_jti = payload.get("jti")
-    old_exp = datetime.utcfromtimestamp(payload["exp"]) if "exp" in payload else (datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+    old_exp = utc_from_timestamp(payload["exp"]) if "exp" in payload else (utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
     if old_jti:
         await revoke_jti(old_jti, old_exp)
 
@@ -153,7 +154,7 @@ async def logout(
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         jti = payload.get("jti")
-        exp = datetime.utcfromtimestamp(payload["exp"]) if "exp" in payload else (datetime.utcnow() + timedelta(hours=1))
+        exp = utc_from_timestamp(payload["exp"]) if "exp" in payload else (utcnow() + timedelta(hours=1))
         if jti:
             await revoke_jti(jti, exp)
     except jwt.PyJWTError:
@@ -165,7 +166,7 @@ async def logout(
             r_payload = jwt.decode(body.refresh_token, SECRET_KEY, algorithms=[ALGORITHM])
             if r_payload.get("type") == "refresh" and r_payload.get("sub") == current_user["username"]:
                 r_jti = r_payload.get("jti")
-                r_exp = datetime.utcfromtimestamp(r_payload["exp"]) if "exp" in r_payload else (datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+                r_exp = utc_from_timestamp(r_payload["exp"]) if "exp" in r_payload else (utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
                 if r_jti:
                     await revoke_jti(r_jti, r_exp)
         except jwt.PyJWTError:
@@ -200,7 +201,7 @@ async def change_password(
         {"$set": {
             "hashed_password": new_hash,
             "user_version": next_version,
-            "password_changed_at": datetime.utcnow(),
+            "password_changed_at": utcnow(),
             "must_change_password": False,
         }}
     )
@@ -238,7 +239,7 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request):
 
     # Generate 6-digit code
     code = "".join(secrets.choice("0123456789") for _ in range(6))
-    expires_at = datetime.utcnow() + timedelta(minutes=RESET_CODE_TTL_MINUTES)
+    expires_at = utcnow() + timedelta(minutes=RESET_CODE_TTL_MINUTES)
 
     # [AUDIT-2026-09-03 fix: يُخزَّن الرمز مبصوماً فقط — من يقرأ قاعدة البيانات أو نسخة احتياطية
     #  لم يعد يملك رموز إعادة تعيين صالحة لكل الحسابات.]
@@ -250,7 +251,7 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request):
             "expires_at": expires_at,
             "attempts": 0,
             "requested_from_ip": ip,
-            "created_at": datetime.utcnow(),
+            "created_at": utcnow(),
         },
          "$unset": {"code": ""}},   # تنظيف أي رمز صريح قديم من قبل هذا الإصلاح
         upsert=True
@@ -275,7 +276,7 @@ async def get_reset_codes(current_user: dict = Depends(get_current_user)):
     if current_user["role"] not in ["admin", "super_admin"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
-    now = datetime.utcnow()
+    now = utcnow()
     entries = await db.password_resets.find({"expires_at": {"$gt": now}}).to_list(100)
     return [
         {
@@ -298,7 +299,7 @@ async def reset_password(data: ResetPasswordRequest, request: Request):
     if not user or not reset_entry:
         raise generic
 
-    if datetime.utcnow() > reset_entry["expires_at"]:
+    if utcnow() > reset_entry["expires_at"]:
         await db.password_resets.delete_one({"username": data.username})
         raise HTTPException(status_code=400, detail="انتهت صلاحية الرمز")
 
@@ -333,7 +334,7 @@ async def reset_password(data: ResetPasswordRequest, request: Request):
         {"$set": {
             "hashed_password": new_hash,
             "user_version": next_version,
-            "password_changed_at": datetime.utcnow()
+            "password_changed_at": utcnow()
         }}
     )
 
@@ -392,7 +393,7 @@ async def admin_reset_password(
         {"$set": {
             "hashed_password": get_password_hash(data.new_password),
             "user_version": int(target.get("user_version", 0)) + 1,
-            "password_changed_at": datetime.utcnow(),
+            "password_changed_at": utcnow(),
             "must_change_password": True,
         }}
     )

@@ -1,6 +1,7 @@
 """المسابقات القرآنية."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -28,7 +29,7 @@ async def create_competition(comp: CompetitionCreate, current_user: dict = Depen
         
     comp_dict = comp.model_dump()
     comp_dict["center_id"] = center_id
-    comp_dict["created_at"] = datetime.utcnow()
+    comp_dict["created_at"] = utcnow()
     
     result = await db.competitions.insert_one(comp_dict)
     
@@ -87,7 +88,7 @@ async def register_contestant(
     con_dict["center_id"] = center_id or student.get("center_id")
     con_dict["grades"] = None
     con_dict["total_score"] = 0.0
-    con_dict["created_at"] = datetime.utcnow()
+    con_dict["created_at"] = utcnow()
     
     result = await db.competition_contestants.insert_one(con_dict)
     

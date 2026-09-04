@@ -1,6 +1,7 @@
 """فحص الصحّة والجاهزية."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
@@ -15,7 +16,7 @@ router = APIRouter()
 @router.get("/api/health")
 async def health_check():
     """فحص صحة النظام"""
-    return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+    return {"status": "healthy", "timestamp": utcnow().isoformat()}
 
 @router.get("/api/health/ready")
 async def readiness_check():
@@ -30,12 +31,12 @@ async def readiness_check():
         logger.error(f"readiness probe failed: {e}")
         return JSONResponse(
             status_code=503,
-            content={"status": "unavailable", "database": False, "timestamp": datetime.utcnow().isoformat()},
+            content={"status": "unavailable", "database": False, "timestamp": utcnow().isoformat()},
         )
     return {
         "status": "ready",
         "database": True,
         "environment": "production" if IS_PRODUCTION else "development",
         "version": APP_VERSION,
-        "timestamp": datetime.utcnow().isoformat(),
+        "timestamp": utcnow().isoformat(),
     }

@@ -1,6 +1,7 @@
 """الجدول الدراسي."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -31,7 +32,7 @@ async def create_academic_schedule(schedule: AcademicScheduleCreate, current_use
 
     schedule_dict = schedule.model_dump()
     schedule_dict["center_id"] = center_id
-    schedule_dict["created_at"] = datetime.utcnow()
+    schedule_dict["created_at"] = utcnow()
     
     teacher_name = None
     teacher = await db.teachers.find_one({"_id": safe_object_id(schedule.teacher_id)})

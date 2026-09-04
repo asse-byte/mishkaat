@@ -1,6 +1,7 @@
 """الإشعارات: الحفظ والبثّ الحيّ."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 
 from app.config import logger
 from app.db import db
@@ -38,7 +39,7 @@ async def push_notification(user_id: str, event_type: str, title: str, body: str
         "body": body,
         "data": data or {},
         "read": False,
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
     try:
         await db.notifications.insert_one(doc)

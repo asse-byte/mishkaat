@@ -1,5 +1,7 @@
 """الإشعارات."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from fastapi import Depends
@@ -45,7 +47,7 @@ async def mark_notification_read(notification_id: str, current_user: dict = Depe
     """تعليم إشعار كمقروء — لصاحبه وحده"""
     result = await db.notifications.update_one(
         {"_id": safe_object_id(notification_id), "user_id": str(current_user["_id"])},
-        {"$set": {"read": True, "read_at": datetime.utcnow()}},
+        {"$set": {"read": True, "read_at": utcnow()}},
     )
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="الإشعار غير موجود")
@@ -55,7 +57,7 @@ async def mark_notification_read(notification_id: str, current_user: dict = Depe
 async def mark_all_notifications_read(current_user: dict = Depends(get_current_user)):
     result = await db.notifications.update_many(
         {"user_id": str(current_user["_id"]), "read": False},
-        {"$set": {"read": True, "read_at": datetime.utcnow()}},
+        {"$set": {"read": True, "read_at": utcnow()}},
     )
     return {"message": "تم", "updated": result.modified_count}
 

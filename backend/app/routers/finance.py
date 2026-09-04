@@ -1,5 +1,7 @@
 """الرسوم والرواتب والمصروفات."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from fastapi import Depends
@@ -111,7 +113,7 @@ async def create_fee(fee: FeeCreate, current_user: dict = Depends(get_current_us
     # [AUDIT-2026-09-03 fix: الرسوم لم تكن تحمل center_id ولا تاريخ إنشاء — فلا يمكن حصر
     #  رسوم مركز ولا حساب إيراد فترة زمنية. يُكتبان الآن من مستند الطالب ووقت الإنشاء.]
     fee_dict["center_id"] = student.get("center_id")
-    fee_dict["created_at"] = datetime.utcnow()
+    fee_dict["created_at"] = utcnow()
     fee_dict["created_by"] = str(current_user["_id"])
     if not fee_dict.get("student_name"):
         fee_dict["student_name"] = student.get("name")
@@ -149,7 +151,7 @@ async def pay_fee(fee_id: str, current_user: dict = Depends(get_current_user)):
     if fee.get("status") == "paid":
         raise HTTPException(status_code=409, detail="هذه الرسوم مدفوعة مسبقاً")
 
-    paid_at = datetime.utcnow()
+    paid_at = utcnow()
     updated_res = await db.fees.update_one(
         {"_id": fee_obj_id, "status": {"$ne": "paid"}},
         {"$set": {
@@ -228,7 +230,7 @@ async def create_salary(salary: SalaryCreate, current_user: dict = Depends(get_c
             raise HTTPException(status_code=403, detail="هذا المعلم لا ينتمي لمركزك")
 
     salary_dict = salary.model_dump()
-    salary_dict["created_at"] = datetime.utcnow()
+    salary_dict["created_at"] = utcnow()
     salary_dict["status"] = "paid"
     result = await db.salaries.insert_one(salary_dict)
     
@@ -277,7 +279,7 @@ async def create_expense(expense: ExpenseCreate, current_user: dict = Depends(ge
         raise HTTPException(status_code=403, detail="غير مصرح لك بإضافة مصروف لمركز آخر")
         
     exp_dict = expense.model_dump()
-    exp_dict["created_at"] = datetime.utcnow()
+    exp_dict["created_at"] = utcnow()
     result = await db.expenses.insert_one(exp_dict)
     
     await write_audit_log(

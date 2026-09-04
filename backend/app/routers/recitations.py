@@ -1,5 +1,7 @@
 """التسميع."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from datetime import timedelta
 from fastapi import APIRouter
@@ -100,7 +102,7 @@ async def get_recitations(
     result = []
     for r in recitations:
         doc = serialize_doc(r)
-        doc["date"] = doc.get("date", datetime.utcnow())
+        doc["date"] = doc.get("date", utcnow())
         if isinstance(doc["date"], datetime):
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
@@ -122,7 +124,7 @@ async def create_recitation(recitation: RecitationCreate, current_user: dict = D
             raise HTTPException(status_code=403, detail="لا يمكن تسجيل تسميع باسم معلم آخر")
 
     recitation_dict = recitation.model_dump()
-    recitation_dict["date"] = datetime.utcnow()
+    recitation_dict["date"] = utcnow()
     result = await db.recitations.insert_one(recitation_dict)
     
     return {
@@ -152,7 +154,7 @@ async def get_student_recitations(student_id: str, current_user: dict = Depends(
     result = []
     for r in recitations:
         doc = serialize_doc(r)
-        doc["date"] = doc.get("date", datetime.utcnow())
+        doc["date"] = doc.get("date", utcnow())
         if isinstance(doc["date"], datetime):
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
@@ -197,7 +199,7 @@ async def delete_recitation(
         {"_id": rec_obj_id},
         {"$set": {
             "is_deleted": True,
-            "deleted_at": datetime.utcnow(),
+            "deleted_at": utcnow(),
             "deleted_by": str(current_user["_id"]),
         }},
     )
@@ -244,7 +246,7 @@ async def predict_completion(student_id: str, current_user: dict = Depends(get_c
             
     avg_mastery = sum(mastery_scores) / len(mastery_scores) if mastery_scores else 85.0
     
-    now = datetime.utcnow()
+    now = utcnow()
     thirty_days_ago = now - timedelta(days=30)
     recent_verses = 0
     for r in new_recitations:

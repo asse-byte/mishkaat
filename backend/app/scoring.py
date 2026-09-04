@@ -1,6 +1,7 @@
 """معادلة التقييم الذكي."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 from datetime import timedelta
 from typing import List
 
@@ -26,7 +27,7 @@ async def compute_student_scores(students: List[dict], days: int) -> List[dict]:
     if not student_ids:
         return []
 
-    since = datetime.utcnow() - timedelta(days=days)
+    since = utcnow() - timedelta(days=days)
     rec_by_student: dict = {}
     att_by_student: dict = {}
 

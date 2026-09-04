@@ -1,5 +1,7 @@
 """لوحة التحكم والتحليلات."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from datetime import timedelta
 from fastapi import APIRouter
@@ -63,7 +65,7 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     pending_fees = await db.fees.count_documents({**student_scope, "status": "pending"})
 
     # نسبة الحضور خلال آخر 30 يوماً فعلاً
-    since = datetime.utcnow() - timedelta(days=30)
+    since = utcnow() - timedelta(days=30)
     window = {**student_scope, "date": {"$gte": since}}
     total_attendance = await db.attendance.count_documents(window)
     present_attendance = await db.attendance.count_documents({**window, "status": {"$in": ["present", "late"]}})
@@ -126,7 +128,7 @@ async def get_student_analytics(student_id: str, current_user: dict = Depends(ge
     """الحصول على الأداء التاريخي للطالب المعين"""
     student = await check_student_access(student_id, current_user)
         
-    six_months_ago = datetime.utcnow() - timedelta(days=180)
+    six_months_ago = utcnow() - timedelta(days=180)
     
     recitations = await db.recitations.find({
         **NOT_DELETED,

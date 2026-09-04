@@ -1,5 +1,7 @@
 """المراكز والإشراف العام."""
 
+from app.clock import utcnow
+
 from bson import ObjectId
 from datetime import datetime
 from fastapi import APIRouter
@@ -44,7 +46,7 @@ async def get_centers(current_user: dict = Depends(get_current_user)):
         center_data["teachers_count"] = await db.teachers.count_documents({"center_id": center_id, "is_active": True})
         center_data["halaqat_count"] = await db.halaqat.count_documents({"center_id": center_id, "is_active": True})
         if "created_at" not in center_data:
-            center_data["created_at"] = datetime.utcnow().isoformat()
+            center_data["created_at"] = utcnow().isoformat()
         else:
             center_data["created_at"] = center_data["created_at"].isoformat() if isinstance(center_data["created_at"], datetime) else center_data["created_at"]
         result.append(center_data)
@@ -103,7 +105,7 @@ async def get_system_status(current_user: dict = Depends(get_current_user)):
     total_logins_disabled = await db.audit_logs.count_documents({"action": "LOGIN_DENIED_DISABLED"})
     total_login_attempts = total_logins_success + total_logins_failed + total_logins_disabled
     
-    active_rate_locks = await db.login_attempts.count_documents({"locked_until": {"$gt": datetime.utcnow()}})
+    active_rate_locks = await db.login_attempts.count_documents({"locked_until": {"$gt": utcnow()}})
     total_public_registrations = await db.register_attempts.count_documents({})
     
     return {
@@ -156,7 +158,7 @@ async def public_register_center(request: Request, center: CenterCreate):
         "status": "trial",
         "currency": center.currency or "FCFA",
         "registered_from_ip": ip,
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
 
     manager_user = {
@@ -168,7 +170,7 @@ async def public_register_center(request: Request, center: CenterCreate):
         "is_active": False,
         "approval_status": "pending",
         "user_version": 0,
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
     manager_result = await db.users.insert_one(manager_user)
     center_dict["manager_id"] = str(manager_result.inserted_id)
@@ -211,7 +213,7 @@ async def approve_center(center_id: str, current_user: dict = Depends(get_curren
 
     await db.centers.update_one(
         {"_id": center_obj_id},
-        {"$set": {"is_active": True, "approval_status": "approved", "approved_at": datetime.utcnow()}}
+        {"$set": {"is_active": True, "approval_status": "approved", "approved_at": utcnow()}}
     )
     if center.get("manager_id"):
         await db.users.update_one(
@@ -274,7 +276,7 @@ async def create_center(center: CenterCreate, current_user: dict = Depends(get_c
         "phone": center.phone,
         "manager_name": center.manager_name,
         "is_active": True,
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
     
     # Create manager account if provided
@@ -293,7 +295,7 @@ async def create_center(center: CenterCreate, current_user: dict = Depends(get_c
             "hashed_password": get_password_hash(center.manager_password),
             "is_active": True,
             "user_version": 0,
-            "created_at": datetime.utcnow()
+            "created_at": utcnow()
         }
         manager_result = await db.users.insert_one(manager_user)
         center_dict["manager_id"] = str(manager_result.inserted_id)
@@ -399,13 +401,13 @@ async def get_center_details(center_id: str, current_user: dict = Depends(get_cu
         halaqat = await db.halaqat.find({"teacher_id": doc["id"], "is_active": True}).to_list(10)
         doc["halaqat"] = [h["name"] for h in halaqat]
         doc["students_count"] = await db.students.count_documents({"halaqah_id": {"$in": [str(h["_id"]) for h in halaqat]}, "is_active": True})
-        doc["hire_date"] = doc.get("hire_date", datetime.utcnow())
+        doc["hire_date"] = doc.get("hire_date", utcnow())
         if isinstance(doc["hire_date"], datetime):
             doc["hire_date"] = doc["hire_date"].isoformat()
         teachers_list.append(doc)
     
     # Registration info
-    center_data["created_at"] = center_data.get("created_at", datetime.utcnow())
+    center_data["created_at"] = center_data.get("created_at", utcnow())
     if isinstance(center_data["created_at"], datetime):
         center_data["created_at"] = center_data["created_at"].isoformat()
     
@@ -434,7 +436,7 @@ async def super_register_center(center: SuperCenterCreate, current_user: dict = 
         "manager_name": center.manager_name,
         "is_active": True,
         "approval_status": "approved",
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
 
     manager_user = {
@@ -446,7 +448,7 @@ async def super_register_center(center: SuperCenterCreate, current_user: dict = 
         "is_active": True,
         "approval_status": "approved",
         "user_version": 0,
-        "created_at": datetime.utcnow(),
+        "created_at": utcnow(),
     }
     
     manager_result = await db.users.insert_one(manager_user)

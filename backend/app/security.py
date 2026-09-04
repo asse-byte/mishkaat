@@ -1,5 +1,7 @@
 """المصادقة والتوكنات وحدود المحاولات."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from datetime import timedelta
 from fastapi import Depends
@@ -44,7 +46,7 @@ def get_password_hash(password: str) -> str:
 
 def _encode_jwt(payload: dict, expires_delta: timedelta, token_type: str) -> tuple[str, str, datetime]:
     """[AUDIT-2026-05-22 fix: tokens now carry jti + type + user_version for revocation/rotation]"""
-    now = datetime.utcnow()
+    now = utcnow()
     expire = now + expires_delta
     jti = secrets.token_hex(16)
     body = {**payload, "exp": expire, "iat": int(now.timestamp()), "jti": jti, "type": token_type}
@@ -156,7 +158,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> dict:
 # [AUDIT-2026-09-03 fix: القفل صار على مفتاحين — العنوان والحساب. القفل على العنوان وحده كان
 #  يُتجاوَز بتدوير العناوين، وخلف وكيل واحد كان يقفل كل مستخدمي المركز دفعة واحدة.]
 async def _check_attempt_key(key: str, label: str):
-    now = datetime.utcnow()
+    now = utcnow()
     entry = await db.login_attempts.find_one({"_id": key})
     if not entry:
         return
@@ -175,7 +177,7 @@ async def _check_rate_limit(ip: str, username: Optional[str] = None):
         await _check_attempt_key(f"user:{username}", "لهذا الحساب")
 
 async def _bump_attempt_key(key: str, maximum: int, lock_minutes: int) -> int:
-    now = datetime.utcnow()
+    now = utcnow()
     entry = await db.login_attempts.find_one_and_update(
         {"_id": key},
         {"$inc": {"count": 1}, "$set": {"last_seen": now}},
@@ -217,7 +219,7 @@ def hash_reset_code(username: str, code: str) -> str:
 
 async def _check_reset_request_rate(ip: str, username: str):
     """حدّ لطلبات إعادة التعيين — بالعنوان وبالحساب معاً"""
-    now = datetime.utcnow()
+    now = utcnow()
     window_start = now - timedelta(hours=1)
     for key in (f"ip:{ip}", f"user:{username}"):
         await db.reset_requests.update_one(
@@ -237,7 +239,7 @@ async def _check_reset_request_rate(ip: str, username: str):
         )
 
 async def _check_register_rate(ip: str):
-    now = datetime.utcnow()
+    now = utcnow()
     window_start = now - timedelta(minutes=REGISTER_WINDOW_MINUTES)
     # Trim old timestamps, then check count
     await db.register_attempts.update_one(

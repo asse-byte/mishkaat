@@ -1,5 +1,7 @@
 """سلسلة سجل التدقيق."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from datetime import timedelta
 from pymongo import ReturnDocument
@@ -47,7 +49,7 @@ async def write_audit_log(actor_id: str, center_id: str, action: str, payload: d
     """
     # MongoDB يخزّن التاريخ بدقة الملي ثانية فقط. لو بُصمت الطوابع بدقة الميكرو ثانية لاختلفت
     # البصمة المُعاد حسابها عن المخزَّنة في كل سجل، فيبلّغ التحقق عن "تلاعب" في سجل سليم.
-    now_raw = datetime.utcnow()
+    now_raw = utcnow()
     timestamp = now_raw.replace(microsecond=(now_raw.microsecond // 1000) * 1000)
     try:
         seq = await _next_audit_seq()

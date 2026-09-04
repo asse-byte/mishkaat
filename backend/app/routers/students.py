@@ -1,5 +1,7 @@
 """الطلاب."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from fastapi import Depends
@@ -75,7 +77,7 @@ async def get_students(
     for s in students:
         # [AUDIT-2026-05-22 fix: decrypt PII before serialization]
         doc = serialize_doc(decrypt_student_doc(s))
-        doc["enrollment_date"] = doc.get("enrollment_date", datetime.utcnow())
+        doc["enrollment_date"] = doc.get("enrollment_date", utcnow())
         if isinstance(doc["enrollment_date"], datetime):
             doc["enrollment_date"] = doc["enrollment_date"].isoformat()
         result.append(doc)
@@ -104,7 +106,7 @@ async def create_student(student: StudentCreate, current_user: dict = Depends(ge
         raise HTTPException(status_code=403, detail="غير مصرح لك بإنشاء طالب في مركز آخر")
     
     student_dict = student.model_dump()
-    enrollment_date = datetime.utcnow()
+    enrollment_date = utcnow()
     student_dict["enrollment_date"] = enrollment_date
     student_dict["progress"] = 0
     student_dict["current_surah"] = None
@@ -174,7 +176,7 @@ async def update_student(student_id: str, student: StudentUpdate, current_user: 
     updated = await db.students.find_one({"_id": student_obj_id})
     # [AUDIT-2026-05-22 fix: decrypt PII for the response]
     doc = serialize_doc(decrypt_student_doc(updated))
-    doc["enrollment_date"] = doc.get("enrollment_date", datetime.utcnow())
+    doc["enrollment_date"] = doc.get("enrollment_date", utcnow())
     if isinstance(doc["enrollment_date"], datetime):
         doc["enrollment_date"] = doc["enrollment_date"].isoformat()
     return doc

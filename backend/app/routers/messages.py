@@ -1,6 +1,7 @@
 """الرسائل الجماعية."""
 
-from datetime import datetime
+from app.clock import utcnow
+
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
@@ -31,7 +32,7 @@ async def create_broadcast_message(msg: BulkMessageCreate, current_user: dict = 
     msg_dict["center_id"] = center_id
     msg_dict["sender_id"] = str(current_user["_id"])
     msg_dict["sender_name"] = current_user.get("name") or current_user.get("username")
-    msg_dict["sent_at"] = datetime.utcnow()
+    msg_dict["sent_at"] = utcnow()
     msg_dict["replies"] = []
     
     result = await db.bulk_messages.insert_one(msg_dict)
@@ -89,7 +90,7 @@ async def reply_to_broadcast(
         "teacher_id": str(current_user["_id"]),
         "teacher_name": current_user.get("name") or current_user.get("username") or "مدير مركز",
         "content": payload.content,
-        "timestamp": datetime.utcnow()
+        "timestamp": utcnow()
     }
     
     await db.bulk_messages.update_one(

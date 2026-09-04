@@ -1,5 +1,7 @@
 """الحضور والغياب."""
 
+from app.clock import utcnow
+
 from datetime import datetime
 from fastapi import APIRouter
 from pymongo.errors import DuplicateKeyError
@@ -59,7 +61,7 @@ async def get_attendance(
     result = []
     for a in attendance:
         doc = serialize_doc(a)
-        doc["date"] = doc.get("date", datetime.utcnow())
+        doc["date"] = doc.get("date", utcnow())
         if isinstance(doc["date"], datetime):
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
@@ -109,7 +111,7 @@ async def create_attendance(data: AttendanceCreate, current_user: dict = Depends
     if current_user["role"] not in ["admin", "center_manager", "teacher"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
-    now = datetime.utcnow()
+    now = utcnow()
     date_str = data.date or now.strftime("%Y-%m-%d")
 
     # [AUDIT-2026-05-22 fix: validate every record's student belongs to caller's center]
@@ -201,7 +203,7 @@ async def get_student_attendance(student_id: str, current_user: dict = Depends(g
     result = []
     for a in attendance:
         doc = serialize_doc(a)
-        doc["date"] = doc.get("date", datetime.utcnow())
+        doc["date"] = doc.get("date", utcnow())
         if isinstance(doc["date"], datetime):
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
@@ -231,7 +233,7 @@ async def get_center_attendance(
     result = []
     for a in attendance:
         doc = serialize_doc(a)
-        doc["date"] = doc.get("date", datetime.utcnow())
+        doc["date"] = doc.get("date", utcnow())
         if isinstance(doc["date"], datetime):
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
