@@ -122,6 +122,12 @@ async def startup_event():
     await _safe_create_index(db.notifications, [("user_id", 1), ("read", 1)])
     await _safe_create_index(db.notifications, "created_at", expireAfterSeconds=180 * 24 * 3600)
 
+    # [إصلاح 2026-09-04] تذاكر فتح قناة البثّ: عمرها دقيقة وMongo يحذف المنتهية بنفسه
+    await _safe_create_index(db.stream_tickets, "ticket", unique=True)
+    await _safe_create_index(db.stream_tickets, "created_at", expireAfterSeconds=300)
+    # قناة البثّ تستطلع الإشعارات تصاعدياً حسب وقت الإنشاء
+    await _safe_create_index(db.notifications, [("user_id", 1), ("created_at", 1)])
+
     # Compound and performance indexes for new SaaS collections (v2.1 specification)
     await db.academic_schedules.create_index([("center_id", 1), ("day", 1), ("time_slot", 1)])
     await db.teacher_evaluations.create_index([("center_id", 1), ("teacher_id", 1)])

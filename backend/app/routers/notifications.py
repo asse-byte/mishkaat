@@ -13,9 +13,10 @@ import asyncio
 import json
 
 from app.common import safe_object_id, serialize_doc
+from app.config import logger
 from app.db import db
-from app.security import _decode_and_verify, get_current_user
-from app.sse import _sse_clients
+from app.security import get_current_user
+from app.sse import consume_stream_ticket, issue_stream_ticket
 
 router = APIRouter()
 
@@ -61,37 +62,65 @@ async def mark_all_notifications_read(current_user: dict = Depends(get_current_u
     )
     return {"message": "تم", "updated": result.modified_count}
 
+@router.post("/api/notifications/stream-ticket")
+async def create_stream_ticket(current_user: dict = Depends(get_current_user)):
+    """
+    [إصلاح 2026-09-04] تذكرة قصيرة العمر لفتح قناة البثّ.
+
+    تُطلب برأس Authorization عادي — فلا يمرّ توكن الوصول في مسار الرابط ولا
+    يتسرّب إلى سجلّات nginx ولا إلى تاريخ المتصفّح.
+    """
+    return await issue_stream_ticket(str(current_user["_id"]))
+
+
 @router.get("/api/notifications/stream")
-async def sse_notifications_stream(token: str, request: Request):
-    """قناة SSE لاستلام الإشعارات الفورية"""
-    try:
-        payload, user = await _decode_and_verify(token, expected_type="access")
-    except Exception:
-        raise HTTPException(status_code=401, detail="Unauthorized")
-        
-    user_id = str(user["_id"])
-    
-    q = asyncio.Queue()
-    if user_id not in _sse_clients:
-        _sse_clients[user_id] = set()
-    _sse_clients[user_id].add(q)
-    
+async def sse_notifications_stream(request: Request, ticket: str):
+    """
+    قناة SSE لاستلام الإشعارات الفورية.
+
+    [إصلاح 2026-09-04] مصدر الأحداث صار قاعدة البيانات لا طابوراً في الذاكرة.
+    النسخة السابقة كانت تقرأ من _sse_clients، وهي ذاكرة داخل العامل الواحد: مع
+    UVICORN_WORKERS=4 لا يصل الإشعار إلا لمن اتّصل بالعامل الذي كتبه. الآن تُستطلَع
+    مجموعة الإشعارات كل ثانيتين، فيصل ما كتبه أي عامل إلى أي عميل، بلا Redis ولا
+    اعتماد جديد. والتأخير الأقصى ثانيتان — مقبول لتنبيه غياب.
+    """
+    user_id = await consume_stream_ticket(ticket)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="تذكرة البثّ غير صالحة أو منتهية")
+
+    # لا تُعاد الإشعارات القديمة عند كل اتصال — نبدأ من لحظة الفتح
+    since = utcnow()
+    POLL_SECONDS = 2.0
+    KEEPALIVE_EVERY = 15.0
+
     async def generator():
-        try:
-            while True:
-                if await request.is_disconnected():
-                    break
-                try:
-                    event_data = await asyncio.wait_for(q.get(), timeout=15.0)
-                    yield f"event: {event_data['event']}\ndata: {json.dumps(event_data['data'])}\n\n"
-                except asyncio.TimeoutError:
-                    yield ": keep-alive\n\n"
-        finally:
-            if user_id in _sse_clients:
-                _sse_clients[user_id].discard(q)
-                if not _sse_clients[user_id]:
-                    del _sse_clients[user_id]
-                    
+        nonlocal since
+        idle = 0.0
+        while True:
+            if await request.is_disconnected():
+                break
+            try:
+                cursor = db.notifications.find(
+                    {"user_id": user_id, "created_at": {"$gt": since}}
+                ).sort("created_at", 1).limit(50)
+                sent = False
+                async for n in cursor:
+                    since = n["created_at"]
+                    payload = {"title": n.get("title"), "message": n.get("body"), **(n.get("data") or {})}
+                    yield (f"event: {n.get('type', 'notification')}" \
+                           f"\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n")
+                    sent = True
+                if sent:
+                    idle = 0.0
+            except Exception as e:
+                logger.error(f"SSE poll failed for {user_id}: {e}")
+
+            await asyncio.sleep(POLL_SECONDS)
+            idle += POLL_SECONDS
+            if idle >= KEEPALIVE_EVERY:
+                idle = 0.0
+                yield ": keep-alive\n\n"
+
     # [إصلاح 2026-09-03 — اكتُشف في مراجعة الإصلاحات نفسها]
     # استيراد asyncio أزال الانهيار، لكن القناة ظلت لا تُوصِّل شيئاً: العميل يتصل ويُسجَّل
     # ويعود 200، ولا يصل أي حدث. سببان يخنقان البثّ، كلاهما يجمّع الاستجابة قبل إرسالها:

@@ -81,7 +81,7 @@ from app.common import (
     serialize_doc,
 )
 from app.scoring import compute_student_scores
-from app.sse import push_notification, push_sse_notification
+from app.sse import consume_stream_ticket, issue_stream_ticket, push_notification
 from app.startup import startup_event
 from app.main import app
 
@@ -99,7 +99,7 @@ __all__ = [
     "verify_password", "audit_hash_input", "write_audit_log", "NOT_DELETED",
     "check_student_access", "client_ip", "parse_date_boundary", "redact_teacher",
     "safe_object_id", "serialize_doc", "compute_student_scores", "push_notification",
-    "push_sse_notification", "startup_event", "app",
+    "consume_stream_ticket", "issue_stream_ticket", "startup_event", "app",
 ]
 
 
