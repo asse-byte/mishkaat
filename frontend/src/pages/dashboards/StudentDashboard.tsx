@@ -77,7 +77,7 @@ export default function StudentDashboard() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] flex items-center justify-center mx-auto mb-4 animate-pulse-soft shadow-xl">
           <BookOpen className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -134,9 +134,9 @@ export default function StudentDashboard() {
       </div>
 
       {/* Progress map */}
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-[hsl(var(--border))]">
+      <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-black text-[hsl(var(--foreground))]">تقدم الحفظ</h3>
+          <h3 className="font-bold text-[hsl(var(--foreground))]">تقدم الحفظ</h3>
           <span className="text-sm font-bold text-[hsl(var(--primary))]">{memorizedJuz} / 30 جزءاً</span>
         </div>
         <div className="h-4 bg-[hsl(var(--muted))] rounded-full overflow-hidden mb-5">
@@ -162,10 +162,10 @@ export default function StudentDashboard() {
 
       <div className="grid lg:grid-cols-2 gap-5">
         {/* Recent Recitations */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" />
-            <h3 className="font-black text-[hsl(var(--foreground))]">التسميعات الأخيرة</h3>
+            <h3 className="font-bold text-[hsl(var(--foreground))]">التسميعات الأخيرة</h3>
           </div>
           <div className="divide-y divide-[hsl(var(--border))]">
             {recitations.length === 0 ? (
@@ -201,14 +201,14 @@ export default function StudentDashboard() {
         </div>
 
         {/* Achievements */}
-        <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+        <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center gap-2">
             <Trophy className="w-5 h-5 text-[hsl(var(--gold))]" />
-            <h3 className="font-black text-[hsl(var(--foreground))]">الإنجازات</h3>
+            <h3 className="font-bold text-[hsl(var(--foreground))]">الإنجازات</h3>
           </div>
           <div className="p-5 space-y-3">
             {achievements.map((a, i) => (
-              <div key={i} className={`flex items-center gap-4 p-4 rounded-2xl border-2 transition-all ${a.unlocked ? 'border-amber-200 bg-amber-50' : 'border-[hsl(var(--border))] opacity-50'}`}>
+              <div key={i} className={`flex items-center gap-4 p-4 rounded-[var(--radius)] border-2 transition-all ${a.unlocked ? 'border-amber-200 bg-amber-50' : 'border-[hsl(var(--border))] opacity-50'}`}>
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-sm ${a.unlocked ? 'gradient-gold' : 'bg-[hsl(var(--muted))]'}`}>
                   <a.icon className="w-6 h-6 text-white" />
                 </div>

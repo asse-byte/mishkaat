@@ -146,17 +146,14 @@ export default function SuperAdminDashboard() {
     <div className="space-y-6 page-fade-in pb-10 text-[hsl(var(--foreground))]">
       
       {/* Super Admin Top Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl gradient-sidebar border-2 border-[hsl(var(--gold))/20] p-6 lg:p-8 text-white shadow-xl">
-        <div className="absolute top-[-50px] left-[-50px] w-64 h-64 rounded-full bg-white/5 pointer-events-none" />
-        <div className="absolute bottom-[-30px] right-20 w-44 h-44 rounded-full bg-white/5 pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2 text-xs font-bold badge-gold text-white px-3 py-1 rounded-full w-fit mb-2">
               <ShieldAlert className="w-3.5 h-3.5" />
               وزارة الشؤون الإسلامية والأوقاف
             </div>
-            <h1 className="text-2xl lg:text-3xl font-black mb-1">منصة مِشكاة للإشراف العام والرقابة</h1>
-            <p className="text-white/70 text-xs lg:text-sm">لوحة الإدارة المركزية والرقابة المالية لجميع مراكز التحفيظ المسجلة</p>
+            <h1 className="text-2xl lg:text-3xl font-bold mb-1">منصة مِشكاة للإشراف العام والرقابة</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">لوحة الإدارة المركزية والرقابة المالية لجميع مراكز التحفيظ المسجلة</p>
           </div>
           <div className="flex gap-2">
             <button
@@ -230,10 +227,10 @@ export default function SuperAdminDashboard() {
           .sort((a, b) => b.score - a.score);
 
         return (
-          <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
+          <div className="bg-white rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div>
-                <h3 className="text-lg font-black flex items-center gap-2 text-emerald-800">
+                <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-800">
                   <TrendingUp className="w-5.5 h-5.5 text-amber-500 animate-pulse" />
                   تصنيف وتقييم المراكز الأكثر التزاماً وتميزاً
                 </h3>
@@ -276,7 +273,7 @@ export default function SuperAdminDashboard() {
                         <td className="py-4 text-center">
                           <div className="flex items-center justify-center gap-1.5">
                             <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden">
-                              <div className="bg-emerald-600 h-full rounded-full" style={{ width: `${center.score}%` }} />
+                              <div className="bg-[hsl(var(--ok))] h-full rounded-full" style={{ width: `${center.score}%` }} />
                             </div>
                             <span className="text-xs font-mono font-bold text-emerald-700">{center.score}%</span>
                           </div>
@@ -304,15 +301,15 @@ export default function SuperAdminDashboard() {
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-100 text-rose-600 text-sm flex items-center gap-3 animate-shake">
             <AlertCircle className="w-5 h-5 shrink-0" />
             <span className="font-semibold">{error}</span>
-            <button onClick={() => setError('')} className="mr-auto text-rose-400 hover:text-rose-600 font-black">✕</button>
+            <button onClick={() => setError('')} className="mr-auto text-rose-400 hover:text-rose-600 font-bold">✕</button>
           </div>
         )}
 
         {/* Add Center Panel */}
         {showAddForm && (
-          <div className="bg-white rounded-3xl border-2 border-[hsl(var(--primary))/20] shadow-xl p-6 animate-slide-in-up">
+          <div className="bg-white rounded-[var(--radius-lg)] border-2 border-[hsl(var(--primary))/20] shadow-xl p-6 animate-slide-in-up">
             <div className="flex items-center justify-between mb-5 border-b pb-3">
-              <h3 className="text-lg font-black text-[hsl(var(--primary))] flex items-center gap-2">
+              <h3 className="text-lg font-bold text-[hsl(var(--primary))] flex items-center gap-2">
                 <Building2 className="w-5 h-5" />
                 تسجيل واعتماد مركز تحفيظ جديد
               </h3>
@@ -372,7 +369,7 @@ export default function SuperAdminDashboard() {
         {/* Center Grid list */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-black flex items-center gap-2">
+            <h3 className="text-lg font-bold flex items-center gap-2">
               <Building2 className="w-5 h-5 text-[hsl(var(--primary))]" />
               مراكز التحفيظ المسجلة بالمنظومة
             </h3>
@@ -380,7 +377,7 @@ export default function SuperAdminDashboard() {
           </div>
 
           {filtered.length === 0 ? (
-            <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
+            <div className="text-center py-20 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
               <Building2 className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-30 animate-pulse" />
               <p className="text-[hsl(var(--muted-foreground))] font-semibold text-base">لا توجد مراكز تحفيظ مطابقة لبحثك</p>
             </div>
@@ -389,12 +386,12 @@ export default function SuperAdminDashboard() {
               {filtered.map(center => {
                 const isUpdating = statusUpdatingId === center.id;
                 return (
-                  <div key={center.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden flex flex-col hover:shadow-xl transition-all stat-card">
+                  <div key={center.id} className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden flex flex-col hover:shadow-xl transition-all stat-card">
                     {/* Header */}
                     <div className="gradient-primary p-5">
                       <div className="flex items-start justify-between">
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-black text-white text-lg truncate leading-snug">{center.name}</h4>
+                          <h4 className="font-bold text-white text-lg truncate leading-snug">{center.name}</h4>
                           <div className="flex items-center gap-1 mt-1.5 text-white/70 text-xs">
                             <MapPin className="w-3.5 h-3.5 shrink-0" />
                             <span className="truncate">{center.address}</span>
@@ -421,7 +418,7 @@ export default function SuperAdminDashboard() {
                       ].map((s, idx) => (
                         <div key={idx} className="p-3 text-center">
                           <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
-                          <p className="text-xl font-black text-[hsl(var(--foreground))]">{s.val}</p>
+                          <p className="text-xl font-bold text-[hsl(var(--foreground))]">{s.val}</p>
                           <p className="text-[10px] text-[hsl(var(--muted-foreground))] font-semibold">{s.label}</p>
                         </div>
                       ))}
@@ -489,10 +486,10 @@ export default function SuperAdminDashboard() {
       {/* Selected Center Details Modal */}
       {selectedCenter && (
         <div className="modal-overlay animate-fade-in" onClick={() => setSelectedCenter(null)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between text-white">
               <div>
-                <h2 className="text-xl font-black">{selectedCenter.name}</h2>
+                <h2 className="text-xl font-bold">{selectedCenter.name}</h2>
                 <span className="text-xs opacity-80">{selectedCenter.address}</span>
               </div>
               <button onClick={() => setSelectedCenter(null)} className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white">
@@ -508,9 +505,9 @@ export default function SuperAdminDashboard() {
                   { label: 'إجمالي المحفظين', val: selectedCenter.teachers_count, icon: GraduationCap, bg: 'bg-blue-50 text-blue-700' },
                   { label: 'إجمالي الحلقات', val: selectedCenter.halaqat_count, icon: BookOpen, bg: 'bg-amber-50 text-amber-700' },
                 ].map((m, idx) => (
-                  <div key={idx} className={`p-4 rounded-2xl text-center ${m.bg}`}>
+                  <div key={idx} className={`p-4 rounded-[var(--radius)] text-center ${m.bg}`}>
                     <m.icon className="w-5 h-5 mx-auto mb-1" />
-                    <p className="text-2xl font-black">{m.val}</p>
+                    <p className="text-2xl font-bold">{m.val}</p>
                     <p className="text-[10px] font-bold">{m.label}</p>
                   </div>
                 ))}

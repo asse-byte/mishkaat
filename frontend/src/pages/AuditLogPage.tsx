@@ -55,10 +55,10 @@ export default function AuditLogPage() {
   if (user?.role !== 'admin') {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-20 h-20 bg-red-100 rounded-3xl flex items-center justify-center mb-4 shadow-lg">
+        <div className="w-20 h-20 bg-red-100 rounded-[var(--radius-lg)] flex items-center justify-center mb-4 shadow-lg">
           <ShieldAlert className="w-10 h-10 text-red-600" />
         </div>
-        <h2 className="text-2xl font-black text-[hsl(var(--foreground))]">غير مصرح بالوصول</h2>
+        <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">غير مصرح بالوصول</h2>
         <p className="text-[hsl(var(--muted-foreground))] mt-2 text-sm">هذه الصفحة مخصصة لمدير النظام فقط.</p>
       </div>
     );
@@ -83,17 +83,15 @@ export default function AuditLogPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-[var(--radius-lg)] p-6 text-white shadow-[var(--shadow)] gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1 flex items-center gap-2">
+            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
               <Activity className="w-6 h-6" /> سجل النشاط
             </h1>
-            <p className="text-white/70 text-sm">مراقبة جميع عمليات الدخول والأمان في النظام</p>
+            <p className="text-sm text-[hsl(var(--ink-3))]">مراقبة جميع عمليات الدخول والأمان في النظام</p>
           </div>
           <button onClick={fetchLogs}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+            className="btn-primary text-sm">
             <RefreshCw className="w-4 h-4" /> تحديث
           </button>
         </div>
@@ -115,7 +113,7 @@ export default function AuditLogPage() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
+      <div className="card p-5">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div className="relative">
             <Search className="absolute right-3 top-3.5 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
@@ -145,7 +143,7 @@ export default function AuditLogPage() {
       </div>
 
       {/* Logs Table */}
-      <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+      <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
             <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
@@ -174,7 +172,7 @@ export default function AuditLogPage() {
                     <tr key={log.id} className="hover:bg-[hsl(var(--muted))]/30 transition-colors">
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center text-white text-xs font-black shrink-0">
+                          <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
                             {(log.username || '?').charAt(0).toUpperCase()}
                           </div>
                           <div>

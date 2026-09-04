@@ -159,17 +159,11 @@ export default function Students() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">إدارة الطلاب</h1>
-            <p className="text-white/70 text-sm">إجمالي: {students.length} طالب</p>
-          </div>
-          <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-            <Users className="w-7 h-7 text-white" />
-          </div>
-        </div>
+            <h1 className="text-2xl font-bold mb-1">إدارة الطلاب</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">إجمالي: {students.length} طالب</p>
+          </div>        </div>
       </div>
 
       {/* Stats */}
@@ -213,19 +207,19 @@ export default function Students() {
       {/* Add Modal */}
       {showAddForm && (
         <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between sticky top-0">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Plus className="w-5 h-5" /> تسجيل طالب جديد
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-white/70 hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
+              <button onClick={() => setShowAddForm(false)} className="text-[hsl(var(--ink-3))] hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
             </div>
             <div className="p-5 space-y-5">
               {/* Student type */}
               <div className="grid grid-cols-2 gap-3">
                 {(['memorizing', 'reviewing'] as const).map(type => (
                   <button key={type} onClick={() => { setStudentType(type); if (type === 'reviewing') setSelectedPlan('plan_review'); }}
-                    className={`p-4 rounded-2xl border-2 text-center transition-all ${
+                    className={`p-4 rounded-[var(--radius)] border-2 text-center transition-all ${
                       studentType === type ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary-light))]' : 'border-[hsl(var(--border))]'}`}>
                     {type === 'memorizing' ? <BookOpen className="w-7 h-7 mx-auto mb-2 text-[hsl(var(--primary))]" /> : <RefreshCw className="w-7 h-7 mx-auto mb-2 text-[hsl(var(--primary))]" />}
                     <p className="font-bold text-sm">{type === 'memorizing' ? 'طالب حفظ' : 'طالب مراجعة'}</p>
@@ -322,24 +316,26 @@ export default function Students() {
 
       {/* Students List */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-3xl bg-white border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
           <Users className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
           <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
         </div>
       ) : (
         <div className="space-y-3 stagger">
           {filtered.map(student => (
-            <div key={student.id} className="bg-white rounded-2xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+            <div key={student.id} className="bg-white rounded-[var(--radius)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
               <div className="flex items-center gap-4 p-4">
                 {/* Avatar */}
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white font-black text-lg shrink-0 ${student.student_type === 'reviewing' ? 'gradient-gold' : 'gradient-primary'}`}>
+                <div className={`w-12 h-12 rounded-[var(--radius)] flex items-center justify-center font-bold text-lg shrink-0 border ${student.student_type === 'reviewing'
+                  ? 'bg-[hsl(var(--lamp-wash))] border-[hsl(var(--lamp-line))] text-[hsl(var(--lamp-strong))]'
+                  : 'bg-[hsl(var(--info-wash))] border-[hsl(var(--info)/.28)] text-[hsl(var(--info))]'}`}>
                   {student.name.charAt(0)}
                 </div>
 
                 {/* Info */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="font-black text-[hsl(var(--foreground))]">{student.name}</h3>
+                    <h3 className="font-bold text-[hsl(var(--foreground))]">{student.name}</h3>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                       student.student_type === 'reviewing' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
                       {student.student_type === 'reviewing' ? 'مراجعة' : 'حفظ'}
@@ -358,7 +354,7 @@ export default function Students() {
 
                 {/* Progress */}
                 <div className="text-center px-3 py-2 bg-[hsl(var(--muted))] rounded-xl shrink-0">
-                  <p className="text-lg font-black text-[hsl(var(--primary))]">{student.progress || 0}%</p>
+                  <p className="text-lg font-bold text-[hsl(var(--primary))]">{student.progress || 0}%</p>
                   <p className="text-[10px] text-[hsl(var(--muted-foreground))]">تقدم</p>
                 </div>
 
@@ -422,30 +418,30 @@ export default function Students() {
       {/* Student Detail / Edit Modal */}
       {selectedStudent && (
         <div className="modal-overlay" onClick={() => setSelectedStudent(null)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className={`p-5 rounded-t-3xl ${selectedStudent.student_type === 'reviewing' ? 'gradient-gold' : 'gradient-primary'}`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-2xl">
+                  <div className="w-14 h-14 rounded-[var(--radius)] bg-[hsl(var(--lamp-wash))] border border-[hsl(var(--lamp-line))] flex items-center justify-center text-[hsl(var(--lamp-strong))] font-bold text-2xl">
                     {selectedStudent.name.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white">{selectedStudent.name}</h2>
-                    <p className="text-white/70 text-sm">
+                    <h2 className="text-lg font-bold text-white">{selectedStudent.name}</h2>
+                    <p className="text-sm text-[hsl(var(--ink-3))]">
                       {selectedStudent.student_type === 'reviewing' ? 'طالب مراجعة' : 'طالب حفظ'}
                       {selectedStudent.memorization_plan && ` · ${planLabels[selectedStudent.memorization_plan]}`}
                     </p>
                   </div>
                 </div>
-                <button onClick={() => setSelectedStudent(null)} className="text-white/70 hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
+                <button onClick={() => setSelectedStudent(null)} className="text-[hsl(var(--ink-3))] hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
               </div>
               <div className="flex gap-2 mt-4">
                 <button onClick={() => setEditMode(!editMode)} title="تبديل وضع التعديل"
-                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold">
+                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <Edit className="w-4 h-4" /> {editMode ? 'إلغاء' : 'تعديل'}
                 </button>
                 <button onClick={() => handleDelete(selectedStudent.id)} title="حذف الطالب"
-                  className="px-4 py-2 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white text-sm font-bold">
+                  className="px-4 py-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white text-sm font-bold">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -456,7 +452,7 @@ export default function Students() {
               <div className="mb-4">
                 <div className="flex justify-between text-sm mb-2">
                   <span className="font-semibold text-[hsl(var(--foreground))]">تقدم الحفظ</span>
-                  <span className="font-black text-[hsl(var(--primary))]">{selectedStudent.progress || 0}%</span>
+                  <span className="font-bold text-[hsl(var(--primary))]">{selectedStudent.progress || 0}%</span>
                 </div>
                 <div className="h-3 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
                   <div className="h-full gradient-primary rounded-full" style={{ width: `${selectedStudent.progress || 0}%` }} />

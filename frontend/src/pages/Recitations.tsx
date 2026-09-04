@@ -148,7 +148,7 @@ export default function Recitations() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
           <BookOpen className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -160,20 +160,14 @@ export default function Recitations() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">سجل التسميع</h1>
-            <p className="text-white/70 text-sm">{recitations.length} تسميع مسجَّل</p>
+            <h1 className="text-2xl font-bold mb-1">سجل التسميع</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">{recitations.length} تسميع مسجَّل</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex w-16 h-16 bg-white/15 rounded-2xl items-center justify-center animate-float">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            {canAdd && (
+          <div className="flex items-center gap-3">            {canAdd && (
               <button onClick={() => { setShowForm(true); setFormData(EMPTY_FORM); setError(''); }}
-                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+                className="btn-primary text-sm">
                 <Plus className="w-4 h-4" /> تسميع جديد
               </button>
             )}
@@ -184,19 +178,19 @@ export default function Recitations() {
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">
         {[
-          { label: 'إجمالي التسميعات', value: recitations.length, cls: 'gradient-primary' },
-          { label: 'تقييم ممتاز',      value: totalExcellent,     cls: 'gradient-gold' },
+          { label: 'إجمالي التسميعات', value: recitations.length, cls: 'stat-card-teal' },
+          { label: 'تقييم ممتاز',      value: totalExcellent,     cls: 'stat-card-amber' },
           { label: 'متوسط الأخطاء',    value: avgMistakes,        cls: 'stat-card-teal' },
         ].map(s => (
-          <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-            <p className="text-3xl font-black">{s.value}</p>
-            <p className="text-white/70 text-sm mt-1">{s.label}</p>
+          <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.value}</p>
+            <p className="eyebrow">{s.label}</p>
           </div>
         ))}
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
+      <div className="card p-5">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <div className="relative">
             <Search className="absolute right-3 top-3.5 w-4 h-4 text-[hsl(var(--muted-foreground))]" />
@@ -228,7 +222,7 @@ export default function Recitations() {
       </div>
 
       {/* List */}
-      <div className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden">
+      <div className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden">
         {filtered.length === 0 ? (
           <div className="py-16 text-center text-[hsl(var(--muted-foreground))]">
             <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
@@ -239,7 +233,7 @@ export default function Recitations() {
             {filtered.map(rec => (
               <div key={rec.id} className="flex items-center gap-4 px-5 py-4 hover:bg-[hsl(var(--muted))]/30 transition-colors">
                 {/* Avatar */}
-                <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0">
+                <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0">
                   {(rec.student_name || 'ط').charAt(0)}
                 </div>
 
@@ -277,7 +271,7 @@ export default function Recitations() {
 
                 {/* Mistakes */}
                 <div className="text-center shrink-0">
-                  <p className={`text-lg font-black ${rec.mistakes_count === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <p className={`text-lg font-bold ${rec.mistakes_count === 0 ? 'text-emerald-600' : 'text-amber-600'}`}>
                     {rec.mistakes_count}
                   </p>
                   <p className="text-[10px] text-[hsl(var(--muted-foreground))]">أخطاء</p>
@@ -299,9 +293,9 @@ export default function Recitations() {
       {/* Add Modal */}
       {showForm && (
         <div className="modal-overlay animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
-              <h2 className="text-lg font-black text-white">تسجيل تسميع جديد</h2>
+              <h2 className="text-lg font-bold text-white">تسجيل تسميع جديد</h2>
               <button onClick={() => setShowForm(false)}
                 className="p-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all">
                 <X className="w-5 h-5" />
@@ -377,7 +371,7 @@ export default function Recitations() {
                       <input type="radio" name="eval" value={k} className="sr-only"
                         checked={formData.evaluation === k}
                         onChange={() => setFormData({ ...formData, evaluation: k })} />
-                      <span className={`w-2.5 h-2.5 rounded-full ${k === 'excellent' ? 'bg-emerald-500' : k === 'good' ? 'bg-blue-500' : k === 'acceptable' ? 'bg-amber-500' : 'stat-card-rose'}`} />
+                      <span className={`w-2.5 h-2.5 rounded-full ${k === 'excellent' ? 'bg-[hsl(var(--ok))]' : k === 'good' ? 'bg-[hsl(var(--info))]' : k === 'acceptable' ? 'bg-[hsl(var(--warn))]' : 'stat-card-rose'}`} />
                       {v.text}
                     </label>
                   ))}

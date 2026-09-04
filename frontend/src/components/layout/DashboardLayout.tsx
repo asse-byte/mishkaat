@@ -138,8 +138,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <BookOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="font-black text-white text-sm leading-tight">نظام المشكاة</h1>
-                <p className="text-white/45 text-[10px] font-bold tracking-widest" dir="ltr">MISHKAAT</p>
+                <h1 className="font-bold text-white text-sm leading-tight">نظام المشكاة</h1>
+                <p className="text-white/50 text-[10px] font-semibold tracking-widest" dir="ltr">MISHKAAT</p>
               </div>
             </div>
             <button
@@ -153,9 +153,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* User card */}
           {user && (
-            <div className="m-4 p-4 rounded-2xl bg-white/6 border border-white/8">
+            <div className="m-4 p-4 rounded-[var(--radius)] bg-white/6 border border-white/8">
               <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-white font-black text-sm shadow-lg">
+                <div className="w-11 h-11 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-sm shadow-lg">
                   {getInitials(user.name)}
                 </div>
                 <div className="flex-1 min-w-0">
@@ -207,7 +207,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               onClick={handleLogout}
               aria-label="تسجيل الخروج من النظام"
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
-                         text-white/60 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                         text-white/60 hover:text-red-400 hover:bg-[hsl(var(--danger))]/10 transition-all"
             >
               <LogOut className="w-5 h-5" aria-hidden="true" />
               <span>تسجيل الخروج</span>
@@ -254,12 +254,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   className="relative p-2 rounded-xl hover:bg-[hsl(var(--muted))] transition-colors text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--foreground))]"
                 >
                   <Bell className="w-5 h-5" aria-hidden="true" />
-                  <span className="absolute top-2 left-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" aria-hidden="true" />
+                  <span className="absolute top-2 left-2 w-2 h-2 bg-[hsl(var(--danger))] rounded-full border-2 border-white" aria-hidden="true" />
                 </Link>
               )}
               {user && (
                 <Link to="/profile">
-                  <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-black text-xs shadow-md">
+                  <div className="w-9 h-9 rounded-xl gradient-primary flex items-center justify-center text-white font-bold text-xs shadow-md">
                     {getInitials(user.name)}
                   </div>
                 </Link>

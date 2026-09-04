@@ -123,7 +123,7 @@ export default function Halaqat() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
           <BookOpen className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري التحميل...</p>
@@ -135,20 +135,14 @@ export default function Halaqat() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">إدارة الحلقات</h1>
-            <p className="text-white/70 text-sm">{halaqat.length} حلقة · {totalStudents} طالب</p>
+            <h1 className="text-2xl font-bold mb-1">إدارة الحلقات</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">{halaqat.length} حلقة · {totalStudents} طالب</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden md:flex w-16 h-16 bg-white/15 rounded-2xl items-center justify-center animate-float">
-              <BookOpen className="w-8 h-8 text-white" />
-            </div>
-            {user?.role === 'center_manager' && (
+          <div className="flex items-center gap-3">            {user?.role === 'center_manager' && (
               <button onClick={openAdd}
-                className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+                className="btn-primary text-sm">
                 <Plus className="w-4 h-4" /> إضافة حلقة
               </button>
             )}
@@ -159,13 +153,13 @@ export default function Halaqat() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">
         {[
-          { label: 'الحلقات النشطة',  value: halaqat.filter(h => h.is_active).length, cls: 'gradient-primary' },
-          { label: 'إجمالي الطلاب',   value: totalStudents,                            cls: 'gradient-gold' },
+          { label: 'الحلقات النشطة',  value: halaqat.filter(h => h.is_active).length, cls: 'stat-card-teal' },
+          { label: 'إجمالي الطلاب',   value: totalStudents,                            cls: 'stat-card-amber' },
           { label: 'متوسط الطلاب',    value: halaqat.length > 0 ? Math.round(totalStudents / halaqat.length) : 0, cls: 'stat-card-teal' },
         ].map(s => (
-          <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-            <p className="text-3xl font-black">{s.value}</p>
-            <p className="text-white/70 text-sm mt-1">{s.label}</p>
+          <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.value}</p>
+            <p className="eyebrow">{s.label}</p>
           </div>
         ))}
       </div>
@@ -180,7 +174,7 @@ export default function Halaqat() {
 
       {/* Halaqat Grid */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 text-[hsl(var(--muted-foreground))] bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-16 text-[hsl(var(--muted-foreground))] bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
           <BookOpen className="w-14 h-14 mx-auto mb-3 opacity-30" />
           <p className="font-medium">لا توجد حلقات{search ? ' مطابقة للبحث' : ''}</p>
         </div>
@@ -192,14 +186,14 @@ export default function Halaqat() {
               : 0;
             const isFull = pct >= 90;
             return (
-              <div key={halaqah.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
+              <div key={halaqah.id} className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
                 {/* Header */}
                 <div className="gradient-primary p-5">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-black text-white truncate">{halaqah.name}</h3>
+                      <h3 className="text-lg font-bold text-white truncate">{halaqah.name}</h3>
                       {halaqah.location && (
-                        <p className="text-white/70 text-sm mt-0.5 flex items-center gap-1">
+                        <p className="text-[hsl(var(--ink-3))] text-sm mt-0.5 flex items-center gap-1">
                           <MapPin className="w-3.5 h-3.5 shrink-0" />{halaqah.location}
                         </p>
                       )}
@@ -242,7 +236,7 @@ export default function Halaqat() {
                     <div className="flex items-center justify-between mb-1.5">
                       <div className="flex items-center gap-1.5 text-sm">
                         <Users className="w-4 h-4 text-[hsl(var(--gold))]" />
-                        <span className="font-black text-[hsl(var(--foreground))]">{halaqah.current_students}</span>
+                        <span className="font-bold text-[hsl(var(--foreground))]">{halaqah.current_students}</span>
                         <span className="text-[hsl(var(--muted-foreground))]">/ {halaqah.max_students}</span>
                       </div>
                       <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-700'}`}>
@@ -264,9 +258,9 @@ export default function Halaqat() {
       {/* Add/Edit Modal */}
       {showForm && (
         <div className="modal-overlay animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
-              <h2 className="text-lg font-black text-white">
+              <h2 className="text-lg font-bold text-white">
                 {editItem ? 'تعديل الحلقة' : 'إضافة حلقة جديدة'}
               </h2>
               <button onClick={() => setShowForm(false)}

@@ -192,7 +192,7 @@ export default function Competitions() {
       {/* Printable Certificate Template (Hidden on screen, shown in print) */}
       {printCert && (
         <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-black" dir="rtl">
-          <div className="border-[12px] border-double border-[hsl(152,45%,38%)] p-8 h-[95vh] flex flex-col justify-between items-center text-center rounded-3xl relative">
+          <div className="border-[12px] border-double border-[hsl(152,45%,38%)] p-8 h-[95vh] flex flex-col justify-between items-center text-center rounded-[var(--radius-lg)] relative">
             
             {/* Elegant Corner Decorations */}
             <div className="absolute top-4 right-4 text-4xl text-[hsl(152,45%,38%)]">❖</div>
@@ -203,7 +203,7 @@ export default function Competitions() {
             <div>
               <div className="text-sm font-bold text-[hsl(152,45%,38%)] mb-1">وزارة الشؤون الإسلامية والأوقاف</div>
               <h4 className="text-xs font-semibold mb-6">مِشكاة لإدارة مراكز تحفيظ القرآن الكريم المعتمدة</h4>
-              <div className="w-20 h-20 mx-auto mb-4 border-2 border-[hsl(152,45%,38%)] rounded-full flex items-center justify-center font-black text-[hsl(152,45%,38%)] text-xl">
+              <div className="w-20 h-20 mx-auto mb-4 border-2 border-[hsl(152,45%,38%)] rounded-full flex items-center justify-center font-bold text-[hsl(152,45%,38%)] text-xl">
                 مِشكاة
               </div>
             </div>
@@ -213,7 +213,7 @@ export default function Competitions() {
               <p className="text-base font-medium max-w-xl mx-auto leading-relaxed">
                 يسر إدارة مركز تحفيظ القرآن الكريم بكل فخر واعتزاز أن تمنح هذه الشهادة للطالب المتميز:
               </p>
-              <h2 className="text-3xl font-black text-amber-600 underline decoration-double decoration-1 my-4">{printCert.student_name}</h2>
+              <h2 className="text-3xl font-bold text-amber-600 underline decoration-double decoration-1 my-4">{printCert.student_name}</h2>
               <p className="text-sm leading-loose max-w-lg mx-auto">
                 وذلك تقديراً لأدائه الاستثنائي وحصوله على فئة <strong className="text-emerald-700">"{printCert.category}"</strong> في 
                 <br />
@@ -248,17 +248,11 @@ export default function Competitions() {
       <div className="print:hidden space-y-6">
 
         {/* Hero */}
-        <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-          <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
-          <div className="relative z-10 flex items-center justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black mb-1">المسابقات القرآنية السنوية</h1>
-              <p className="text-white/70 text-sm">تقييم مستويات الحفظ والأداء والتجويد مع الرصد الفوري لعلامات المحكمين</p>
-            </div>
-            <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-              <Trophy className="w-7 h-7 text-white" />
-            </div>
-          </div>
+              <h1 className="text-2xl font-bold mb-1">المسابقات القرآنية السنوية</h1>
+              <p className="text-sm text-[hsl(var(--ink-3))]">تقييم مستويات الحفظ والأداء والتجويد مع الرصد الفوري لعلامات المحكمين</p>
+            </div>          </div>
         </div>
 
         {/* Competitions Selector Bar */}
@@ -298,12 +292,12 @@ export default function Competitions() {
         {/* Comp Add Modal */}
         {showAddComp && (
           <div className="modal-overlay" onClick={() => setShowAddComp(false)}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
               <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between text-white">
-                <h3 className="text-lg font-black flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2">
                   <Trophy className="w-5 h-5 text-[hsl(var(--gold))]" /> إضافة مسابقة سنوية جديدة
                 </h3>
-                <button onClick={() => setShowAddComp(false)} className="text-white/75 hover:text-white">✕</button>
+                <button onClick={() => setShowAddComp(false)} className="text-[hsl(var(--ink-3))] hover:text-white">✕</button>
               </div>
               <div className="p-5 space-y-4">
                 {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs">{error}</div>}
@@ -347,12 +341,12 @@ export default function Competitions() {
         {/* Contestant Reg Modal */}
         {showRegContestant && selectedComp && (
           <div className="modal-overlay" onClick={() => setShowRegContestant(false)}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
               <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between text-white">
-                <h3 className="text-lg font-black flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2">
                   <Award className="w-5 h-5 text-[hsl(var(--gold))]" /> تسجيل متسابق جديد
                 </h3>
-                <button onClick={() => setShowRegContestant(false)} className="text-white/75 hover:text-white">✕</button>
+                <button onClick={() => setShowRegContestant(false)} className="text-[hsl(var(--ink-3))] hover:text-white">✕</button>
               </div>
               <div className="p-5 space-y-4">
                 {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs">{error}</div>}
@@ -392,15 +386,15 @@ export default function Competitions() {
         {/* Contestants grading modal */}
         {showGradeModal && (
           <div className="modal-overlay" onClick={() => setShowGradeModal(null)}>
-            <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+            <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
               <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between text-white">
-                <h3 className="text-lg font-black flex items-center gap-2">
+                <h3 className="text-lg font-bold flex items-center gap-2">
                   <Star className="w-5 h-5 text-[hsl(var(--gold))]" /> رصد درجات التقييم والتحكيم
                 </h3>
-                <button onClick={() => setShowGradeModal(null)} className="text-white/75 hover:text-white">✕</button>
+                <button onClick={() => setShowGradeModal(null)} className="text-[hsl(var(--ink-3))] hover:text-white">✕</button>
               </div>
               <div className="p-5 space-y-4">
-                <div className="p-3 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center gap-2.5">
+                <div className="p-3 bg-emerald-50 rounded-[var(--radius)] border border-emerald-100 flex items-center gap-2.5">
                   <User className="w-5 h-5 text-emerald-700" />
                   <div>
                     <h4 className="font-bold text-sm text-emerald-800">{showGradeModal.student_name}</h4>
@@ -458,9 +452,9 @@ export default function Competitions() {
         )}
 
         {/* Leaderboard layout of Contestants */}
-        <div className="bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm overflow-hidden">
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm overflow-hidden">
           <div className="p-5 border-b border-[hsl(var(--border))] flex items-center justify-between">
-            <h3 className="font-black text-base flex items-center gap-2">
+            <h3 className="font-bold text-base flex items-center gap-2">
               <Trophy className="w-5 h-5 text-amber-500 animate-float" />
               لوحة صدارة المتسابقين والنتائج اللحظية
             </h3>
@@ -492,7 +486,7 @@ export default function Competitions() {
                     const isRanked = con.grades;
                     return (
                       <tr key={con.id} className="hover:bg-[hsl(var(--muted))/30] transition-colors">
-                        <td className="p-4 font-black">
+                        <td className="p-4 font-bold">
                           {idx === 0 && con.total_score > 0 ? <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-lg text-xs">🥇 الأول</span> : ''}
                           {idx === 1 && con.total_score > 0 ? <span className="bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg text-xs">🥈 الثاني</span> : ''}
                           {idx === 2 && con.total_score > 0 ? <span className="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-lg text-xs">🥉 الثالث</span> : ''}
@@ -503,7 +497,7 @@ export default function Competitions() {
                         <td className="p-4 text-center font-mono font-semibold">{con.grades?.hifdh_score ?? '-'}</td>
                         <td className="p-4 text-center font-mono font-semibold">{con.grades?.tajweed_score ?? '-'}</td>
                         <td className="p-4 text-center font-mono font-semibold">{con.grades?.voice_score ?? '-'}</td>
-                        <td className="p-4 text-center font-mono font-black text-[hsl(var(--primary))] text-base">
+                        <td className="p-4 text-center font-mono font-bold text-[hsl(var(--primary))] text-base">
                           {con.total_score > 0 ? `${con.total_score} درجة` : 'لم يرصد بعد'}
                         </td>
                         <td className="p-4 text-center">

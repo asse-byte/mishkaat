@@ -186,26 +186,24 @@ export default function NotificationsPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1 flex items-center gap-2">
+            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
               <Bell className="w-6 h-6" /> الإشعارات
             </h1>
-            <p className="text-white/70 text-sm">
+            <p className="text-sm text-[hsl(var(--ink-3))]">
               {unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}
             </p>
           </div>
           <button onClick={load}
-            className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+            className="btn-primary text-sm">
             <RefreshCw className="w-4 h-4" /> تحديث
           </button>
         </div>
       </div>
 
       {/* Controls */}
-      <div className="flex items-center justify-between gap-4 bg-white rounded-2xl p-4 shadow-sm border border-[hsl(var(--border))]">
+      <div className="flex items-center justify-between gap-4 bg-white rounded-[var(--radius)] p-4 shadow-sm border border-[hsl(var(--border))]">
         <div className="flex gap-2">
           {(['all', 'unread'] as const).map(f => (
             <button key={f} onClick={() => setFilter(f)}
@@ -227,14 +225,14 @@ export default function NotificationsPage() {
       {loading ? (
         <div className="flex items-center justify-center h-48">
           <div className="text-center">
-            <div className="w-12 h-12 gradient-primary rounded-2xl mx-auto mb-3 flex items-center justify-center animate-pulse-soft">
+            <div className="w-12 h-12 gradient-primary rounded-[var(--radius)] mx-auto mb-3 flex items-center justify-center animate-pulse-soft">
               <Bell className="w-6 h-6 text-white" />
             </div>
             <p className="text-sm text-[hsl(var(--muted-foreground))]">جاري تحميل الإشعارات...</p>
           </div>
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
+        <div className="text-center py-16 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))]">
           <Bell className="w-14 h-14 mx-auto mb-3 opacity-30" />
           <p className="font-medium">لا توجد إشعارات {filter === 'unread' ? 'غير مقروءة' : ''}</p>
           <p className="text-sm mt-1">ستظهر هنا الإشعارات المرتبطة بنشاطك في النظام</p>
@@ -246,13 +244,13 @@ export default function NotificationsPage() {
             const Icon = cfg.icon;
             return (
               <div key={n.id}
-                className={`flex items-start gap-4 p-5 rounded-2xl border transition-all stat-card ${
+                className={`flex items-start gap-4 p-5 rounded-[var(--radius)] border transition-all stat-card ${
                   n.read
                     ? 'bg-white border-[hsl(var(--border))]'
                     : 'bg-[hsl(var(--primary-light))]/40 border-[hsl(var(--primary))]/20 shadow-sm'
                 }`}>
                 {/* Icon */}
-                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${cfg.bg}`}>
+                <div className={`w-12 h-12 rounded-[var(--radius)] flex items-center justify-center shrink-0 ${cfg.bg}`}>
                   <Icon className={`w-5 h-5 ${cfg.color}`} />
                 </div>
 
@@ -261,7 +259,7 @@ export default function NotificationsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className={`font-black text-sm ${!n.read ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
+                        <h3 className={`font-bold text-sm ${!n.read ? 'text-[hsl(var(--primary))]' : 'text-[hsl(var(--foreground))]'}`}>
                           {n.title}
                         </h3>
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${cfg.bg} ${cfg.color}`}>

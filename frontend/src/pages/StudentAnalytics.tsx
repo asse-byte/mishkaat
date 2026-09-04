@@ -65,13 +65,13 @@ export default function StudentAnalytics() {
         </Link>
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary flex flex-col md:flex-row items-center gap-6">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 flex flex-col md:flex-row items-center gap-6">
         <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white/40">
            <User className="w-10 h-10 text-white" />
         </div>
         <div className="text-center md:text-right">
-          <h1 className="text-3xl font-black mb-1">{student.name}</h1>
-          <p className="text-white/80 font-medium">{student.halaqah_name}</p>
+          <h1 className="text-3xl font-bold mb-1">{student.name}</h1>
+          <p className="text-[hsl(var(--ink-3))] font-medium">{student.halaqah_name}</p>
         </div>
         <div className="mr-auto hidden md:block opacity-20">
             <BrainCircuit className="w-32 h-32" />
@@ -79,37 +79,37 @@ export default function StudentAnalytics() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="card p-5 flex items-center gap-4">
               <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center">
                   <Award className="w-6 h-6 text-emerald-600" />
               </div>
               <div>
                   <p className="text-slate-500 text-sm font-bold">متوسط التقييم العام</p>
-                  <p className="text-2xl font-black text-emerald-600">{avgScore.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold text-emerald-600">{avgScore.toFixed(1)}%</p>
               </div>
           </div>
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="card p-5 flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
                   <CheckCircle className="w-6 h-6 text-blue-600" />
               </div>
               <div>
                   <p className="text-slate-500 text-sm font-bold">إجمالي التسميعات (6 شهور)</p>
-                  <p className="text-2xl font-black text-blue-600">{validRecitationCount}</p>
+                  <p className="text-2xl font-bold text-blue-600">{validRecitationCount}</p>
               </div>
           </div>
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-slate-100 flex items-center gap-4">
+          <div className="card p-5 flex items-center gap-4">
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center">
                   <Calculator className="w-6 h-6 text-red-600" />
               </div>
               <div>
                   <p className="text-slate-500 text-sm font-bold">متوسط الأخطاء لكل تسميع</p>
-                  <p className="text-2xl font-black text-red-600">{avgMistakes.toFixed(1)}</p>
+                  <p className="text-2xl font-bold text-red-600">{avgMistakes.toFixed(1)}</p>
               </div>
           </div>
       </div>
 
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-        <h3 className="font-black text-slate-800 mb-6 flex items-center gap-2">
+      <div className="card p-6">
+        <h3 className="font-bold text-slate-800 mb-6 flex items-center gap-2">
             <BrainCircuit className="w-5 h-5 text-slate-500" /> منحنى تحليل الأداء الشامل
         </h3>
         
@@ -134,8 +134,8 @@ export default function StudentAnalytics() {
       
       {/* mistakes chart */}
       {timeline.length > 0 && (
-      <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-100">
-        <h3 className="font-black text-slate-800 mb-6 text-center">معدل الأخطاء في التسميع عبر الزمن</h3>
+      <div className="card p-6">
+        <h3 className="font-bold text-slate-800 mb-6 text-center">معدل الأخطاء في التسميع عبر الزمن</h3>
         <div className="h-64 w-full" dir="ltr">
             <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={timeline}>

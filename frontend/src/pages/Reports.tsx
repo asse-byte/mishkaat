@@ -21,10 +21,10 @@ interface ReportData {
 }
 
 const REPORT_TYPES = [
-  { id: 'attendance',  label: 'تقرير الحضور والغياب',   icon: Calendar,     cls: 'gradient-primary' },
-  { id: 'recitations', label: 'تقرير التسميع',           icon: BookOpen,     cls: 'gradient-gold' },
+  { id: 'attendance',  label: 'تقرير الحضور والغياب',   icon: Calendar,     cls: 'stat-card-teal' },
+  { id: 'recitations', label: 'تقرير التسميع',           icon: BookOpen,     cls: 'stat-card-amber' },
   { id: 'financial',   label: 'التقرير المالي',           icon: DollarSign,   cls: 'stat-card-teal' },
-  { id: 'students',    label: 'تقرير الطلاب',            icon: Users,        cls: 'bg-[hsl(152,45%,38%)]' },
+  { id: 'students',    label: 'تقرير الطلاب',            icon: Users,        cls: 'stat-card-green' },
 ];
 
 function PrintButton({ onClick }: { onClick: () => void }) {
@@ -78,7 +78,7 @@ export default function Reports() {
   if (loading) return (
     <div className="flex items-center justify-center h-64">
       <div className="text-center">
-        <div className="w-16 h-16 gradient-primary rounded-2xl mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
+        <div className="w-16 h-16 gradient-primary rounded-[var(--radius)] mx-auto mb-4 flex items-center justify-center animate-pulse-soft shadow-xl">
           <FileText className="w-8 h-8 text-white" />
         </div>
         <p className="text-[hsl(var(--muted-foreground))] font-medium">جاري تحميل بيانات التقارير...</p>
@@ -127,12 +127,10 @@ export default function Reports() {
     <div className="space-y-6 animate-fade-in print:space-y-4">
 
       {/* Header — hidden when printing */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary print:hidden">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 print:hidden">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">إصدار التقارير</h1>
-            <p className="text-white/70 text-sm">تقارير شاملة قابلة للطباعة والتصدير</p>
+            <h1 className="text-2xl font-bold mb-1">إصدار التقارير</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">تقارير شاملة قابلة للطباعة والتصدير</p>
           </div>
           <PrintButton onClick={handlePrint} />
         </div>
@@ -142,10 +140,11 @@ export default function Reports() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">
         {REPORT_TYPES.map(rt => (
           <button key={rt.id} onClick={() => setActiveReport(rt.id)}
-            className={`rounded-2xl p-4 flex flex-col items-center gap-2 text-center font-bold text-sm transition-all stat-card ${
+            aria-pressed={activeReport === rt.id}
+            className={`card p-4 flex flex-col items-center gap-2 text-center font-semibold text-sm transition-colors ${
               activeReport === rt.id
-                ? `${rt.cls} text-white shadow-lg`
-                : 'bg-white border border-[hsl(var(--border))] text-[hsl(var(--muted-foreground))] hover:border-[hsl(var(--primary))]'}`}>
+                ? 'border-[hsl(var(--lamp))] bg-[hsl(var(--lamp-wash))] text-[hsl(var(--ink))]'
+                : 'text-[hsl(var(--ink-3))] hover:border-[hsl(var(--lamp))] hover:text-[hsl(var(--ink))]'}`}>
             <rt.icon className="w-6 h-6" />
             <span>{rt.label}</span>
           </button>
@@ -153,17 +152,17 @@ export default function Reports() {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))] print:hidden">
+      <div className="card p-5 print:hidden">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-bold mb-1.5">الحلقة</label>
+            <label className="block text-sm font-semibold text-[hsl(var(--ink-2))] mb-1.5">الحلقة</label>
             <select value={filterHalaqah} onChange={e => setFilterHalaqah(e.target.value)} title="الحلقة" className="form-input">
               <option value="">كل الحلقات</option>
               {(data?.halaqat || []).map((h: any) => <option key={h.id} value={h.id}>{h.name}</option>)}
             </select>
           </div>
           <div>
-            <label className="block text-sm font-bold mb-1.5">الشهر</label>
+            <label className="block text-sm font-semibold text-[hsl(var(--ink-2))] mb-1.5">الشهر</label>
             <input type="month" value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="form-input" dir="ltr" />
           </div>
         </div>
@@ -171,7 +170,7 @@ export default function Reports() {
 
       {/* ── PRINT HEADER (shown only when printing) ─────────── */}
       <div className="hidden print:block text-center border-b-2 border-gray-200 pb-4 mb-6">
-        <h1 className="text-3xl font-black text-gray-900">مركز {data?.center_name} لتحفيظ القرآن الكريم</h1>
+        <h1 className="text-3xl font-bold text-gray-900">مركز {data?.center_name} لتحفيظ القرآن الكريم</h1>
         <h2 className="text-xl font-bold text-gray-700 mt-1">
           {REPORT_TYPES.find(r => r.id === activeReport)?.label}
         </h2>
@@ -185,20 +184,20 @@ export default function Reports() {
           {/* KPI cards */}
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'إجمالي سجلات الحضور', val: filteredAtt.length, cls: 'gradient-primary' },
-              { label: 'الحاضرون',             val: attPresent,         cls: 'bg-emerald-600' },
-              { label: 'نسبة الحضور',          val: `${attRate}%`,      cls: attRate >= 80 ? 'bg-emerald-600' : attRate >= 60 ? 'gradient-gold' : 'bg-red-600' },
+              { label: 'إجمالي سجلات الحضور', val: filteredAtt.length, cls: 'stat-card-teal' },
+              { label: 'الحاضرون',             val: attPresent,         cls: 'stat-card-green' },
+              { label: 'نسبة الحضور',          val: `${attRate}%`,      cls: attRate >= 80 ? 'stat-card-green' : attRate >= 60 ? 'stat-card-amber' : 'stat-card-rose' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Per-halaqah */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-[hsl(var(--primary))]" /> الحضور حسب الحلقة
             </h3>
             <table className="w-full text-sm text-right">
@@ -221,9 +220,9 @@ export default function Reports() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
                         <div className="flex-1 h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-emerald-500' : h.rate >= 60 ? 'bg-amber-500' : 'stat-card-rose'}`} style={{ width: `${h.rate}%` }} />
+                          <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-[hsl(var(--ok))]' : h.rate >= 60 ? 'bg-[hsl(var(--warn))]' : 'bg-[hsl(var(--danger))]'}`} style={{ width: `${h.rate}%` }} />
                         </div>
-                        <span className={`font-black text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
+                        <span className={`font-bold text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
                       </div>
                     </td>
                   </tr>
@@ -233,8 +232,8 @@ export default function Reports() {
           </div>
 
           {/* Individual records */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4">سجل الحضور التفصيلي ({filteredAtt.length} سجل)</h3>
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4">سجل الحضور التفصيلي ({filteredAtt.length} سجل)</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
@@ -271,20 +270,20 @@ export default function Reports() {
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'إجمالي التسميعات', val: filteredRec.length, cls: 'gradient-primary' },
-              { label: 'تقييم ممتاز',      val: recExcellent,       cls: 'gradient-gold' },
+              { label: 'إجمالي التسميعات', val: filteredRec.length, cls: 'stat-card-teal' },
+              { label: 'تقييم ممتاز',      val: recExcellent,       cls: 'stat-card-amber' },
               { label: 'متوسط الأخطاء',    val: recAvgMistakes,     cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
           {/* Per-halaqah recitation */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" /> التسميع حسب الحلقة
             </h3>
             <table className="w-full text-sm text-right">
@@ -302,7 +301,7 @@ export default function Reports() {
                     <td className="px-4 py-3 font-bold">{h.name}</td>
                     <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
                     <td className="px-4 py-3 text-emerald-600 font-bold">{h.excellent}</td>
-                    <td className="px-4 py-3 font-black text-[hsl(var(--primary))]">{h.rate}%</td>
+                    <td className="px-4 py-3 font-bold text-[hsl(var(--primary))]">{h.rate}%</td>
                   </tr>
                 ))}
               </tbody>
@@ -310,8 +309,8 @@ export default function Reports() {
           </div>
 
           {/* All recitations */}
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4">سجل التسميع التفصيلي</h3>
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4">سجل التسميع التفصيلي</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-right">
                 <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
@@ -351,19 +350,19 @@ export default function Reports() {
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'إجمالي المحصَّل',  val: FCFA(totalPaid), cls: 'gradient-primary' },
-              { label: 'رسوم معلقة',       val: FCFA(totalPend), cls: 'gradient-gold' },
+              { label: 'إجمالي المحصَّل',  val: FCFA(totalPaid), cls: 'stat-card-teal' },
+              { label: 'رسوم معلقة',       val: FCFA(totalPend), cls: 'stat-card-amber' },
               { label: 'صافي الإيرادات',   val: FCFA(totalPaid - totalPend), cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-xl font-black" dir="ltr">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+                <p className="num-display text-xl text-[hsl(var(--ink))] amount" dir="ltr">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <DollarSign className="w-5 h-5 text-[hsl(var(--gold))]" /> تفاصيل الرسوم
             </h3>
             <div className="overflow-x-auto">
@@ -401,19 +400,19 @@ export default function Reports() {
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'إجمالي الطلاب',    val: data?.students.length || 0, cls: 'gradient-primary' },
-              { label: 'إجمالي المحفظين',  val: data?.teachers.length || 0, cls: 'gradient-gold' },
+              { label: 'إجمالي الطلاب',    val: data?.students.length || 0, cls: 'stat-card-teal' },
+              { label: 'إجمالي المحفظين',  val: data?.teachers.length || 0, cls: 'stat-card-amber' },
               { label: 'إجمالي الحلقات',   val: data?.halaqat.length || 0,  cls: 'stat-card-teal' },
             ].map(s => (
-              <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-                <p className="text-3xl font-black">{s.val}</p>
-                <p className="text-white/80 text-sm mt-1">{s.label}</p>
+              <div key={s.label} className={`${s.cls} p-5`}>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.val}</p>
+                <p className="eyebrow">{s.label}</p>
               </div>
             ))}
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm border border-[hsl(var(--border))]">
-            <h3 className="font-black text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
+          <div className="card p-5">
+            <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <Users className="w-5 h-5 text-[hsl(var(--primary))]" /> قائمة الطلاب الكاملة
             </h3>
             <div className="overflow-x-auto">

@@ -136,16 +136,14 @@ export default function Centers() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl p-6 text-white shadow-xl gradient-primary">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">إدارة المراكز</h1>
-            <p className="text-white/70 text-sm">{centers.length} مركز مسجَّل في النظام</p>
+            <h1 className="text-2xl font-bold mb-1">إدارة المراكز</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">{centers.length} مركز مسجَّل في النظام</p>
           </div>
           {user?.role === 'admin' && (
             <button onClick={openAdd}
-              className="flex items-center gap-2 bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl transition-all text-sm">
+              className="btn-primary text-sm">
               <Plus className="w-4 h-4" /> إضافة مركز
             </button>
           )}
@@ -155,16 +153,16 @@ export default function Centers() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">
         {[
-          { label: 'المراكز النشطة', value: centers.filter(c => c.is_active).length, icon: Building2, cls: 'gradient-primary' },
-          { label: 'إجمالي المحفظين', value: centers.reduce((s, c) => s + (c.teachers_count || 0), 0), icon: GraduationCap, cls: 'gradient-gold' },
+          { label: 'المراكز النشطة', value: centers.filter(c => c.is_active).length, icon: Building2, cls: 'stat-card-teal' },
+          { label: 'إجمالي المحفظين', value: centers.reduce((s, c) => s + (c.teachers_count || 0), 0), icon: GraduationCap, cls: 'stat-card-amber' },
           { label: 'إجمالي الطلاب', value: centers.reduce((s, c) => s + (c.students_count || 0), 0), icon: Users, cls: 'stat-card-teal' },
         ].map(s => (
-          <div key={s.label} className={`stat-card rounded-2xl p-5 text-white ${s.cls} shadow-lg`}>
-            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3">
-              <s.icon className="w-5 h-5 text-white" />
+          <div key={s.label} className={`${s.cls} p-5`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className="eyebrow">{s.label}</span>
+              <s.icon className="w-4 h-4 text-[hsl(var(--ink-3))] shrink-0" strokeWidth={1.75} />
             </div>
-            <p className="text-3xl font-black">{s.value}</p>
-            <p className="text-white/70 text-sm mt-1">{s.label}</p>
+            <p className="num-display text-3xl text-[hsl(var(--ink))]">{s.value}</p>
           </div>
         ))}
       </div>
@@ -183,7 +181,7 @@ export default function Centers() {
           <div className="w-10 h-10 border-4 border-[hsl(var(--primary))] border-t-transparent rounded-full animate-spin" />
         </div>
       ) : filtered.length === 0 ? (
-        <div className="text-center py-16 text-[hsl(var(--muted-foreground))] bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-16 text-[hsl(var(--muted-foreground))] bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
           <Building2 className="w-14 h-14 mx-auto mb-3 opacity-30" />
           <p className="font-medium">لا توجد مراكز{search ? ' مطابقة للبحث' : ' مسجَّلة'}</p>
           {!search && user?.role === 'admin' && (
@@ -195,14 +193,14 @@ export default function Centers() {
       ) : (
         <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-5 stagger">
           {filtered.map(center => (
-            <div key={center.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
+            <div key={center.id} className="bg-white rounded-[var(--radius-lg)] shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
               {/* Card header */}
               <div className="gradient-primary p-5">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-black text-white truncate">{center.name}</h3>
+                    <h3 className="text-lg font-bold text-white truncate">{center.name}</h3>
                     {center.manager_name && (
-                      <p className="text-white/70 text-sm mt-0.5 truncate">م. {center.manager_name}</p>
+                      <p className="text-[hsl(var(--ink-3))] text-sm mt-0.5 truncate">م. {center.manager_name}</p>
                     )}
                   </div>
                   <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full shrink-0 ${center.is_active ? 'bg-emerald-400/30 text-white' : 'bg-red-400/30 text-white'}`}>
@@ -220,7 +218,7 @@ export default function Centers() {
                 ].map(s => (
                   <div key={s.label} className="p-3 text-center">
                     <s.icon className="w-4 h-4 mx-auto mb-1 text-[hsl(var(--primary))]" />
-                    <p className="font-black text-[hsl(var(--foreground))] text-base">{s.val || 0}</p>
+                    <p className="font-bold text-[hsl(var(--foreground))] text-base">{s.val || 0}</p>
                     <p className="text-xs text-[hsl(var(--muted-foreground))]">{s.label}</p>
                   </div>
                 ))}
@@ -275,9 +273,9 @@ export default function Centers() {
       {/* Add/Edit Modal */}
       {showForm && (
         <div className="modal-overlay animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
-              <h2 className="text-lg font-black text-white">
+              <h2 className="text-lg font-bold text-white">
                 {editCenter ? 'تعديل بيانات المركز' : 'إضافة مركز جديد'}
               </h2>
               <button onClick={() => setShowForm(false)} className="p-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all">
@@ -370,11 +368,11 @@ export default function Centers() {
       {/* Detail Modal */}
       {detailCenter && (
         <div className="modal-overlay animate-fade-in">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="gradient-primary p-6 rounded-t-3xl flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black text-white">{detailCenter.name}</h2>
-                <p className="text-white/70 text-sm">تفاصيل المركز الكاملة</p>
+                <h2 className="text-xl font-bold text-white">{detailCenter.name}</h2>
+                <p className="text-sm text-[hsl(var(--ink-3))]">تفاصيل المركز الكاملة</p>
               </div>
               <button onClick={() => setDetailCenter(null)} className="p-2 rounded-xl bg-white/20 text-white hover:bg-white/30 transition-all">
                 <X className="w-5 h-5" />
@@ -390,21 +388,21 @@ export default function Centers() {
                   {/* Basic Info */}
                   <div className="grid grid-cols-3 gap-4">
                     {[
-                      { label: 'الطلاب', val: detailCenter.students_count || 0, icon: Users, cls: 'gradient-primary' },
-                      { label: 'المحفظون', val: detailCenter.teachers_count || 0, icon: GraduationCap, cls: 'gradient-gold' },
+                      { label: 'الطلاب', val: detailCenter.students_count || 0, icon: Users, cls: 'stat-card-teal' },
+                      { label: 'المحفظون', val: detailCenter.teachers_count || 0, icon: GraduationCap, cls: 'stat-card-amber' },
                       { label: 'الحلقات', val: detailCenter.halaqat_count || 0, icon: BookOpen, cls: 'stat-card-teal' },
                     ].map(s => (
-                      <div key={s.label} className={`${s.cls} rounded-2xl p-4 text-white text-center shadow-md`}>
+                      <div key={s.label} className={`${s.cls} p-4 text-center`}>
                         <s.icon className="w-6 h-6 mx-auto mb-2" />
-                        <p className="text-2xl font-black">{s.val}</p>
-                        <p className="text-white/70 text-xs">{s.label}</p>
+                        <p className="text-2xl font-bold">{s.val}</p>
+                        <p className="eyebrow">{s.label}</p>
                       </div>
                     ))}
                   </div>
 
                   {/* Details */}
-                  <div className="bg-[hsl(var(--muted))] rounded-2xl p-4 space-y-3">
-                    <h4 className="font-black text-[hsl(var(--foreground))] text-sm">معلومات التسجيل</h4>
+                  <div className="bg-[hsl(var(--muted))] rounded-[var(--radius)] p-4 space-y-3">
+                    <h4 className="font-bold text-[hsl(var(--foreground))] text-sm">معلومات التسجيل</h4>
                     {[
                       { label: 'المدير', val: detailCenter.manager_name },
                       { label: 'الهاتف', val: detailCenter.phone, dir: 'ltr' },
@@ -422,14 +420,14 @@ export default function Centers() {
                   {/* Teachers list */}
                   {(detailCenter as any).teachers && (detailCenter as any).teachers.length > 0 && (
                     <div>
-                      <h4 className="font-black text-[hsl(var(--foreground))] mb-3 flex items-center gap-2">
+                      <h4 className="font-bold text-[hsl(var(--foreground))] mb-3 flex items-center gap-2">
                         <GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />
                         المحفظون ({(detailCenter as any).teachers.length})
                       </h4>
                       <div className="space-y-2">
                         {(detailCenter as any).teachers.map((t: any) => (
                           <div key={t.id} className="flex items-center gap-3 p-3 rounded-xl bg-[hsl(var(--muted))]">
-                            <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm">
+                            <div className="w-9 h-9 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm">
                               {t.name.charAt(0)}
                             </div>
                             <div className="flex-1 min-w-0">

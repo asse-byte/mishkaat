@@ -167,17 +167,11 @@ export default function Teachers() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">إدارة المحفظين</h1>
-            <p className="text-white/70 text-sm">{teachers.length} محفظ · {teachers.reduce((s, t) => s + t.students_count, 0)} طالب</p>
-          </div>
-          <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-            <GraduationCap className="w-7 h-7 text-white" />
-          </div>
-        </div>
+            <h1 className="text-2xl font-bold mb-1">إدارة المحفظين</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">{teachers.length} محفظ · {teachers.reduce((s, t) => s + t.students_count, 0)} طالب</p>
+          </div>        </div>
       </div>
 
       {/* Actions */}
@@ -200,12 +194,12 @@ export default function Teachers() {
       {/* Add Teacher Modal */}
       {showAddForm && (
         <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between">
-              <h3 className="text-lg font-black text-white flex items-center gap-2">
+              <h3 className="text-lg font-bold text-white flex items-center gap-2">
                 <Plus className="w-5 h-5" /> إضافة محفظ جديد
               </h3>
-              <button onClick={() => setShowAddForm(false)} className="text-white/70 hover:text-white">
+              <button onClick={() => setShowAddForm(false)} className="text-[hsl(var(--ink-3))] hover:text-white">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -302,38 +296,40 @@ export default function Teachers() {
 
       {/* Teachers Grid */}
       {filtered.length === 0 ? (
-        <div className="text-center py-16 rounded-3xl bg-white border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
           <GraduationCap className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
           <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد محفظون مطابقون</p>
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
           {filtered.map(teacher => (
-            <div key={teacher.id} className="bg-white rounded-3xl shadow-sm border border-[hsl(var(--border))] overflow-hidden stat-card">
-              <div className="gradient-primary p-4">
+            <div key={teacher.id} className="card overflow-hidden">
+              {/* كان رأس البطاقة شريطاً كحلياً صمّاء داخل بطاقة فاتحة — بقيّة النظام
+                  صارت أسطحاً فاتحة، فيفصله الآن خطّ لا لون كامل. */}
+              <div className="p-4 border-b border-[hsl(var(--line-2))]">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-lg">
+                    <div className="w-12 h-12 rounded-[var(--radius)] bg-[hsl(var(--lamp-wash))] border border-[hsl(var(--lamp-line))] flex items-center justify-center text-[hsl(var(--lamp-strong))] font-bold text-lg">
                       {teacher.name.charAt(0)}
                     </div>
                     <div>
-                      <h3 className="font-black text-white">{teacher.name}</h3>
+                      <h3 className="text-base font-bold text-[hsl(var(--ink))]">{teacher.name}</h3>
                       {teacher.specialization && (
-                        <p className="text-white/70 text-xs mt-0.5">{teacher.specialization}</p>
+                        <p className="eyebrow">{teacher.specialization}</p>
                       )}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => { setSelectedTeacher(teacher); setEditMode(false); setShowTransfer(false); }} title="عرض التفاصيل"
-                      className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors">
+                      className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
                       <Eye className="w-4 h-4" />
                     </button>
                     <button onClick={() => openEdit(teacher)} title="تعديل"
-                      className="p-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-white transition-colors">
+                      className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleDelete(teacher.id)} title="حذف"
-                      className="p-1.5 rounded-lg bg-white/15 hover:bg-red-500/50 text-white transition-colors">
+                      className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--danger))] hover:bg-[hsl(var(--danger-wash))] transition-colors">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -384,34 +380,34 @@ export default function Teachers() {
       {/* Teacher Detail / Edit Modal */}
       {selectedTeacher && (
         <div className="modal-overlay" onClick={() => { setSelectedTeacher(null); setEditMode(false); setShowTransfer(false); }}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center text-white font-black text-2xl">
+                  <div className="w-14 h-14 rounded-[var(--radius)] bg-[hsl(var(--lamp-wash))] border border-[hsl(var(--lamp-line))] flex items-center justify-center text-[hsl(var(--lamp-strong))] font-bold text-2xl">
                     {selectedTeacher.name.charAt(0)}
                   </div>
                   <div>
-                    <h2 className="text-lg font-black text-white">{selectedTeacher.name}</h2>
-                    {selectedTeacher.specialization && <p className="text-white/70 text-sm">{selectedTeacher.specialization}</p>}
+                    <h2 className="text-lg font-bold text-white">{selectedTeacher.name}</h2>
+                    {selectedTeacher.specialization && <p className="text-sm text-[hsl(var(--ink-3))]">{selectedTeacher.specialization}</p>}
                   </div>
                 </div>
-                <button onClick={() => { setSelectedTeacher(null); setEditMode(false); }} title="إغلاق" className="text-white/70 hover:text-white">
+                <button onClick={() => { setSelectedTeacher(null); setEditMode(false); }} title="إغلاق" className="text-[hsl(var(--ink-3))] hover:text-white">
                   <X className="w-5 h-5" />
                 </button>
               </div>
               {/* action buttons */}
               <div className="flex gap-2 mt-4">
                 <button onClick={() => setEditMode(!editMode)} title="تبديل وضع التعديل"
-                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold transition-all">
+                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <Edit className="w-4 h-4" /> {editMode ? 'إلغاء التعديل' : 'تعديل'}
                 </button>
                 <button onClick={() => setShowTransfer(!showTransfer)} title="نقل إلى حلقة أخرى"
-                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-xl bg-white/15 hover:bg-white/25 text-white text-sm font-bold transition-all">
+                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <ArrowLeftRight className="w-4 h-4" /> نقل الحلقة
                 </button>
                 <button onClick={() => handleDelete(selectedTeacher.id)} title="حذف المحفظ"
-                  className="px-4 py-2 rounded-xl bg-red-500/30 hover:bg-red-500/50 text-white text-sm font-bold transition-all">
+                  className="px-4 py-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white text-sm font-bold transition-all">
                   <Trash2 className="w-4 h-4" />
                 </button>
               </div>
@@ -472,7 +468,7 @@ export default function Teachers() {
                   </button>
                 </div>
               ) : showTransfer ? (
-                <div className="space-y-3 p-4 rounded-2xl border-2 border-[hsl(var(--primary))/20] bg-[hsl(var(--accent))]">
+                <div className="space-y-3 p-4 rounded-[var(--radius)] border-2 border-[hsl(var(--primary))/20] bg-[hsl(var(--accent))]">
                   <h4 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
                     <ArrowLeftRight className="w-4 h-4 text-[hsl(var(--primary))]" /> نقل المحفظ بين الحلقات
                   </h4>

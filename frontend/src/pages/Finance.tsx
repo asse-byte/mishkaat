@@ -214,7 +214,7 @@ export default function Finance() {
       {/* Printable Receipt layout */}
       {printVoucher && (
         <div id="print-section" className="hidden print:block" dir="rtl">
-          <div className="border-4 border-double border-[hsl(152,45%,38%)] p-6 rounded-2xl flex flex-col justify-between h-[90vh] text-center">
+          <div className="border-4 border-double border-[hsl(152,45%,38%)] p-6 rounded-[var(--radius)] flex flex-col justify-between h-[90vh] text-center">
             
             {/* Header */}
             <div>
@@ -247,7 +247,7 @@ export default function Finance() {
               </div>
               <div className="flex justify-between border-b pb-2 bg-emerald-50 p-2 rounded-lg">
                 <span className="text-emerald-800 font-bold">المبلغ المدفوع:</span>
-                <span className="font-black text-emerald-800 text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
+                <span className="font-bold text-emerald-800 text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
               </div>
               {printVoucher.notes && (
                 <div className="flex justify-between border-b pb-2">
@@ -292,17 +292,11 @@ export default function Finance() {
       <div className="print:hidden space-y-6">
 
         {/* Header */}
-        <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-          <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-          <div className="relative z-10 flex items-center justify-between">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-black mb-1">الإدارة المالية</h1>
-              <p className="text-white/70 text-sm">رسوم الطلاب · رواتب المحفظين · مصروفات المركز</p>
-            </div>
-            <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-              <Wallet className="w-7 h-7 text-white" />
-            </div>
-          </div>
+              <h1 className="text-2xl font-bold mb-1">الإدارة المالية</h1>
+              <p className="text-sm text-[hsl(var(--ink-3))]">رسوم الطلاب · رواتب المحفظين · مصروفات المركز</p>
+            </div>          </div>
         </div>
 
         {/* Summary cards */}
@@ -326,13 +320,13 @@ export default function Finance() {
         </div>
 
         {/* Net balance */}
-        <div className={`rounded-2xl p-5 flex items-center justify-between ${summary.net >= 0 ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
+        <div className={`rounded-[var(--radius)] p-5 flex items-center justify-between ${summary.net >= 0 ? 'bg-emerald-50 border-2 border-emerald-200' : 'bg-red-50 border-2 border-red-200'}`}>
           <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.net >= 0 ? 'bg-emerald-500' : 'stat-card-rose'}`}>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${summary.net >= 0 ? 'bg-[hsl(var(--ok))]' : 'stat-card-rose'}`}>
               <Landmark className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className={`font-black text-lg ${summary.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">
+              <p className={`font-bold text-lg ${summary.net >= 0 ? 'text-emerald-700' : 'text-red-700'}`} dir="ltr">
                 {formatCurrency(Math.abs(summary.net))}
               </p>
               <p className={`text-sm ${summary.net >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
@@ -343,7 +337,7 @@ export default function Finance() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 p-1 bg-[hsl(var(--muted))] rounded-2xl">
+        <div className="flex gap-2 p-1 bg-[hsl(var(--muted))] rounded-[var(--radius)]">
           {([
             { id: 'fees', label: 'رسوم الطلاب', icon: Users },
             { id: 'salaries', label: 'رواتب المحفظين', icon: GraduationCap },
@@ -362,13 +356,13 @@ export default function Finance() {
         {tab === 'fees' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><Users className="w-4 h-4 text-[hsl(var(--primary))]" />رسوم الطلاب</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><Users className="w-4 h-4 text-[hsl(var(--primary))]" />رسوم الطلاب</h3>
               <button onClick={() => setShowFeeForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
                 <Plus className="w-4 h-4" />إضافة رسوم
               </button>
             </div>
             {showFeeForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <label className="text-sm font-semibold block mb-1">الطالب *</label>
@@ -416,9 +410,9 @@ export default function Finance() {
               {fees.length === 0 ? (
                 <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><DollarSign className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد رسوم مسجَّلة</p></div>
               ) : fees.map(fee => (
-                <div key={fee.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={fee.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-black text-sm">
+                    <div className="w-10 h-10 gradient-primary rounded-xl flex items-center justify-center text-white font-bold text-sm">
                       {(fee.student_name || 'ط').charAt(0)}
                     </div>
                     <div>
@@ -427,7 +421,7 @@ export default function Finance() {
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    <p className="font-black text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(fee.amount)}</p>
+                    <p className="font-bold text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(fee.amount)}</p>
                     <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${feeStatusLabels[fee.status]?.cls}`}>
                       {feeStatusLabels[fee.status]?.text}
                     </span>
@@ -465,13 +459,13 @@ export default function Finance() {
         {tab === 'salaries' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />رواتب المحفظين</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><GraduationCap className="w-4 h-4 text-[hsl(var(--primary))]" />رواتب المحفظين</h3>
               <button onClick={() => setShowSalaryForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
                 <Plus className="w-4 h-4" />صرف راتب
               </button>
             </div>
             {showSalaryForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <label className="text-sm font-semibold block mb-1">المحفظ *</label>
@@ -510,9 +504,9 @@ export default function Finance() {
               {salaries.length === 0 ? (
                 <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><GraduationCap className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد رواتب مسجَّلة</p></div>
               ) : salaries.map(sal => (
-                <div key={sal.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={sal.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 gradient-gold rounded-xl flex items-center justify-center text-white font-black text-sm">
+                    <div className="w-10 h-10 gradient-gold rounded-xl flex items-center justify-center text-white font-bold text-sm">
                       {(sal.teacher_name || 'م').charAt(0)}
                     </div>
                     <div>
@@ -522,7 +516,7 @@ export default function Finance() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-left">
-                      <p className="font-black text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(sal.amount)}</p>
+                      <p className="font-bold text-[hsl(var(--foreground))]" dir="ltr">{formatCurrency(sal.amount)}</p>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">مدفوع</span>
                     </div>
                     <button
@@ -551,13 +545,13 @@ export default function Finance() {
         {tab === 'expenses' && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="font-black text-[hsl(var(--foreground))] flex items-center gap-2"><Receipt className="w-4 h-4 text-[hsl(var(--primary))]" />مصروفات المركز</h3>
+              <h3 className="font-bold text-[hsl(var(--foreground))] flex items-center gap-2"><Receipt className="w-4 h-4 text-[hsl(var(--primary))]" />مصروفات المركز</h3>
               <button onClick={() => setShowExpenseForm(true)} className="gradient-primary text-white font-bold px-4 py-2 rounded-xl flex items-center gap-1 text-sm hover:opacity-90">
                 <Plus className="w-4 h-4" />إضافة مصروف
               </button>
             </div>
             {showExpenseForm && (
-              <div className="bg-[hsl(var(--accent))] rounded-2xl p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
+              <div className="bg-[hsl(var(--accent))] rounded-[var(--radius)] p-4 border-2 border-[hsl(var(--primary))/20] space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div className="col-span-2">
                     <label className="text-sm font-semibold block mb-1">عنوان المصروف *</label>
@@ -601,7 +595,7 @@ export default function Finance() {
               {expenses.length === 0 ? (
                 <div className="text-center py-10 text-[hsl(var(--muted-foreground))]"><Receipt className="w-12 h-12 mx-auto mb-2 opacity-30" /><p>لا توجد مصروفات مسجَّلة</p></div>
               ) : expenses.map(exp => (
-                <div key={exp.id} className="bg-white rounded-2xl p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
+                <div key={exp.id} className="bg-white rounded-[var(--radius)] p-4 border border-[hsl(var(--border))] flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center">
                       <TrendingDown className="w-5 h-5 text-red-500" />
@@ -615,7 +609,7 @@ export default function Finance() {
                     </div>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-black text-red-600" dir="ltr">{formatCurrency(exp.amount)}</p>
+                    <p className="font-bold text-red-600" dir="ltr">{formatCurrency(exp.amount)}</p>
                     <button
                       onClick={() => handleTriggerPrint({
                         type: 'expense',

@@ -166,30 +166,26 @@ export default function ReviewPlans() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">خطط المراجعة والتثبيت</h1>
-            <p className="text-white/70 text-sm">إدارة ومتابعة طلاب مراجعة القرآن الكريم</p>
-          </div>
-          <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-            <RefreshCw className="w-7 h-7 text-white" />
-          </div>
-        </div>
+            <h1 className="text-2xl font-bold mb-1">خطط المراجعة والتثبيت</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">إدارة ومتابعة طلاب مراجعة القرآن الكريم</p>
+          </div>        </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
         {[
-          { icon: Users,     val: reviewStudents.length,      label: 'طالب مراجعة',     cls: 'gradient-primary' },
-          { icon: Target,    val: REVIEW_PLAN.daysPerCycle,   label: 'أيام للدورة',      cls: 'gradient-gold' },
+          { icon: Users,     val: reviewStudents.length,      label: 'طالب مراجعة',     cls: 'stat-card-teal' },
+          { icon: Target,    val: REVIEW_PLAN.daysPerCycle,   label: 'أيام للدورة',      cls: 'stat-card-amber' },
           { icon: BookOpen,  val: REVIEW_PLAN.juzPerDay,      label: 'أجزاء يومياً',     cls: 'stat-card-teal' },
-          { icon: Star,      val: REVIEW_PLAN.cyclesPerYear,  label: 'دورات سنوياً',     cls: 'bg-[hsl(152,45%,38%)]' },
+          { icon: Star,      val: REVIEW_PLAN.cyclesPerYear,  label: 'دورات سنوياً',     cls: 'stat-card-green' },
         ].map(s => (
-          <div key={s.label} className={`rounded-2xl p-4 text-white shadow-sm ${s.cls}`}>
-            <s.icon className="w-5 h-5 mb-2 opacity-80" />
-            <p className="text-2xl font-black">{s.val}</p>
-            <p className="text-white/75 text-xs mt-0.5">{s.label}</p>
+          <div key={s.label} className={`${s.cls} p-4`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <span className="eyebrow">{s.label}</span>
+              <s.icon className="w-4 h-4 text-[hsl(var(--ink-3))] shrink-0" strokeWidth={1.75} />
+            </div>
+            <p className="num-display text-2xl text-[hsl(var(--ink))]">{s.val}</p>
           </div>
         ))}
       </div>
@@ -219,22 +215,22 @@ export default function ReviewPlans() {
         <CardContent>
           <div className="grid md:grid-cols-4 gap-4 mb-6">
             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 text-white font-bold">1</div>
+              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">1</div>
               <h4 className="font-semibold text-sm">المراجعة اليومية</h4>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">5 أجزاء يومياً بتدبر وإتقان</p>
             </div>
             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 text-white font-bold">2</div>
+              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">2</div>
               <h4 className="font-semibold text-sm">الختمة الأسبوعية</h4>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">ختمة كاملة كل 6 أيام + يوم راحة</p>
             </div>
             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 text-white font-bold">3</div>
+              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">3</div>
               <h4 className="font-semibold text-sm">التسميع اليومي</h4>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">تسميع على المحفظ لضمان الإتقان</p>
             </div>
             <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-2 text-white font-bold">4</div>
+              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">4</div>
               <h4 className="font-semibold text-sm">التقييم الدوري</h4>
               <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">8 دورات مراجعة سنوياً</p>
             </div>
@@ -288,8 +284,8 @@ export default function ReviewPlans() {
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    <Avatar className="w-14 h-14 bg-green-500">
-                      <AvatarFallback className="text-white text-lg">
+                    <Avatar className="w-14 h-14">
+                      <AvatarFallback className="text-lg bg-[hsl(var(--ok-wash))] text-[hsl(var(--ok))] font-bold">
                         {student.name.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
@@ -364,7 +360,7 @@ export default function ReviewPlans() {
                                     key={j}
                                     className={`w-7 h-7 text-xs rounded flex items-center justify-center font-medium ${
                                       hasRecitation
-                                        ? 'bg-green-500 text-white'
+                                        ? 'bg-[hsl(var(--ok))] text-white'
                                         : 'bg-gray-200 text-gray-600'
                                     }`}
                                   >

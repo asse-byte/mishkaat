@@ -130,12 +130,10 @@ export default function BulkMessages() {
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
       
       {/* Header banner */}
-      <div className="relative overflow-hidden rounded-3xl gradient-primary p-6 text-white shadow-lg">
-        <div className="absolute top-[-30px] left-[-30px] w-40 h-40 rounded-full bg-white/5 pointer-events-none" />
-        <div className="relative z-10 flex items-center justify-between">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-black mb-1">الرسائل الجماعية والبث المزدوج</h1>
-            <p className="text-white/70 text-sm">
+            <h1 className="text-2xl font-bold mb-1">الرسائل الجماعية والبث المزدوج</h1>
+            <p className="text-sm text-[hsl(var(--ink-3))]">
               {isSuperAdmin 
                 ? 'بث الرسائل التوجيهية العامة لجميع مدراء المراكز المعتمدة ومتابعة استجاباتهم'
                 : activeTab === 'outbox'
@@ -143,16 +141,12 @@ export default function BulkMessages() {
                   : 'استلام التوجيهات الرسمية والرد المباشر عليها'
               }
             </p>
-          </div>
-          <div className="w-14 h-14 bg-white/15 rounded-2xl flex items-center justify-center animate-float">
-            <MessageSquare className="w-7 h-7 text-white" />
-          </div>
-        </div>
+          </div>        </div>
       </div>
 
       {/* Tabs Switcher for Center Manager (has both Inbox and Outbox) */}
       {isManager && (
-        <div className="flex gap-2 p-1.5 bg-[hsl(var(--muted))]/40 rounded-2xl w-fit">
+        <div className="flex gap-2 p-1.5 bg-[hsl(var(--muted))]/40 rounded-[var(--radius)] w-fit">
           <button
             onClick={() => setActiveTab('inbox')}
             className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
@@ -181,7 +175,7 @@ export default function BulkMessages() {
       {/* Action Bar */}
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <h3 className="font-black text-base flex items-center gap-2">
+          <h3 className="font-bold text-base flex items-center gap-2">
             {activeTab === 'outbox' ? (
               <><Send className="w-5 h-5 text-[hsl(var(--primary))]" />إدارة رسائل البث الصادرة</>
             ) : (
@@ -204,12 +198,12 @@ export default function BulkMessages() {
       {/* Broadcast Create Modal */}
       {showBroadcastForm && (
         <div className="modal-overlay" onClick={() => setShowBroadcastForm(false)}>
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-lg" onClick={e => e.stopPropagation()}>
             <div className="gradient-primary p-5 rounded-t-3xl flex items-center justify-between text-white">
-              <h3 className="text-lg font-black flex items-center gap-2">
+              <h3 className="text-lg font-bold flex items-center gap-2">
                 <Sparkles className="w-5 h-5 text-[hsl(var(--gold))]" /> بث إعلان وتوجيه رسمي جديد
               </h3>
-              <button onClick={() => setShowBroadcastForm(false)} className="text-white/75 hover:text-white">✕</button>
+              <button onClick={() => setShowBroadcastForm(false)} className="text-[hsl(var(--ink-3))] hover:text-white">✕</button>
             </div>
             <div className="p-5 space-y-4">
               {error && (
@@ -266,7 +260,7 @@ export default function BulkMessages() {
 
       {/* Main Messaging Interface */}
       {messages.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-[hsl(var(--border))]">
+        <div className="text-center py-20 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
           <MessageSquare className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-35" />
           <p className="text-[hsl(var(--muted-foreground))] font-semibold">لا توجد رسائل جماعية مرسلة أو واردة حالياً</p>
         </div>
@@ -279,7 +273,7 @@ export default function BulkMessages() {
               <div
                 key={msg.id}
                 onClick={() => setSelectedMessage(msg)}
-                className={`p-4 rounded-3xl border cursor-pointer transition-all stat-card flex flex-col justify-between ${
+                className={`p-4 rounded-[var(--radius-lg)] border cursor-pointer transition-all stat-card flex flex-col justify-between ${
                   selectedMessage?.id === msg.id 
                     ? 'border-[hsl(var(--primary))] bg-[hsl(var(--primary-light))]/30 shadow-md' 
                     : 'bg-white border-[hsl(var(--border))]'
@@ -312,7 +306,7 @@ export default function BulkMessages() {
           </div>
 
           {/* Selected message details & replies thread (right 2/3) */}
-          <div className="lg:col-span-2 bg-white rounded-3xl border border-[hsl(var(--border))] shadow-sm flex flex-col justify-between min-h-[60vh] max-h-[70vh] overflow-hidden">
+          <div className="lg:col-span-2 bg-white rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm flex flex-col justify-between min-h-[60vh] max-h-[70vh] overflow-hidden">
             {selectedMessage ? (
               <div className="flex flex-col h-full justify-between">
                 
@@ -320,9 +314,9 @@ export default function BulkMessages() {
                 <div className="p-6 overflow-y-auto space-y-6 flex-1 max-h-[50vh]">
                   
                   {/* Original Broadcast content */}
-                  <div className="p-5 rounded-2xl bg-[hsl(var(--muted))]/50 border-r-4 border-[hsl(var(--primary))]">
+                  <div className="p-5 rounded-[var(--radius)] bg-[hsl(var(--muted))]/50 border-r-4 border-[hsl(var(--primary))]">
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-black text-base text-[hsl(var(--foreground))]">{selectedMessage.subject}</h3>
+                      <h3 className="font-bold text-base text-[hsl(var(--foreground))]">{selectedMessage.subject}</h3>
                       <span className="text-xs text-[hsl(var(--muted-foreground))] font-mono">
                         {new Date(selectedMessage.sent_at).toLocaleString('ar-SA')}
                       </span>
@@ -347,7 +341,7 @@ export default function BulkMessages() {
                     ) : (
                       <div className="space-y-3 pl-2">
                         {selectedMessage.replies.map((reply, idx) => (
-                          <div key={idx} className="p-3.5 rounded-2xl bg-amber-50/40 border border-amber-100/50 flex flex-col gap-1 stat-card">
+                          <div key={idx} className="p-3.5 rounded-[var(--radius)] bg-amber-50/40 border border-amber-100/50 flex flex-col gap-1 stat-card">
                             <div className="flex items-center justify-between text-xs mb-1">
                               <span className="font-bold text-[hsl(var(--primary))]">{reply.teacher_name}</span>
                               <span className="text-[10px] text-gray-400 font-mono">
