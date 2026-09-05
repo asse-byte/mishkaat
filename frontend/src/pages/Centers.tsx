@@ -6,6 +6,7 @@ import {
   AlertCircle, Phone, MapPin, Calendar, Eye,
 } from 'lucide-react';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface CenterData {
   id: string;
@@ -136,19 +137,13 @@ export default function Centers() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">إدارة المراكز</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">{centers.length} مركز مسجَّل في النظام</p>
-          </div>
-          {user?.role === 'admin' && (
-            <button onClick={openAdd}
-              className="btn-primary text-sm">
-              <Plus className="w-4 h-4" /> إضافة مركز
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader title="إدارة المراكز" subtitle={`${centers.length} مركز مسجَّل في النظام`}>
+        {user?.role === 'admin' && (
+          <button onClick={openAdd} className="btn-primary text-sm">
+            <Plus className="w-4 h-4" /> إضافة مركز
+          </button>
+        )}
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">

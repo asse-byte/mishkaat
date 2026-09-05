@@ -22,6 +22,7 @@ import {
   Users,
 } from 'lucide-react';
 import { studentsApi, recitationsApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface ReviewStudent {
   id: string;
@@ -166,12 +167,10 @@ export default function ReviewPlans() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">خطط المراجعة والتثبيت</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">إدارة ومتابعة طلاب مراجعة القرآن الكريم</p>
-          </div>        </div>
-      </div>
+      <PageHeader
+        title="خطط المراجعة والتثبيت"
+        subtitle="إدارة ومتابعة طلاب مراجعة القرآن الكريم"
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
         {[

@@ -8,8 +8,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { 
   BookOpen, Users, Star, Heart, Shield, ArrowLeft, 
   CheckCircle2, ChevronDown, Award, Trophy, Building2, 
-  MapPin, TrendingUp 
+  MapPin, TrendingUp
 } from 'lucide-react';
+import MishkaatMark from '@/components/ui/MishkaatMark';
 
 const Landing = () => {
   const { isAuthenticated } = useAuth();
@@ -37,7 +38,7 @@ const Landing = () => {
           <div className="flex justify-between items-center h-20">
             <div className="flex items-center gap-3">
               <div className="w-12 h-12 bg-gradient-to-br from-[hsl(var(--niche))] to-[hsl(var(--niche-2))] rounded-xl flex items-center justify-center shadow-lg shadow-emerald-200">
-                <BookOpen className="w-7 h-7 text-white" />
+                <MishkaatMark className="w-7 h-7 text-[hsl(var(--lamp))]" title="المشكاة" />
               </div>
               <div>
                 <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-l from-[hsl(var(--niche))] to-[hsl(var(--niche-2))]">المشكاة</h1>
@@ -342,7 +343,7 @@ const Landing = () => {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-10 h-10 bg-[hsl(var(--niche))] rounded-lg flex items-center justify-center">
-                  <BookOpen className="w-6 h-6 text-white" />
+                  <MishkaatMark className="w-6 h-6 text-[hsl(var(--lamp))]" title="المشكاة" />
                 </div>
                 <h3 className="text-2xl font-bold text-white">المشكاة</h3>
               </div>

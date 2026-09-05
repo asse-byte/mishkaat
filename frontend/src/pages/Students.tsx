@@ -9,6 +9,7 @@ import {
 import { Link } from 'react-router-dom';
 import { studentsApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 const memorizationPlans = [
   { id: 'plan_2_years', name: 'خطة سنتين',   years: 2, description: 'للمتفرغين'   },
@@ -158,13 +159,7 @@ export default function Students() {
   return (
     <div className="space-y-6 animate-fade-in">
 
-      {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">إدارة الطلاب</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">إجمالي: {students.length} طالب</p>
-          </div>        </div>
-      </div>
+      <PageHeader title="إدارة الطلاب" subtitle={`إجمالي: ${students.length} طالب`} />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">

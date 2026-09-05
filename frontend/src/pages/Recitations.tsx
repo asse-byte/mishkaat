@@ -5,6 +5,7 @@ import {
   CheckCircle2, X, AlertCircle, Filter, Trash2,
 } from 'lucide-react';
 import { recitationsApi, studentsApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 // 114 سورة كاملة
 const ALL_SURAHS = [
@@ -160,20 +161,16 @@ export default function Recitations() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">سجل التسميع</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">{recitations.length} تسميع مسجَّل</p>
-          </div>
-          <div className="flex items-center gap-3">            {canAdd && (
-              <button onClick={() => { setShowForm(true); setFormData(EMPTY_FORM); setError(''); }}
-                className="btn-primary text-sm">
-                <Plus className="w-4 h-4" /> تسميع جديد
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader title="سجل التسميع" subtitle={`${recitations.length} تسميع مسجَّل`}>
+        {canAdd && (
+          <button
+            onClick={() => { setShowForm(true); setFormData(EMPTY_FORM); setError(''); }}
+            className="btn-primary text-sm"
+          >
+            <Plus className="w-4 h-4" /> تسميع جديد
+          </button>
+        )}
+      </PageHeader>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">

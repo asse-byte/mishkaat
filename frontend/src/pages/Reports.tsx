@@ -6,6 +6,7 @@ import {
   BarChart3,
 } from 'lucide-react';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
 
@@ -127,14 +128,13 @@ export default function Reports() {
     <div className="space-y-6 animate-fade-in print:space-y-4">
 
       {/* Header — hidden when printing */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 print:hidden">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">إصدار التقارير</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">تقارير شاملة قابلة للطباعة والتصدير</p>
-          </div>
-          <PrintButton onClick={handlePrint} />
-        </div>
-      </div>
+      <PageHeader
+        title="إصدار التقارير"
+        subtitle="تقارير شاملة قابلة للطباعة والتصدير"
+        className="print:hidden"
+      >
+        <PrintButton onClick={handlePrint} />
+      </PageHeader>
 
       {/* Report Type Selector */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 print:hidden">
@@ -200,35 +200,39 @@ export default function Reports() {
             <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-[hsl(var(--primary))]" /> الحضور حسب الحلقة
             </h3>
-            <table className="w-full text-sm text-right">
-              <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-                <tr>
-                  <th className="px-4 py-3 rounded-r-xl font-bold">الحلقة</th>
-                  <th className="px-4 py-3 font-bold">إجمالي السجلات</th>
-                  <th className="px-4 py-3 font-bold">الحاضرون</th>
-                  <th className="px-4 py-3 font-bold">الغائبون</th>
-                  <th className="px-4 py-3 rounded-l-xl font-bold">نسبة الحضور</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
-                {halaqahAttStats.map(h => (
-                  <tr key={h.id} className="hover:bg-[hsl(var(--muted))]/30">
-                    <td className="px-4 py-3 font-bold text-[hsl(var(--foreground))]">{h.name}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
-                    <td className="px-4 py-3 text-emerald-600 font-bold">{h.present}</td>
-                    <td className="px-4 py-3 text-red-600 font-bold">{h.total - h.present}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
-                          <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-[hsl(var(--ok))]' : h.rate >= 60 ? 'bg-[hsl(var(--warn))]' : 'bg-[hsl(var(--danger))]'}`} style={{ width: `${h.rate}%` }} />
-                        </div>
-                        <span className={`font-bold text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
-                      </div>
-                    </td>
+            {/* غلاف تمرير: index.css يفرض على الهاتف table{min-width:600px}،
+                فجدول بلا هذا الغلاف يدفع الصفحة كلها أعرض من الشاشة. */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-right">
+                <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+                  <tr>
+                    <th className="px-4 py-3 rounded-r-xl font-bold">الحلقة</th>
+                    <th className="px-4 py-3 font-bold">إجمالي السجلات</th>
+                    <th className="px-4 py-3 font-bold">الحاضرون</th>
+                    <th className="px-4 py-3 font-bold">الغائبون</th>
+                    <th className="px-4 py-3 rounded-l-xl font-bold">نسبة الحضور</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[hsl(var(--border))]">
+                  {halaqahAttStats.map(h => (
+                    <tr key={h.id} className="hover:bg-[hsl(var(--muted))]/30">
+                      <td className="px-4 py-3 font-bold text-[hsl(var(--foreground))]">{h.name}</td>
+                      <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
+                      <td className="px-4 py-3 text-emerald-600 font-bold">{h.present}</td>
+                      <td className="px-4 py-3 text-red-600 font-bold">{h.total - h.present}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-2 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${h.rate >= 80 ? 'bg-[hsl(var(--ok))]' : h.rate >= 60 ? 'bg-[hsl(var(--warn))]' : 'bg-[hsl(var(--danger))]'}`} style={{ width: `${h.rate}%` }} />
+                          </div>
+                          <span className={`font-bold text-xs ${h.rate >= 80 ? 'text-emerald-600' : h.rate >= 60 ? 'text-amber-600' : 'text-red-600'}`}>{h.rate}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Individual records */}
@@ -286,26 +290,30 @@ export default function Reports() {
             <h3 className="font-bold text-[hsl(var(--foreground))] mb-4 flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-[hsl(var(--primary))]" /> التسميع حسب الحلقة
             </h3>
-            <table className="w-full text-sm text-right">
-              <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
-                <tr>
-                  <th className="px-4 py-3 font-bold rounded-r-xl">الحلقة</th>
-                  <th className="px-4 py-3 font-bold">إجمالي التسميعات</th>
-                  <th className="px-4 py-3 font-bold">ممتاز</th>
-                  <th className="px-4 py-3 font-bold rounded-l-xl">نسبة الممتاز</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[hsl(var(--border))]">
-                {halaqahRecStats.map(h => (
-                  <tr key={h.id} className="hover:bg-[hsl(var(--muted))]/30">
-                    <td className="px-4 py-3 font-bold">{h.name}</td>
-                    <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
-                    <td className="px-4 py-3 text-emerald-600 font-bold">{h.excellent}</td>
-                    <td className="px-4 py-3 font-bold text-[hsl(var(--primary))]">{h.rate}%</td>
+            {/* غلاف تمرير: index.css يفرض على الهاتف table{min-width:600px}،
+                فجدول بلا هذا الغلاف يدفع الصفحة كلها أعرض من الشاشة. */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-right">
+                <thead className="bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))]">
+                  <tr>
+                    <th className="px-4 py-3 font-bold rounded-r-xl">الحلقة</th>
+                    <th className="px-4 py-3 font-bold">إجمالي التسميعات</th>
+                    <th className="px-4 py-3 font-bold">ممتاز</th>
+                    <th className="px-4 py-3 font-bold rounded-l-xl">نسبة الممتاز</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[hsl(var(--border))]">
+                  {halaqahRecStats.map(h => (
+                    <tr key={h.id} className="hover:bg-[hsl(var(--muted))]/30">
+                      <td className="px-4 py-3 font-bold">{h.name}</td>
+                      <td className="px-4 py-3 text-[hsl(var(--muted-foreground))]">{h.total}</td>
+                      <td className="px-4 py-3 text-emerald-600 font-bold">{h.excellent}</td>
+                      <td className="px-4 py-3 font-bold text-[hsl(var(--primary))]">{h.rate}%</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* All recitations */}

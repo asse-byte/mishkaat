@@ -5,6 +5,7 @@ import {
   Trash2, X, CheckCircle2, AlertCircle, MapPin, Edit2,
 } from 'lucide-react';
 import { halaqatApi, teachersApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface HalaqahData {
   id: string;
@@ -135,20 +136,13 @@ export default function Halaqat() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">إدارة الحلقات</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">{halaqat.length} حلقة · {totalStudents} طالب</p>
-          </div>
-          <div className="flex items-center gap-3">            {user?.role === 'center_manager' && (
-              <button onClick={openAdd}
-                className="btn-primary text-sm">
-                <Plus className="w-4 h-4" /> إضافة حلقة
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+      <PageHeader title="إدارة الحلقات" subtitle={`${halaqat.length} حلقة · ${totalStudents} طالب`}>
+        {user?.role === 'center_manager' && (
+          <button onClick={openAdd} className="btn-primary text-sm">
+            <Plus className="w-4 h-4" /> إضافة حلقة
+          </button>
+        )}
+      </PageHeader>
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">

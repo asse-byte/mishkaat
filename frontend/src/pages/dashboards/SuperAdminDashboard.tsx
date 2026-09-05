@@ -145,17 +145,22 @@ export default function SuperAdminDashboard() {
   return (
     <div className="space-y-6 page-fade-in pb-10 text-[hsl(var(--foreground))]">
       
-      {/* Super Admin Top Header Banner */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold badge-gold text-white px-3 py-1 rounded-full w-fit mb-2">
-              <ShieldAlert className="w-3.5 h-3.5" />
-              وزارة الشؤون الإسلامية والأوقاف
-            </div>
-            <h1 className="text-2xl lg:text-3xl font-bold mb-1">منصة مِشكاة للإشراف العام والرقابة</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">لوحة الإدارة المركزية والرقابة المالية لجميع مراكز التحفيظ المسجلة</p>
+      {/* Super Admin Top Header Banner.
+          ترويسة خاصّة (شارة فوق العنوان) فلا تُبنى على PageHeader، لكنها تتبع
+          قواعده: التفاف عند الضيق، و min-w-0 على كتلة النصّ حتى تنكمش بدل أن
+          تدفع الصفحة أعرض من شاشة الهاتف. */}
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="min-w-0">
+          {/* كان معها text-white: طبقة الأدوات تسبق طبقة المكوّنات، فيغلب الأبيضُ
+              لونَ .badge-gold ويصير النصّ أبيض على أرضية كريمية فاتحة (١٫١:١). */}
+          <div className="flex items-center gap-2 text-xs font-bold badge-gold px-3 py-1 rounded-full w-fit mb-2">
+            <ShieldAlert className="w-3.5 h-3.5 shrink-0" />
+            وزارة الشؤون الإسلامية والأوقاف
           </div>
-          <div className="flex gap-2">
+          <h1 className="text-2xl lg:text-3xl font-bold mb-1">منصة المشكاة للإشراف العام والرقابة</h1>
+          <p className="text-sm text-[hsl(var(--ink-3))]">لوحة الإدارة المركزية والرقابة المالية لجميع مراكز التحفيظ المسجلة</p>
+        </div>
+        <div className="flex gap-2 flex-wrap shrink-0">
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -172,7 +177,6 @@ export default function SuperAdminDashboard() {
               <Plus className="w-4 h-4" />
               إضافة مركز معتمد
             </button>
-          </div>
         </div>
       </div>
 

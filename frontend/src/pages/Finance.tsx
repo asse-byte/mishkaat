@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import api from '@/services/api';
 import { studentsApi, teachersApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Fee { id: string; student_id: string; student_name?: string; amount: number; due_date: string; fee_type: string; status: string; notes?: string; }
 interface Salary { id: string; teacher_id: string; teacher_name?: string; amount: number; month: string; center_id: string; notes?: string; created_at: string; }
@@ -230,77 +231,81 @@ export default function Finance() {
         }
       `}</style>
 
-      {/* Printable Receipt layout */}
+      {/* Printable Receipt layout.
+          قيم لونية ثابتة عمداً: الإيصال يُطبع على ورق أبيض، وأدوات تيلويند
+          الملوّنة (text-gray-500 وأخواتها) مربوطة في index.css برموز النظام
+          التي تنقلب في الوضع الليلي — فمن طبع إيصالاً ليلاً كان يحصل على نصّ
+          فاتح على ورق أبيض. والإطار كان بالأخضر القديم (لوحة EduGete). */}
       {printVoucher && (
         <div id="print-section" className="hidden print:block" dir="rtl">
-          <div className="border-4 border-double border-[hsl(152,45%,38%)] p-6 rounded-[var(--radius)] flex flex-col justify-between h-[90vh] text-center">
+          <div className="border-4 border-double border-[#1B233C] p-6 rounded-[var(--radius)] flex flex-col justify-between h-[90vh] text-center">
             
             {/* Header */}
             <div>
-              <div className="text-xs font-bold text-[hsl(152,45%,38%)]">المملكة المغربية / الشؤون الإسلامية المعتمدة</div>
-              <h1 className="text-xl font-extrabold text-[hsl(152,45%,38%)] mt-2">سند إيصال مالي رسمي</h1>
-              <p className="text-[10px] text-gray-500 mt-1">إدارة التحفيظ والتعليم الأكاديمي المتكامل</p>
+              <div className="text-xs font-bold text-[#1B233C]">المملكة المغربية / الشؤون الإسلامية المعتمدة</div>
+              <h1 className="text-xl font-extrabold text-[#1B233C] mt-2">سند إيصال مالي رسمي</h1>
+              <p className="text-[10px] text-[#5B6474] mt-1">إدارة التحفيظ والتعليم الأكاديمي المتكامل</p>
             </div>
 
             {/* Voucher Details */}
             <div className="my-6 space-y-4 text-right px-6 text-sm">
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">اسم المركز:</span>
-                <span className="font-bold text-gray-800">{center?.name || 'مركز تحفيظ معتمد'}</span>
+                <span className="text-[#5B6474] font-semibold">اسم المركز:</span>
+                <span className="font-bold text-[#232A36]">{center?.name || 'مركز تحفيظ معتمد'}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">رقم السند المالي:</span>
-                <span className="font-mono font-bold text-gray-800" dir="ltr">#{printVoucher.refId.slice(-8).toUpperCase()}</span>
+                <span className="text-[#5B6474] font-semibold">رقم السند المالي:</span>
+                <span className="font-mono font-bold text-[#232A36]" dir="ltr">#{printVoucher.refId.slice(-8).toUpperCase()}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">نوع الحركة المالية:</span>
-                <span className="font-bold text-gray-800">{printVoucher.title}</span>
+                <span className="text-[#5B6474] font-semibold">نوع الحركة المالية:</span>
+                <span className="font-bold text-[#232A36]">{printVoucher.title}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">المستفيد / العميل:</span>
-                <span className="font-bold text-emerald-800">{printVoucher.targetName}</span>
+                <span className="text-[#5B6474] font-semibold">المستفيد / العميل:</span>
+                <span className="font-bold text-[#1B233C]">{printVoucher.targetName}</span>
               </div>
               <div className="flex justify-between border-b pb-2">
-                <span className="text-gray-500 font-semibold">التاريخ:</span>
-                <span className="font-semibold text-gray-800">{printVoucher.date}</span>
+                <span className="text-[#5B6474] font-semibold">التاريخ:</span>
+                <span className="font-semibold text-[#232A36]">{printVoucher.date}</span>
               </div>
-              <div className="flex justify-between border-b pb-2 bg-emerald-50 p-2 rounded-lg">
-                <span className="text-emerald-800 font-bold">المبلغ المدفوع:</span>
-                <span className="font-bold text-emerald-800 text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
+              <div className="flex justify-between border-b pb-2 bg-[#F3EEE2] p-2 rounded-lg">
+                <span className="text-[#1B233C] font-bold">المبلغ المدفوع:</span>
+                <span className="font-bold text-[#1B233C] text-lg" dir="ltr">{formatCurrency(printVoucher.amount)}</span>
               </div>
               {printVoucher.notes && (
                 <div className="flex justify-between border-b pb-2">
-                  <span className="text-gray-500 font-semibold">ملاحظات:</span>
-                  <span className="font-medium text-gray-700">{printVoucher.notes}</span>
+                  <span className="text-[#5B6474] font-semibold">ملاحظات:</span>
+                  <span className="font-medium text-[#39404E]">{printVoucher.notes}</span>
                 </div>
               )}
             </div>
 
             {/* QR Placeholder and sign */}
             <div className="flex flex-col items-center gap-2">
-              <div className="w-16 h-16 border border-dashed border-gray-400 flex items-center justify-center font-mono text-[9px] text-gray-400">
+              <div className="w-16 h-16 border border-dashed border-[#98A0AE] flex items-center justify-center font-mono text-[9px] text-[#767E8C]">
                 [QR CODE]
               </div>
-              <span className="text-[9px] text-gray-400 font-mono" dir="ltr">{printVoucher.refId}</span>
+              <span className="text-[9px] text-[#767E8C] font-mono" dir="ltr">{printVoucher.refId}</span>
             </div>
 
             {/* Stamp and Signatures */}
-            <div className="grid grid-cols-3 gap-6 px-4 pt-4 border-t border-gray-100 text-xs">
+            <div className="grid grid-cols-3 gap-6 px-4 pt-4 border-t border-[#D8DCE4] text-xs">
               <div>
-                <span className="text-gray-500 block mb-6">توقيع المستلم</span>
-                <div className="h-6 border-b border-gray-200"></div>
+                <span className="text-[#5B6474] block mb-6">توقيع المستلم</span>
+                <div className="h-6 border-b border-[#C7CCD6]"></div>
               </div>
               <div>
-                <span className="text-gray-500 block mb-6">خاتم المركز الرسمي</span>
-                <div className="h-6 border-b border-gray-200"></div>
+                <span className="text-[#5B6474] block mb-6">خاتم المركز الرسمي</span>
+                <div className="h-6 border-b border-[#C7CCD6]"></div>
               </div>
               <div>
-                <span className="text-gray-500 block mb-6">توقيع المدير المسؤول</span>
-                <div className="h-6 border-b border-gray-200"></div>
+                <span className="text-[#5B6474] block mb-6">توقيع المدير المسؤول</span>
+                <div className="h-6 border-b border-[#C7CCD6]"></div>
               </div>
             </div>
 
-            <div className="text-[9px] text-gray-400">
+            <div className="text-[9px] text-[#767E8C]">
               النظام محمي وموثق قانونياً باسم المطور الرسمي Abdoul Malick Cisse © 2026
             </div>
           </div>
@@ -311,12 +316,10 @@ export default function Finance() {
       <div className="print:hidden space-y-6">
 
         {/* Header */}
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-1">الإدارة المالية</h1>
-              <p className="text-sm text-[hsl(var(--ink-3))]">رسوم الطلاب · رواتب المحفظين · مصروفات المركز</p>
-            </div>          </div>
-        </div>
+        <PageHeader
+          title="الإدارة المالية"
+          subtitle="رسوم الطلاب · رواتب المحفظين · مصروفات المركز"
+        />
 
         {/* Summary cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">

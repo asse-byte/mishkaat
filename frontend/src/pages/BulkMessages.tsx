@@ -11,6 +11,7 @@ import {
   ArrowUpRight, RefreshCw, X, Eye, ShieldAlert,
 } from 'lucide-react';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Reply {
   teacher_id: string;
@@ -130,19 +131,16 @@ export default function BulkMessages() {
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
       
       {/* Header banner */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">الرسائل الجماعية والبث المزدوج</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">
-              {isSuperAdmin 
-                ? 'بث الرسائل التوجيهية العامة لجميع مدراء المراكز المعتمدة ومتابعة استجاباتهم'
-                : activeTab === 'outbox'
-                  ? 'إرسال التوجيهات العامة لجميع المحفظين ومتابعة ردودهم في سلاسل نقاش تفاعلية'
-                  : 'استلام التوجيهات الرسمية والرد المباشر عليها'
-              }
-            </p>
-          </div>        </div>
-      </div>
+      <PageHeader
+        title="الرسائل الجماعية والبث المزدوج"
+        subtitle={
+          isSuperAdmin
+            ? 'بث الرسائل التوجيهية العامة لجميع مدراء المراكز المعتمدة ومتابعة استجاباتهم'
+            : activeTab === 'outbox'
+              ? 'إرسال التوجيهات العامة لجميع المحفظين ومتابعة ردودهم في سلاسل نقاش تفاعلية'
+              : 'استلام التوجيهات الرسمية والرد المباشر عليها'
+        }
+      />
 
       {/* Tabs Switcher for Center Manager (has both Inbox and Outbox) */}
       {isManager && (

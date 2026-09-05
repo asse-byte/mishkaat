@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#232D4B"/>
+      <stop offset="1" stop-color="#141B2E"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0"   stop-color="#EFAA43" stop-opacity=".34"/>
+      <stop offset=".45" stop-color="#EFAA43" stop-opacity=".12"/>
+      <stop offset="1"   stop-color="#EFAA43" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="lamp" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#FDE8BE"/>
+      <stop offset=".55" stop-color="#EFAA43"/>
+      <stop offset="1"   stop-color="#D08C2A"/>
+    </linearGradient>
+    <radialGradient id="core" cx="50%" cy="45%" r="50%">
+      <stop offset="0"   stop-color="#FFF7E4" stop-opacity=".95"/>
+      <stop offset=".55" stop-color="#FDE8BE" stop-opacity=".45"/>
+      <stop offset="1"   stop-color="#FDE8BE" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="recess" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0"   stop-color="#0B101E" stop-opacity=".7"/>
+      <stop offset="1"   stop-color="#0B101E" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <g>
+    <!-- جوف الكوّة: تجويف أغمق من الجدار يعطي عمقاً بلا خطوط زائدة -->
+    <path d="M 152 386 L 152 290 A 208 208 0 0 1 256 110 A 208 208 0 0 1 360 290 L 360 386 Z"
+          fill="url(#recess)"/>
+
+    <!-- وهج المصباح: الضوء ينتشر ويتجاوز حافّة الكوّة قليلاً كما يفعل الضوء -->
+    <circle cx="256" cy="278" r="186" fill="url(#glow)"/>
+
+    <!-- الكوّة: قائمتان يعلوهما قوس مدبَّب -->
+    <path d="M 152 386 L 152 290 A 208 208 0 0 1 256 110 A 208 208 0 0 1 360 290 L 360 386"
+          fill="none" stroke="#D9A254" stroke-width="21"
+          stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- عتبة الكوّة -->
+    <path d="M 138 386 L 374 386" fill="none" stroke="#D9A254" stroke-width="21" stroke-linecap="round"/>
+
+    <g transform="translate(0,-8)">
+      <!-- سلسلة التعليق -->
+      <path d="M 256 130 L 256 182" fill="none" stroke="#D08C2A" stroke-width="10" stroke-linecap="round"/>
+
+      <!-- قنديل المسجد: فوّهة مُتَّسِعة، خصر، جسم منتفخ، قاعدة.
+           الظلّ الخارجي منحنى واحد مستمرّ: عند الخصر وعند أعرض نقطة يكون المماسّ
+           رأسياً على الجانبين، فلا ينكسر الخطّ. الانكسار عند الخصر هو ما كان يجعل
+           القنديل يُقرأ «قِمعاً فوق كرة» عند 48 بكسل، لا نِسَبُ الأجزاء.
+           الحافّة العليا مقوَّسة قليلاً لا مقطوعة: القنديل مفتوح، لا مصمَت. -->
+      <path d="M 216 180
+               C 222 210, 234 224, 234 248
+               C 234 268, 192 280, 192 300
+               C 192 322, 210 344, 238 344
+               C 248 350, 264 350, 274 344
+               C 302 344, 320 322, 320 300
+               C 320 280, 278 268, 278 248
+               C 278 224, 290 210, 296 180
+               C 288 190, 224 190, 216 180 Z"
+            fill="url(#lamp)"/>
+
+      <!-- قلب اللهب: المصباح مُوقَد، لا كتلة نحاسية -->
+      <ellipse cx="256" cy="300" rx="52" ry="40" fill="url(#core)"/>
+
+      <!-- لمعة على كتف القنديل: تفصيلة واحدة تكفي لإعطاء الحجم -->
+      <path d="M 220 272 C 209 288, 209 306, 217 322"
+            fill="none" stroke="#FDE8BE" stroke-width="8"
+            stroke-linecap="round" opacity=".5"/>
+
+      <!-- كُرة القاع -->
+      <circle cx="256" cy="360" r="7" fill="#D08C2A"/>
+    </g>
+  </g></svg>

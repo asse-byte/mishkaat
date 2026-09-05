@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { teachersApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface TeacherData {
   id: string;
@@ -167,12 +168,10 @@ export default function Teachers() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">إدارة المحفظين</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">{teachers.length} محفظ · {teachers.reduce((s, t) => s + t.students_count, 0)} طالب</p>
-          </div>        </div>
-      </div>
+      <PageHeader
+        title="إدارة المحفظين"
+        subtitle={`${teachers.length} محفظ · ${teachers.reduce((s, t) => s + t.students_count, 0)} طالب`}
+      />
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
