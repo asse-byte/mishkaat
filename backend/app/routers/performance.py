@@ -18,7 +18,7 @@ from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.clock import utcnow
-from app.common import NOT_DELETED, check_student_access
+from app.common import NOT_DELETED, check_student_access, safe_object_id
 from app.config import TOTAL_QURAN_PAGES, logger
 from app.db import db
 from app.errors_taxonomy import ERROR_TYPES
@@ -124,10 +124,19 @@ async def student_performance(student_id: str, current_user: dict = Depends(get_
     # قبل هذه الميزة لن تمنح أصحابها شيئاً إن لم يُقيَّم إلا على تسميع جديد.
     new_badges = await evaluate_badges(student_id, snapshot, student.get("center_id"))
 
+    # اسم المركز للورقة المطبوعة: الورقة تخرج من يد المحفّظ إلى وليّ الأمر،
+    # فترويسة بلا اسم المركز ورقةٌ لا تُعرف جهتُها
+    center_name = None
+    if student.get("center_id"):
+        center = await db.centers.find_one(
+            {"_id": safe_object_id(student["center_id"])}, {"name": 1})
+        center_name = (center or {}).get("name")
+
     return {
         "student_id": student_id,
         "student_name": student.get("name"),
         "halaqah_name": student.get("halaqah_name"),
+        "center_name": center_name,
         "metrics": snapshot,
         "forecast": {
             **projection,

@@ -655,9 +655,23 @@ tbody tr:last-child td { border-bottom: 0; }
 }
 
 @media print {
-  .no-print, aside, header button { display: none !important; }
+  /* قِشرة التطبيق كلّها تُحذف من الورق: الشريط الجانبي والشريط العلوي.
+     كانت القاعدة تُخفي أزرار الشريط العلوي وتُبقيه، فيُطبع اسمُ الصفحة
+     وتاريخُ اليوم فوق كل ورقة — وكلُّ ما يُطبع في النظام (تقرير المركز،
+     الإيصال المالي، شهادة المسابقة، تقرير الطالب) يحمل ترويسته الخاصّة
+     أصلاً، فالشريط تكرارٌ يزاحمها ويأكل من مساحة الورقة. */
+  aside, header.sticky, .no-print { display: none !important; }
+
+  /* العمود الرئيسي يفقد إزاحته عن شريط جانبي لم يعد موجوداً */
+  .lg\:mr-72 { margin-right: 0 !important; }
+  main { padding: 0 !important; }
+
   body { background: #fff; color: #000; }
   .card { box-shadow: none; border: 1px solid #ccc; }
+
+  /* الطابعات تُسقط ألوان الخلفية افتراضياً، فتضيع أشرطة النسب وأرضيات
+     الصناديق. هذا يطلب من المتصفّح طباعتها كما هي. */
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
 
 /* --primary يخدم دورين: لون نصّ (84 موضعاً) وسطحاً (12 موضعاً).

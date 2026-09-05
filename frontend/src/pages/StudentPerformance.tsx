@@ -2,10 +2,11 @@ import { useCallback, useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Activity, Award, BookOpen, CalendarCheck, Loader2, RefreshCw,
-  Sparkles, Star, Target, TrendingUp, Trophy,
+  Printer, Sparkles, Star, Target, TrendingUp, Trophy,
 } from 'lucide-react';
 import api from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
+import StudentReportSheet from '@/components/ui/StudentReportSheet';
 
 /**
  * صفحة أداء الطالب — المقاييس الخمسة، والتنبؤ، وخريطة الرحلة، والأوسمة.
@@ -53,6 +54,7 @@ interface Challenge {
 interface Perf {
   student_name: string;
   halaqah_name?: string;
+  center_name?: string;
   metrics: Metrics;
   forecast: Forecast;
   badges: Badge[];
@@ -126,11 +128,28 @@ export default function StudentPerformance() {
   const earned = perf.badges.filter(b => b.earned);
 
   return (
-    <div className="space-y-6 animate-fade-in">
+    <>
+      {/* ورقة وليّ الأمر: لا تظهر على الشاشة، وهي كلّ ما يُطبع */}
+      <StudentReportSheet
+        studentName={perf.student_name}
+        halaqahName={perf.halaqah_name}
+        centerName={perf.center_name}
+        metrics={m}
+        forecast={f}
+        journeyPercent={journey?.percent ?? 0}
+        totalPages={journey?.total_pages ?? 604}
+        badges={perf.badges}
+        totalXp={perf.total_xp}
+      />
+
+    <div className="space-y-6 animate-fade-in print:hidden">
       <PageHeader
         title={perf.student_name}
         subtitle={`${perf.halaqah_name || 'بلا حلقة'} · ${m.sessions_count} تسميعة · ${perf.total_xp} نقطة`}
       >
+        <button onClick={() => window.print()} className="btn-primary text-sm">
+          <Printer className="w-4 h-4" /> تقرير لوليّ الأمر
+        </button>
         <Link to={`/analytics/${studentId}`} className="btn-outline-teal text-sm">
           <Activity className="w-4 h-4" /> الرسوم البيانية
         </Link>
@@ -288,5 +307,6 @@ export default function StudentPerformance() {
         </div>
       </div>
     </div>
+    </>
   );
 }
