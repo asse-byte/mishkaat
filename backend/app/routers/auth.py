@@ -52,14 +52,27 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 
     # [AUDIT-2026-05-22 fix: refuse to issue tokens for disabled accounts even on correct password]
     if not user.get("is_active", True):
+        # [إصلاح 2026-09-06] الحسابُ المعلَّق ليس حساباً معطَّلاً.
+        # من سجّل مركزه للتوّ يصل حسابُه معطَّلاً بانتظار اعتماد المدير — وهذا
+        # مقصود — لكن رسالة «الحساب معطّل» تقول له إنه محظور لا إنه في الطابور،
+        # فيظنّ التطبيق معطوباً ويعيد المحاولة. الحالتان تُفرَّقان الآن.
+        pending = user.get("approval_status") == "pending"
         await write_audit_log(
             actor_id=str(user["_id"]),
             center_id=user.get("center_id", "system"),
-            action="LOGIN_DENIED_DISABLED",
+            action="LOGIN_DENIED_PENDING" if pending else "LOGIN_DENIED_DISABLED",
             payload={"username": user["username"]},
             client_ip=ip,
         )
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="الحساب معطّل - Account is disabled")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=(
+                "طلب تسجيل مركزك قيد المراجعة. سيُفعَّل حسابك بعد اعتماد المدير، "
+                "وسنتواصل معك على بريدك."
+                if pending else
+                "الحساب معطّل — راجع إدارة النظام."
+            ),
+        )
 
     await _clear_attempts(ip, form_data.username)
     # تسجيل الدخول الناجح

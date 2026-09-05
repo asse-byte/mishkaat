@@ -45,14 +45,37 @@ export default function Centers() {
   const [saving, setSaving]           = useState(false);
   const [error, setError]             = useState('');
 
+  const isAdmin = user?.role === 'admin';
+  const [pending, setPending] = useState<CenterData[]>([]);
+  const [decidingId, setDecidingId] = useState<string | null>(null);
+
   const loadCenters = useCallback(async () => {
     try {
       setLoading(true);
       const resp = await api.get('/centers');
       setCenters(resp.data || []);
+      // [إضافة 2026-09-06] طابور الاعتماد. نقطتا /centers/pending و/approve
+      // موجودتان في الخادم منذ البداية ولا يستدعيهما شيء في الواجهة، فكان
+      // المركز المسجَّل من الصفحة العامّة يبقى معلَّقاً إلى الأبد: صاحبُه لا
+      // يستطيع الدخول، ومدير النظام لا يرى ما يعتمده.
+      if (isAdmin) {
+        const p = await api.get('/centers/pending');
+        setPending(p.data || []);
+      }
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, []);
+  }, [isAdmin]);
+
+  const decide = async (id: string, action: 'approve' | 'reject') => {
+    if (action === 'reject' && !confirm('رفض هذا الطلب؟ لن يستطيع صاحبه الدخول.')) return;
+    try {
+      setDecidingId(id);
+      await api.post(`/centers/${id}/${action}`);
+      await loadCenters();
+    } catch (e: any) {
+      alert(e.response?.data?.detail || 'تعذّر تنفيذ الإجراء');
+    } finally { setDecidingId(null); }
+  };
 
   useEffect(() => { loadCenters(); }, [loadCenters]);
 
@@ -144,6 +167,47 @@ export default function Centers() {
           </button>
         )}
       </PageHeader>
+
+      {/* طابور الاعتماد — يظهر لمدير النظام حين يوجد طلب */}
+      {isAdmin && pending.length > 0 && (
+        <div className="card p-5 border-[hsl(var(--lamp-line))] bg-[hsl(var(--lamp-wash))]">
+          <div className="flex items-baseline justify-between gap-2 flex-wrap mb-3">
+            <h3 className="text-base font-bold">طلبات تسجيل قيد المراجعة</h3>
+            <span className="text-xs text-[hsl(var(--ink-3))]">
+              {pending.length} طلب — لا يستطيع أصحابُها الدخول قبل الاعتماد
+            </span>
+          </div>
+          <div className="space-y-2">
+            {pending.map(c => (
+              <div key={c.id} className="flex items-center gap-3 flex-wrap p-3 rounded-[var(--radius-sm)]
+                                         bg-[hsl(var(--surface))] border border-[hsl(var(--line))]">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm truncate">{c.name}</p>
+                  <p className="text-xs text-[hsl(var(--ink-3))] truncate">
+                    {[c.manager_name, c.address, c.phone].filter(Boolean).join(' · ') || '—'}
+                  </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => decide(c.id, 'approve')}
+                    disabled={decidingId === c.id}
+                    className="btn-primary text-sm disabled:opacity-50"
+                  >
+                    <CheckCircle2 className="w-4 h-4" /> اعتماد
+                  </button>
+                  <button
+                    onClick={() => decide(c.id, 'reject')}
+                    disabled={decidingId === c.id}
+                    className="btn-outline-teal text-sm disabled:opacity-50"
+                  >
+                    <X className="w-4 h-4" /> رفض
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">

@@ -33,8 +33,17 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 async def get_centers(current_user: dict = Depends(get_current_user)):
     """الحصول على قائمة المراكز مع إحصائيات"""
     role = current_user["role"]
-    centers_query: dict = {"is_active": True}
-    if role != "super_admin":
+    # [إصلاح 2026-09-06] كان الشرط "غير super_admin ⇐ احصره في مركزه"، ومدير
+    # النظام (admin) دورٌ عامّ بلا center_id — فكان يرى صفراً من خمسة مراكز.
+    # وهو صاحب الاعتماد والرفض وإنشاء المراكز، فلا معنى لأن تكون قائمتُه فارغة.
+    #
+    # ويرى المعلَّقة وغير المفعّلة أيضاً: لو حُجبت عنه لما وجد ما يعتمده أصلاً.
+    # الأدوار المحصورة (مدير مركز، محفّظ) تبقى على مركزها وعلى المفعَّل وحده.
+    centers_query: dict = {}
+    if role in ("admin", "super_admin"):
+        pass
+    else:
+        centers_query["is_active"] = True
         user_center = current_user.get("center_id")
         if not user_center:
             return []
