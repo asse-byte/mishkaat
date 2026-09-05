@@ -239,9 +239,20 @@ async def _check_reset_request_rate(ip: str, username: str):
         )
 
 async def _check_register_rate(ip: str):
+    """
+    يتحقّق من حدّ التسجيل ولا يُسجّل محاولة.
+
+    [إصلاح 2026-09-06] كانت الدالة تفحص وتُسجّل معاً قبل أي تحقّق من المدخلات،
+    فثلاث محاولات فاشلة — نقصُ حقل، أو كلمة مرور قصيرة، أو اسم مستخدم مأخوذ —
+    تستهلك حصّة الساعة كاملة، ويُمنع صاحبُها ساعةً كاملة وهو لم ينجح في التسجيل
+    مرّة واحدة. وهذا بالضبط ما وقع: ثلاثة 400 ثمّ 429.
+
+    الحدّ موجود لردع الإغراق لا لمعاقبة الخطأ المطبعي، فصار التسجيل بعد النجاح
+    وحده (_record_register_attempt). والفحص يبقى قبل كل شيء فيظلّ الإغراق
+    محدوداً: من نجح ثلاثاً في الساعة لا يُقبل رابعُه.
+    """
     now = utcnow()
     window_start = now - timedelta(minutes=REGISTER_WINDOW_MINUTES)
-    # Trim old timestamps, then check count
     await db.register_attempts.update_one(
         {"_id": ip},
         {"$pull": {"timestamps": {"$lt": window_start}}},
@@ -253,9 +264,13 @@ async def _check_register_rate(ip: str):
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             detail=f"تجاوزت الحد المسموح. حاول بعد {REGISTER_WINDOW_MINUTES} دقيقة."
         )
+
+
+async def _record_register_attempt(ip: str):
+    """يُنادى بعد نجاح التسجيل وحده."""
     await db.register_attempts.update_one(
         {"_id": ip},
-        {"$push": {"timestamps": now}, "$set": {"last_seen": now}},
+        {"$push": {"timestamps": utcnow()}, "$set": {"last_seen": utcnow()}},
         upsert=True,
     )
 

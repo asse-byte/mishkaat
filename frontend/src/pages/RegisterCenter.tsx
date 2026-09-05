@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BookOpen, User, Building, MapPin, Phone, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { BookOpen, User, Building, MapPin, Phone, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import axios, { AxiosError } from 'axios';
 
 // Get API URL from env or use relative path (assuming proxy is setup in vite.config.ts)
@@ -40,7 +40,7 @@ const RegisterCenter = () => {
         manager_name: formData.managerName,
         manager_username: formData.managerUsername,
         manager_password: formData.managerPassword,
-        manager_email: formData.managerEmail || undefined,
+        manager_email: formData.managerEmail.trim(),
         is_active: true
       };
 
@@ -155,9 +155,34 @@ const RegisterCenter = () => {
                   </div>
                 </div>
                 <div>
+                  {/* [إصلاح 2026-09-06] كان الحدّ هنا 6 والخادم يشترط 8 مع رقم
+                      وحرف، فتُقبل كلمةٌ في المتصفّح ثم يردّها الخادم 400 بلا أن
+                      يعرف المستخدم القاعدة أصلاً. القاعدة الآن مكتوبة تحت الحقل. */}
                   <label className="block text-sm font-medium text-slate-700 mb-1">كلمة المرور *</label>
-                  <input type="password" dir="ltr" name="managerPassword" value={formData.managerPassword} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-right" placeholder="••••••••" required minLength={6} />
+                  <input type="password" dir="ltr" name="managerPassword" value={formData.managerPassword} onChange={handleChange} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-right" placeholder="••••••••" required minLength={8} />
+                  <p className="text-xs text-slate-500 mt-1">ثمانية أحرف على الأقل، وفيها رقم وحرف.</p>
                 </div>
+              </div>
+
+              {/* [إصلاح 2026-09-06] هذا الحقل لم يكن موجوداً إطلاقاً.
+                  managerEmail كان في الحالة ولا يربطه شيء بالنموذج، فيُرسَل
+                  undefined دائماً، والخادم يشترطه ويردّ 400 «البريد الإلكتروني
+                  مطلوب للتحقق». أي أن تسجيل مركز جديد كان متعذّراً بالكامل، لا
+                  في حالة طرفية — لا سبيل لأحد أن ينجح فيه. */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">البريد الإلكتروني *</label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                    <Mail className="h-4 w-4 text-[hsl(var(--ink-3))]" />
+                  </div>
+                  <input
+                    type="email" dir="ltr" name="managerEmail"
+                    value={formData.managerEmail} onChange={handleChange}
+                    className="w-full pr-10 pl-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all text-right"
+                    placeholder="manager@example.com" required
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">يُستعمل للتواصل معك بشأن اعتماد المركز.</p>
               </div>
             </div>
 
