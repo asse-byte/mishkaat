@@ -1,5 +1,6 @@
 """المراكز والإشراف العام."""
 
+import re
 from app.clock import utcnow
 
 from bson import ObjectId
@@ -14,11 +15,16 @@ from app.audit import write_audit_log
 from app.common import client_ip, safe_object_id, serialize_doc, NOT_VOIDED
 from app.config import DB_NAME
 from app.db import db
+from pymongo.errors import DuplicateKeyError
 from app.routers.finance import _sum_amounts
 from app.models import CenterCreate, SuperCenterCreate, SuperCenterStatusUpdate
-from app.security import _check_register_rate, get_current_user, get_password_hash, validate_password_complexity
+from app.security import _check_register_rate, _record_register_attempt, get_current_user, get_password_hash, validate_password_complexity
 
 router = APIRouter()
+
+# تحقّق كافٍ من شكل البريد بلا تبعية إضافية: email-validator غير مثبَّتة،
+# و EmailStr في Pydantic تعتمد عليها فتُسقط الإقلاع كلَّه لو استُعملت.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s.]+(\.[^@\s.]+)+$")
 
 
 # ==================== Centers Routes ====================
@@ -141,6 +147,10 @@ async def public_register_center(request: Request, center: CenterCreate):
     validate_password_complexity(center.manager_password)
     if not center.manager_email:
         raise HTTPException(status_code=400, detail="البريد الإلكتروني مطلوب للتحقق")
+    # [إصلاح 2026-09-06] الحقل كان يُشترط وجودُه ولا يُتحقّق من شكله، والرسالة
+    # تقول إنه «للتحقق» — فيُقبل «أ» بريداً ولا يصل إلى صاحبه شيء أبداً.
+    if not _EMAIL_RE.match(center.manager_email.strip()):
+        raise HTTPException(status_code=400, detail="صيغة البريد الإلكتروني غير صحيحة")
 
     existing = await db.users.find_one({"username": center.manager_username})
     if existing:
@@ -172,7 +182,12 @@ async def public_register_center(request: Request, center: CenterCreate):
         "user_version": 0,
         "created_at": utcnow(),
     }
-    manager_result = await db.users.insert_one(manager_user)
+    # [إصلاح 2026-09-06] فحصُ الاسم أعلاه لا يمنع السباق: طلبان متزامنان
+    # بالاسم نفسه يمرّان معاً، فيردّ الفهرسُ الفريد الثانيَ بخطأ 500 غامض.
+    try:
+        manager_result = await db.users.insert_one(manager_user)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="اسم المستخدم موجود بالفعل")
     center_dict["manager_id"] = str(manager_result.inserted_id)
 
     result = await db.centers.insert_one(center_dict)
@@ -190,6 +205,9 @@ async def public_register_center(request: Request, center: CenterCreate):
         payload={"manager_username": center.manager_username, "center_name": center_dict["name"]},
         client_ip=ip,
     )
+
+    # تُحتسب المحاولة الآن لا قبل التحقّق: الحدّ لردع الإغراق لا لمعاقبة الخطأ
+    await _record_register_attempt(ip)
 
     return {
         "id": center_id,
@@ -451,7 +469,12 @@ async def super_register_center(center: SuperCenterCreate, current_user: dict = 
         "created_at": utcnow(),
     }
     
-    manager_result = await db.users.insert_one(manager_user)
+    # [إصلاح 2026-09-06] فحصُ الاسم أعلاه لا يمنع السباق: طلبان متزامنان
+    # بالاسم نفسه يمرّان معاً، فيردّ الفهرسُ الفريد الثانيَ بخطأ 500 غامض.
+    try:
+        manager_result = await db.users.insert_one(manager_user)
+    except DuplicateKeyError:
+        raise HTTPException(status_code=400, detail="اسم المستخدم موجود بالفعل")
     center_dict["manager_id"] = str(manager_result.inserted_id)
 
     result = await db.centers.insert_one(center_dict)
