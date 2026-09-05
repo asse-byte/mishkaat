@@ -12,7 +12,7 @@ from app.config import ALLOWED_ORIGINS, APP_VERSION, IS_PRODUCTION, logger
 from app.startup import startup_event
 from app.routers import (
     attendance, audit_logs, auth, centers, competitions, dashboard, exports,
-    finance, halaqat, health, messages, notifications, recitations,
+    finance, halaqat, health, messages, notifications, performance, recitations,
     review_plans, schedules, students, teachers,
 )
 
@@ -31,6 +31,7 @@ ROUTERS = (
     competitions.router,
     messages.router,
     recitations.router,
+    performance.router,
     attendance.router,
     finance.router,
     review_plans.router,

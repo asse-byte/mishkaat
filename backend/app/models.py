@@ -3,6 +3,8 @@
 from datetime import datetime
 from pydantic import BaseModel
 from pydantic import ConfigDict
+from pydantic import field_validator
+from typing import Dict
 from typing import List
 from typing import Literal
 from typing import Optional
@@ -317,6 +319,42 @@ class RecitationBase(BaseModel):
     tajweed_errors_count: int = 0
     notes: Optional[str] = None
     recitation_type: Literal["new", "review"] = "new"
+
+    # [إضافة 2026-09-05 — FR6 في تقرير Halaqtna] وسم الأخطاء بتصنيف مغلق موزون.
+    # العدّادات الثلاثة أعلاه تبقى كما هي لتوافق البيانات والواجهات القديمة؛
+    # error_tags حين يوجد يسبقها فلا يُحسب الخطأ مرّتين (errors_taxonomy).
+    # القيمة: {رمز النوع: عدد الأخطاء}، والرموز يتحقّق منها المُصادِق أدناه.
+    error_tags: Optional[Dict[str, int]] = None
+
+    # عدد صفحات التسميعة. المقاييس الأدائية كلها لكل صفحة، والنطاق يُسجَّل
+    # بالآيات — فإن تُرك فارغاً اشتُقّ من عدد الآيات، وهو تقريب معلَن.
+    pages_count: Optional[float] = None
+
+    @field_validator("error_tags")
+    @classmethod
+    def _check_error_tags(cls, v):
+        if v is None:
+            return v
+        from app.errors_taxonomy import CODES
+        cleaned = {}
+        for code, count in v.items():
+            if code not in CODES:
+                raise ValueError(f"نوع خطأ غير معروف: {code}")
+            n = int(count or 0)
+            if n < 0:
+                raise ValueError("عدد الأخطاء لا يكون سالباً")
+            if n:
+                cleaned[code] = n
+        return cleaned
+
+    @field_validator("pages_count")
+    @classmethod
+    def _check_pages(cls, v):
+        if v is None:
+            return v
+        if v <= 0 or v > 604:
+            raise ValueError("عدد الصفحات خارج المدى المعقول")
+        return v
 
 class RecitationCreate(RecitationBase):
     pass

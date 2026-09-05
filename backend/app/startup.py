@@ -117,6 +117,21 @@ async def startup_event():
     await _safe_create_index(db.fees, [("student_id", 1), ("status", 1)])
     await _safe_create_index(db.students, [("center_id", 1), ("is_active", 1)])
     await _safe_create_index(db.salaries, [("center_id", 1), ("month", 1)])
+    # [إضافة 2026-09-05 — طبقة التحفيز، FR12/FR13 في تقرير Halaqtna]
+    # المفتاح الفريد على (الطالب، السبب، المصدر) هو ما يجعل منح النقاط عديم
+    # الأثر عند التكرار: إعادةُ إرسال كشف الحضور أو إعادة معالجة تسميعة لا
+    # تمنح النقاط مرّتين. بدونه يستطيع أيّ تكرار أن يضخّم رصيد طالب بلا حدّ.
+    await _safe_create_index(
+        db.xp_ledger, [("student_id", 1), ("reason", 1), ("source_id", 1)], unique=True
+    )
+    await _safe_create_index(db.xp_ledger, [("student_id", 1), ("created_at", -1)])
+    await _safe_create_index(db.xp_ledger, [("center_id", 1), ("created_at", -1)])
+    # الوسام يُنال مرّة واحدة لكل طالب
+    await _safe_create_index(
+        db.student_badges, [("student_id", 1), ("badge_code", 1)], unique=True
+    )
+    await _safe_create_index(db.student_badges, [("center_id", 1), ("earned_at", -1)])
+
     # الإشعارات المخزَّنة: قراءة سريعة للمستخدم، وتنظيف تلقائي بعد 180 يوماً
     await _safe_create_index(db.notifications, [("user_id", 1), ("created_at", -1)])
     await _safe_create_index(db.notifications, [("user_id", 1), ("read", 1)])
