@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Calendar, TrendingUp, Trophy, CheckCircle2, Star, FileText } from 'lucide-react';
+import { BookOpen, Calendar, TrendingUp, Trophy, CheckCircle2, Star, FileText, Gauge, Medal} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
@@ -110,6 +111,18 @@ export default function StudentDashboard() {
         roleTitle={t('role_student')}
         subtext={studentInfo?.current_surah ? `${studentInfo.current_surah} · آية ${studentInfo.current_ayah} · ${studentInfo?.halaqah_name || ''}` : undefined}
       />
+
+      {/* ما يهمّ الطالب: أين هو من المصحف، ومتى يختم، وما نالَه — لا الأرقام وحدها */}
+      {studentInfo && (
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Link to={`/performance/${studentInfo.id}`} className="btn-primary text-sm">
+            <Gauge className="w-4 h-4" /> رحلتي وأوسمتي وموعد ختمي
+          </Link>
+          <Link to="/leaderboards" className="btn-outline-teal text-sm">
+            <Medal className="w-4 h-4" /> لوحات الصدارة
+          </Link>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 stagger">

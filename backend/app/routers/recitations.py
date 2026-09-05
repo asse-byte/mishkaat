@@ -13,8 +13,12 @@ from typing import Optional
 
 from app.audit import write_audit_log
 from app.common import NOT_DELETED, check_student_access, client_ip, safe_object_id, serialize_doc
+from app.config import XP_PER_PAGE, logger
 from app.db import db
+from app.gamification import award_xp, evaluate_badges
+from app.metrics import compute_all, pages_of
 from app.models import RecitationCreate
+from app.routers.performance import invalidate_model
 from app.security import get_current_user
 
 router = APIRouter()
@@ -108,6 +112,29 @@ async def get_recitations(
         result.append(doc)
     return result
 
+async def _award_session_rewards(recitation_dict: dict, recitation_id: str, student: dict) -> None:
+    """
+    نقاط الخبرة والأوسمة بعد تسميعة واحدة (FR12، FR13).
+
+    النقاط بعدد الصفحات لا بعدد الجلسات: عشرُ صفحات في جلسة تساوي عشراً في
+    عشر جلسات، فلا يُكافأ تفتيتُ الجلسة. والمفتاح الفريد على (الطالب، السبب،
+    المصدر) يجعل إعادةَ المعالجة بلا أثر.
+    """
+    center_id = student.get("center_id")
+    student_id = recitation_dict["student_id"]
+
+    pages = pages_of(recitation_dict)
+    await award_xp(student_id, round(pages * XP_PER_PAGE), "recitation", recitation_id, center_id)
+
+    recitations = await db.recitations.find(
+        {**NOT_DELETED, "student_id": student_id}).to_list(5000)
+    attendance = await db.attendance.find({"student_id": student_id}).to_list(5000)
+    await evaluate_badges(student_id, compute_all(recitations, attendance), center_id)
+
+    # تاريخ المركز تغيّر، فنموذج التنبؤ المخزَّن لم يعد على أحدث البيانات
+    invalidate_model(center_id)
+
+
 @router.post("/api/recitations")
 async def create_recitation(recitation: RecitationCreate, current_user: dict = Depends(get_current_user)):
     """تسجيل تسميع جديد"""
@@ -115,7 +142,7 @@ async def create_recitation(recitation: RecitationCreate, current_user: dict = D
         raise HTTPException(status_code=403, detail="غير مصرح")
 
     # [AUDIT-2026-05-22 fix: enforce student belongs to caller's center before logging recitation]
-    await check_student_access(recitation.student_id, current_user)
+    student = await check_student_access(recitation.student_id, current_user)
 
     # [AUDIT-2026-05-22 fix: a teacher may only record recitations under their own teacher identity]
     if current_user["role"] == "teacher":
@@ -126,9 +153,22 @@ async def create_recitation(recitation: RecitationCreate, current_user: dict = D
     recitation_dict = recitation.model_dump()
     recitation_dict["date"] = utcnow()
     result = await db.recitations.insert_one(recitation_dict)
-    
+    recitation_id = str(result.inserted_id)
+
+    # [إضافة 2026-09-05 — FR12/FR13 في تقرير Halaqtna]
+    # حفظُ الجلسة يُطلق ثلاثة أفعال تلقائية (UC15-UC17 في التقرير): إعادة حساب
+    # المقاييس، وتحديث التنبؤ، ومنح النقاط. الأوّلان يُحسبان عند القراءة هنا
+    # (لا تُخزَّن قيمة مشتقّة، انظر app/metrics.py)، والثالث يُكتب الآن.
+    #
+    # الفشل هنا لا يُسقط تسجيل التسميع: التسميعة هي السجلّ الحقيقي، والنقاط
+    # طبقةُ تحفيز فوقه. ولو رُبط مصيرهما لفقد المحفّظُ عملَه لخلل في التحفيز.
+    try:
+        await _award_session_rewards(recitation_dict, recitation_id, student)
+    except Exception as exc:  # pragma: no cover - لا يُفشل المسار الأساسي
+        logger.warning(f"gamification after recitation {recitation_id} failed: {exc}")
+
     return {
-        "id": str(result.inserted_id),
+        "id": recitation_id,
         "student_id": recitation_dict["student_id"],
         "student_name": recitation_dict.get("student_name"),
         "teacher_id": recitation_dict["teacher_id"],

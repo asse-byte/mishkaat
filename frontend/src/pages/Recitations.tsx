@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { recitationsApi, studentsApi } from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
+import ErrorTagger, { useErrorTypes } from '@/components/ui/ErrorTagger';
 
 // 114 سورة كاملة
 const ALL_SURAHS = [
@@ -56,7 +57,11 @@ interface StudentData { id: string; name: string; }
 const EMPTY_FORM = {
   student_id: '', surah_name: '', start_ayah: '1', end_ayah: '10',
   evaluation: 'excellent', mistakes_count: '0', notes: '', recitation_type: 'new',
+  pages_count: '',
 };
+
+// وسم الأخطاء المصنَّف — منفصل عن الحقول النصّية لأن شكله مختلف: خريطة رمز→عدد
+const EMPTY_TAGS: Record<string, number> = {};
 
 export default function Recitations() {
   const { user } = useAuth();
@@ -67,6 +72,8 @@ export default function Recitations() {
   const [submitting, setSubmitting]   = useState(false);
   const [error, setError]             = useState('');
   const [formData, setFormData]       = useState(EMPTY_FORM);
+  const [errorTags, setErrorTags]     = useState<Record<string, number>>(EMPTY_TAGS);
+  const errorTypes                    = useErrorTypes();
 
   // Filters
   const [search, setSearch]           = useState('');
@@ -108,12 +115,19 @@ export default function Recitations() {
         start_ayah: parseInt(formData.start_ayah) || 1,
         end_ayah: parseInt(formData.end_ayah) || 10,
         evaluation: formData.evaluation,
-        mistakes_count: parseInt(formData.mistakes_count) || 0,
+        // العدّاد القديم يبقى لتوافق الشاشات التي تعرضه؛ الوسم المصنَّف هو
+        // ما تقرأه المقاييس، وهو يسبقه فلا يُحسب الخطأ مرّتين.
+        mistakes_count: Object.values(errorTags).reduce((s, n) => s + n, 0),
+        // يُرسَل دائماً ولو فارغاً: الفارغ يعني «نظرتُ فلم أجد خطأً» وهو دقّة
+        // تامّة، وغيابُه يعني سجلّاً لم يمرّ على الوسم أصلاً. الفرق بينهما مقياس.
+        error_tags: errorTags,
+        pages_count: formData.pages_count ? Number(formData.pages_count) : undefined,
         notes: formData.notes || undefined,
         recitation_type: formData.recitation_type,
       } as any);
       setShowForm(false);
       setFormData(EMPTY_FORM);
+      setErrorTags(EMPTY_TAGS);
       await loadData();
     } catch (e: any) {
       setError(e.response?.data?.detail || 'حدث خطأ أثناء حفظ التسميع');
@@ -164,7 +178,7 @@ export default function Recitations() {
       <PageHeader title="سجل التسميع" subtitle={`${recitations.length} تسميع مسجَّل`}>
         {canAdd && (
           <button
-            onClick={() => { setShowForm(true); setFormData(EMPTY_FORM); setError(''); }}
+            onClick={() => { setShowForm(true); setFormData(EMPTY_FORM); setErrorTags(EMPTY_TAGS); setError(''); }}
             className="btn-primary text-sm"
           >
             <Plus className="w-4 h-4" /> تسميع جديد
@@ -375,12 +389,19 @@ export default function Recitations() {
                 </div>
               </div>
 
-              {/* Mistakes */}
+              {/* الأخطاء الموزونة (FR6) — بديل حقل «عدد الأخطاء» المفرد */}
+              <ErrorTagger types={errorTypes} value={errorTags} onChange={setErrorTags} />
+
+              {/* عدد الصفحات: المقاييس الأدائية كلها لكل صفحة. يُترك فارغاً
+                  فيُشتقّ من نطاق الآيات، وهو تقريب معلَن لا قياس. */}
               <div>
-                <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">عدد الأخطاء</label>
-                <input type="number" min="0" className="form-input" dir="ltr"
-                  value={formData.mistakes_count}
-                  onChange={e => setFormData({ ...formData, mistakes_count: e.target.value })} />
+                <label className="block text-sm font-bold text-[hsl(var(--foreground))] mb-1.5">
+                  عدد الصفحات <span className="font-normal text-[hsl(var(--ink-3))]">— اختياري، يُحسب من الآيات إن تُرك</span>
+                </label>
+                <input type="number" min="0" step="0.25" className="form-input" dir="ltr"
+                  placeholder="مثال: 1.5"
+                  value={formData.pages_count}
+                  onChange={e => setFormData({ ...formData, pages_count: e.target.value })} />
               </div>
 
               {/* Notes */}

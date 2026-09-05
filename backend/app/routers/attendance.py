@@ -11,7 +11,10 @@ from fastapi import Query
 from typing import Optional
 
 from app.common import check_student_access, safe_object_id, serialize_doc
+from app.config import XP_PER_SESSION, logger
 from app.db import db
+from app.gamification import award_xp
+from app.metrics import _PRESENT_STATUSES
 from app.models import AttendanceCreate
 from app.security import get_current_user
 from app.sse import push_notification
@@ -187,6 +190,21 @@ async def create_attendance(data: AttendanceCreate, current_user: dict = Depends
             created += 1
         else:
             updated_count += 1
+
+    # [إضافة 2026-09-05 — FR13 في تقرير Halaqtna] نقاط الحضور.
+    # المصدر هو (الطالب + تاريخ اليوم) لا معرّف السجلّ: الكشف يُعاد إرساله عند
+    # التصحيح، والمفتاح الفريد بهذه الصورة يمنح نقاط اليوم مرّة واحدة مهما
+    # أُعيد الإرسال. ومن غاب لا يُمنح شيئاً — النقطة على الحضور لا على الذِّكر.
+    for rec in records:
+        if rec.get("status") not in _PRESENT_STATUSES:
+            continue
+        try:
+            await award_xp(
+                rec["student_id"], XP_PER_SESSION, "attendance",
+                f'{rec["student_id"]}:{rec["date_str"]}', rec.get("center_id"),
+            )
+        except Exception as exc:  # pragma: no cover - لا يُفشل تسجيل الحضور
+            logger.warning(f"attendance xp failed: {exc}")
 
     return {
         "message": f"تم تسجيل حضور {len(records)} طالب",

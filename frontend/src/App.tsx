@@ -27,6 +27,8 @@ import AuditLogPage from '@/pages/AuditLogPage';
 import Reports from '@/pages/Reports';
 import Rankings from '@/pages/Rankings';
 import StudentAnalytics from '@/pages/StudentAnalytics';
+import StudentPerformance from '@/pages/StudentPerformance';
+import Leaderboards from '@/pages/Leaderboards';
 import AcademicSchedules from '@/pages/AcademicSchedules';
 import Competitions from '@/pages/Competitions';
 import BulkMessages from '@/pages/BulkMessages';
@@ -146,6 +148,24 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <StudentAnalytics />
+          </ProtectedRoute>
+        }
+      />
+      {/* الأداء والتنبؤ والتحفيز (FR7-FR13). لا تُقيَّد بدور: الخادم يحصر كلَّ
+          سائل في نطاقه — الطالب ووليّ الأمر في بيانات الطالب وحدها. */}
+      <Route
+        path="/performance/:studentId"
+        element={
+          <ProtectedRoute>
+            <StudentPerformance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leaderboards"
+        element={
+          <ProtectedRoute>
+            <Leaderboards />
           </ProtectedRoute>
         }
       />
