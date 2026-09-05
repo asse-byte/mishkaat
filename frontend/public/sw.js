@@ -1,23 +1,34 @@
-// Service Worker for Quran Memorization Center Management System PWA
-const CACHE_NAME = 'quran-center-v2';
+// عامل الخدمة — المشكاة (PWA)
+//
+// اسم المخزن يحمل رقم إصدار: تغييره يُبطل كل ما خزّنه الإصدار السابق. رُفع إلى v3
+// مع تغيير الأيقونات والبيان، وإلا لظلّت الأجهزة المثبَّتة تعرض الأيقونة الخضراء
+// القديمة والاسم القديم إلى أن يُفرَّغ المخزن يدوياً.
+const CACHE_NAME = 'mishkaat-v3';
 const STATIC_ASSETS = [
   '/',
   '/manifest.json',
+  '/favicon.svg',
   '/icons/icon-192x192.png',
   '/icons/icon-512x512.png',
+  '/icons/maskable-192x192.png',
+  '/icons/apple-touch-icon.png',
 ];
 
-// Install: cache static assets
+// التثبيت: تخزين الأصول الثابتة
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
+      // addAll ذرّي: فشل أصل واحد يُسقط التثبيت كلّه ويُبقي العامل القديم يعمل.
+      // نُخزّن كلاً على حدة حتى لا يُعطّل ملفٌ مفقود التحديثَ بأسره.
+      return Promise.all(
+        STATIC_ASSETS.map((url) => cache.add(url).catch(() => undefined))
+      );
     })
   );
   self.skipWaiting();
 });
 
-// Activate: clean old caches
+// التفعيل: تنظيف المخازن القديمة
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -29,32 +40,36 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Fetch: network first, fall back to cache
+// الجلب: الشبكة أولاً ثم المخزن
 self.addEventListener('fetch', (event) => {
-  // Skip non-GET requests
-  if (event.request.method !== 'GET') return;
+  const { request } = event;
 
-  // Skip non-http/https requests (e.g., chrome-extension://, data:, etc.)
-  if (!event.request.url.startsWith('http:') && !event.request.url.startsWith('https:')) return;
-  
-  // Skip API requests (always go to network)
-  if (event.request.url.includes('/api/')) return;
+  if (request.method !== 'GET') return;
+  if (!request.url.startsWith('http:') && !request.url.startsWith('https:')) return;
+  // طلبات الـAPI تذهب إلى الشبكة دائماً — ولا تُخزَّن أبداً: بعضها يحمل بيانات
+  // شخصية، وقناة الإشعارات (SSE) بثّ لا ينتهي فلا معنى لتخزينه.
+  if (request.url.includes('/api/')) return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(request)
       .then((response) => {
-        // Clone the response and cache it
-        const responseClone = response.clone();
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseClone);
-        });
+        // لا يُخزَّن إلا ردٌّ كامل ناجح. الردّ الجزئي (206) يرفضه cache.put
+        // برمي استثناء، وردّ الخطأ (404/500) لو خُزِّن لظلّ يُقدَّم بلا اتصال.
+        if (response.ok && response.status === 200 && response.type !== 'opaque') {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone)).catch(() => {});
+        }
         return response;
       })
-      .catch(() => {
-        // Fallback to cache
-        return caches.match(event.request).then((response) => {
-          return response || caches.match('/');
-        });
+      .catch(async () => {
+        const cached = await caches.match(request);
+        if (cached) return cached;
+        // تطبيق صفحة واحدة: أي مسار تنقُّل يُخدَم بقشرة التطبيق نفسها
+        if (request.mode === 'navigate') {
+          const shell = await caches.match('/');
+          if (shell) return shell;
+        }
+        return Response.error();
       })
   );
 });
