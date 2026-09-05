@@ -27,6 +27,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
+import MishkaatMark from '@/components/ui/MishkaatMark';
 import { NotificationsProvider, useNotifications } from '@/contexts/NotificationsContext';
 
 /* المجموعات: أربع عشرة وجهة في قائمة مسطّحة واحدة تجعل "لوحة التحكم" (يومية)
@@ -146,8 +147,10 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
           {/* Logo */}
           <div className="flex items-center justify-between p-5 border-b border-white/8">
             <div className="flex items-center gap-3">
-              <div className="w-11 h-11 gradient-primary rounded-xl flex items-center justify-center shadow-lg">
-                <BookOpen className="w-6 h-6 text-white" />
+              {/* علامة المشكاة نفسها التي على أيقونة التطبيق — كانت هنا أيقونة
+                  كتاب عامّة، فلا يرى المستخدم داخل التطبيق ما ثبّته على شاشته */}
+              <div className="w-11 h-11 rounded-xl flex items-center justify-center shadow-lg bg-[hsl(var(--niche-2))] border border-white/10">
+                <MishkaatMark className="w-7 h-7 text-[hsl(var(--lamp))]" title="المشكاة" />
               </div>
               <div>
                 <h1 className="font-bold text-white text-sm leading-tight">نظام المشكاة</h1>
@@ -228,8 +231,14 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      {/* Main */}
-      <div className="flex-1 lg:mr-72 flex flex-col min-h-screen">
+      {/* Main.
+          min-w-0 ليست تجميلاً: هذا العمود عنصر flex، وعرضه الأدنى الافتراضي
+          (min-width:auto) هو عرض أعرض محتوى غير قابل للانكماش داخله. فأيّ بطاقة
+          فيها اسم طويل أو رقم لا ينكسر كانت تدفع التطبيق كلَّه أعرض من الشاشة —
+          صفحة «التقارير» كانت 676 بكسل على شاشة 375، تُمرَّر أفقياً بكاملها بما
+          فيها الشريط العلوي. مع min-w-0 يبقى العمود بعرض الشاشة ويتولّى المحتوى
+          أمر فيضانه بنفسه (التفافاً أو تمريراً داخل صندوقه). */}
+      <div className="flex-1 min-w-0 lg:mr-72 flex flex-col min-h-screen">
         {/* Topbar */}
         <header className="sticky top-0 z-30 bg-white/92 backdrop-blur-md border-b border-[hsl(var(--border))] px-5 py-3 shadow-sm">
           <div className="flex items-center justify-between">

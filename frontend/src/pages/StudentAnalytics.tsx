@@ -65,7 +65,10 @@ export default function StudentAnalytics() {
         </Link>
       </div>
 
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2 flex flex-col md:flex-row items-center gap-6">
+      {/* قائمة الأصناف كانت تحمل `flex` مرّتين و`items-baseline` مع `items-center`
+          و`gap-x-4 gap-y-2` مع `gap-6` — أدوات متضاربة يحسم بينها ترتيب ملف
+          التنسيق لا ترتيب الأسماء، أي أن النتيجة لم تكن مقصودة أصلاً. */}
+      <div className="flex flex-col md:flex-row items-center gap-6">
         <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm border-2 border-white/40">
            <User className="w-10 h-10 text-white" />
         </div>

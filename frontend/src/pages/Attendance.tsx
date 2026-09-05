@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { halaqatApi } from '@/services/api';
 import api from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface StudentRow {
   id: string;
@@ -98,12 +99,7 @@ function TeacherAttendance() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">تسجيل الحضور والغياب</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">سجّل حضور طلابك يومياً</p>
-          </div>        </div>
-      </div>
+      <PageHeader title="تسجيل الحضور والغياب" subtitle="سجّل حضور طلابك يومياً" />
 
       {/* Filters */}
       <div className="card p-5">

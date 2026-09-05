@@ -11,6 +11,8 @@ import {
   Volume2, ShieldAlert, Printer,
 } from 'lucide-react';
 import api, { studentsApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
+import MishkaatMark from '@/components/ui/MishkaatMark';
 
 interface Competition {
   id: string;
@@ -189,55 +191,59 @@ export default function Competitions() {
   return (
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
       
-      {/* Printable Certificate Template (Hidden on screen, shown in print) */}
+      {/* Printable Certificate Template (Hidden on screen, shown in print).
+          الألوان هنا قيم ثابتة عمداً، لا رموز النظام ولا أدوات تيلويند الملوّنة.
+          الشهادة تُطبع على ورق أبيض دائماً، ورموز النظام تنقلب في الوضع الليلي:
+          من طبعها ليلاً كان يحصل على نصّ فاتح على ورق أبيض. وكانت هويّتها خضراء
+          (لوحة EduGete القديمة) واسم التطبيق فيها «مِشكاة» بلا أل التعريف. */}
       {printCert && (
-        <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-black" dir="rtl">
-          <div className="border-[12px] border-double border-[hsl(152,45%,38%)] p-8 h-[95vh] flex flex-col justify-between items-center text-center rounded-[var(--radius-lg)] relative">
-            
+        <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-[#151A24]" dir="rtl">
+          <div className="border-[12px] border-double border-[#1B233C] p-8 h-[95vh] flex flex-col justify-between items-center text-center rounded-[var(--radius-lg)] relative">
+
             {/* Elegant Corner Decorations */}
-            <div className="absolute top-4 right-4 text-4xl text-[hsl(152,45%,38%)]">❖</div>
-            <div className="absolute top-4 left-4 text-4xl text-[hsl(152,45%,38%)]">❖</div>
-            <div className="absolute bottom-4 right-4 text-4xl text-[hsl(152,45%,38%)]">❖</div>
-            <div className="absolute bottom-4 left-4 text-4xl text-[hsl(152,45%,38%)]">❖</div>
+            <div className="absolute top-4 right-4 text-4xl text-[#B0801F]">❖</div>
+            <div className="absolute top-4 left-4 text-4xl text-[#B0801F]">❖</div>
+            <div className="absolute bottom-4 right-4 text-4xl text-[#B0801F]">❖</div>
+            <div className="absolute bottom-4 left-4 text-4xl text-[#B0801F]">❖</div>
 
             <div>
-              <div className="text-sm font-bold text-[hsl(152,45%,38%)] mb-1">وزارة الشؤون الإسلامية والأوقاف</div>
-              <h4 className="text-xs font-semibold mb-6">مِشكاة لإدارة مراكز تحفيظ القرآن الكريم المعتمدة</h4>
-              <div className="w-20 h-20 mx-auto mb-4 border-2 border-[hsl(152,45%,38%)] rounded-full flex items-center justify-center font-bold text-[hsl(152,45%,38%)] text-xl">
-                مِشكاة
+              <div className="text-sm font-bold text-[#1B233C] mb-1">وزارة الشؤون الإسلامية والأوقاف</div>
+              <h4 className="text-xs font-semibold mb-6">المشكاة لإدارة دور ومراكز تحفيظ القرآن الكريم المعتمدة</h4>
+              <div className="w-20 h-20 mx-auto mb-4 border-2 border-[#1B233C] rounded-full flex items-center justify-center text-[#B0801F]">
+                <MishkaatMark className="w-11 h-11" title="المشكاة" />
               </div>
             </div>
 
             <div className="space-y-6">
-              <h1 className="text-4xl font-extrabold text-[hsl(152,45%,38%)] font-serif tracking-wide">شـهادة تـقدير وتـكريم</h1>
+              <h1 className="text-4xl font-extrabold text-[#1B233C] font-serif tracking-wide">شـهادة تـقدير وتـكريم</h1>
               <p className="text-base font-medium max-w-xl mx-auto leading-relaxed">
                 يسر إدارة مركز تحفيظ القرآن الكريم بكل فخر واعتزاز أن تمنح هذه الشهادة للطالب المتميز:
               </p>
-              <h2 className="text-3xl font-bold text-amber-600 underline decoration-double decoration-1 my-4">{printCert.student_name}</h2>
+              <h2 className="text-3xl font-bold text-[#B0801F] underline decoration-double decoration-1 my-4">{printCert.student_name}</h2>
               <p className="text-sm leading-loose max-w-lg mx-auto">
-                وذلك تقديراً لأدائه الاستثنائي وحصوله على فئة <strong className="text-emerald-700">"{printCert.category}"</strong> في 
+                وذلك تقديراً لأدائه الاستثنائي وحصوله على فئة <strong className="text-[#1B233C]">"{printCert.category}"</strong> في
                 <br />
                 <strong>{selectedComp?.title}</strong>
                 <br />
-                بدرجة تفوق إجمالية قدرها <strong className="text-emerald-700">{printCert.total_score} / 100</strong>
+                بدرجة تفوق إجمالية قدرها <strong className="text-[#1B233C]">{printCert.total_score} / 100</strong>
               </p>
-              <p className="text-xs text-gray-500 italic">"خيركم من تعلم القرآن وعلمه"</p>
+              <p className="text-xs text-[#5B6474] italic">"خيركم من تعلم القرآن وعلمه"</p>
             </div>
 
-            <div className="w-full grid grid-cols-2 gap-20 px-12 pt-8 border-t border-gray-100">
+            <div className="w-full grid grid-cols-2 gap-20 px-12 pt-8 border-t border-[#D8DCE4]">
               <div className="text-right">
-                <span className="text-xs block text-gray-500">توقيع الموجه العام</span>
+                <span className="text-xs block text-[#5B6474]">توقيع الموجه العام</span>
                 <div className="h-10"></div>
                 <span className="text-sm font-bold">عـبد المالك سيسي</span>
               </div>
               <div className="text-left">
-                <span className="text-xs block text-gray-500">خاتم وتوقيع المركز</span>
+                <span className="text-xs block text-[#5B6474]">خاتم وتوقيع المركز</span>
                 <div className="h-10"></div>
                 <span className="text-sm font-semibold">توقيع المشرف العام</span>
               </div>
             </div>
 
-            <div className="text-[10px] text-gray-400">
+            <div className="text-[10px] text-[#767E8C]">
               حرر بتاريخ: {selectedComp?.date} · النظام محمي بموجب حقوق النشر لـ Abdoul Malick Cisse © 2026
             </div>
           </div>
@@ -248,12 +254,10 @@ export default function Competitions() {
       <div className="print:hidden space-y-6">
 
         {/* Hero */}
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold mb-1">المسابقات القرآنية السنوية</h1>
-              <p className="text-sm text-[hsl(var(--ink-3))]">تقييم مستويات الحفظ والأداء والتجويد مع الرصد الفوري لعلامات المحكمين</p>
-            </div>          </div>
-        </div>
+        <PageHeader
+          title="المسابقات القرآنية السنوية"
+          subtitle="تقييم مستويات الحفظ والأداء والتجويد مع الرصد الفوري لعلامات المحكمين"
+        />
 
         {/* Competitions Selector Bar */}
         <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">

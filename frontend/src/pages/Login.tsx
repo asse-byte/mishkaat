@@ -36,9 +36,11 @@ export default function Login() {
       {/* العلامة خارج البطاقة: المصباح في الضوء الساقط من أعلى الكوّة */}
       <div className="w-full max-w-[400px] animate-fade-in">
         <div className="flex flex-col items-center mb-7 text-center">
-          <MishkaatMark className="w-12 h-12 text-[hsl(var(--lamp))] mb-3" title="مشكاة" />
-          <h1 className="text-white text-2xl">مشكاة</h1>
-          <p className="text-white/55 text-sm mt-1">نظام إدارة مراكز تحفيظ القرآن الكريم</p>
+          <MishkaatMark className="w-12 h-12 text-[hsl(var(--lamp))] mb-3" title="المشكاة" />
+          {/* الاسم بأل التعريف كما هو في البيان وفي بقيّة الواجهة — كان «مشكاة»
+              هنا وحدها، فيرى المستخدم اسمين لتطبيق واحد */}
+          <h1 className="text-white text-2xl">المشكاة</h1>
+          <p className="text-white/55 text-sm mt-1">نظام إدارة دور القرآن الكريم</p>
         </div>
 
         <div className="bg-[hsl(var(--surface))] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-7">

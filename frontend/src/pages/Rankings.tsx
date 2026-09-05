@@ -3,6 +3,7 @@ import { Trophy, Loader2, Activity } from 'lucide-react';
 import api from '@/services/api';
 
 import { Link } from 'react-router-dom';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface RankingStudent {
   id: string;
@@ -42,10 +43,10 @@ export default function Rankings() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">
-        <h1 className="text-2xl font-bold mb-1">نظام الترتيب الذكي</h1>
-        <p className="text-sm text-[hsl(var(--ink-3))]">تقييم الطلاب بناءً على معادلة رياضية ذكية للحضور والتسميع والمراجعة</p>
-      </div>
+      <PageHeader
+        title="نظام الترتيب الذكي"
+        subtitle="تقييم الطلاب بناءً على معادلة رياضية ذكية للحضور والتسميع والمراجعة"
+      />
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Best Students */}

@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import api from '@/services/api';
 import { useNotifications } from '@/contexts/NotificationsContext';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface Notification {
   id: string;
@@ -230,21 +231,14 @@ export default function NotificationsPage() {
     <div className="space-y-6 animate-fade-in">
 
       {/* Header */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1 flex items-center gap-2">
-              <Bell className="w-6 h-6" /> الإشعارات
-            </h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">
-              {unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}
-            </p>
-          </div>
-          <button onClick={load}
-            className="btn-primary text-sm">
-            <RefreshCw className="w-4 h-4" /> تحديث
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title={<><Bell className="w-6 h-6 shrink-0" /> الإشعارات</>}
+        subtitle={unreadCount > 0 ? `لديك ${unreadCount} إشعار غير مقروء` : 'جميع الإشعارات مقروءة'}
+      >
+        <button onClick={load} className="btn-primary text-sm">
+          <RefreshCw className="w-4 h-4" /> تحديث
+        </button>
+      </PageHeader>
 
       {/* Controls */}
       <div className="flex items-center justify-between gap-4 bg-white rounded-[var(--radius)] p-4 shadow-sm border border-[hsl(var(--border))]">

@@ -11,6 +11,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import api, { halaqatApi, teachersApi } from '@/services/api';
+import PageHeader from '@/components/ui/PageHeader';
 
 interface ScheduleData {
   id: string;
@@ -154,13 +155,10 @@ export default function AcademicSchedules() {
   return (
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
 
-      {/* Header banner */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-2">        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">الجدول الدراسي الأكاديمي الأسبوعي</h1>
-            <p className="text-sm text-[hsl(var(--ink-3))]">مواءمة وتنسيق الحصص الشرعية والقرآنية ومواد اللغات والرياضيات</p>
-          </div>        </div>
-      </div>
+      <PageHeader
+        title="الجدول الدراسي الأكاديمي الأسبوعي"
+        subtitle="مواءمة وتنسيق الحصص الشرعية والقرآنية ومواد اللغات والرياضيات"
+      />
 
       {/* Actions and search bar */}
       <div className="flex flex-col sm:flex-row gap-3">
