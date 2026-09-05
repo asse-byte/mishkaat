@@ -4,7 +4,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Users, Plus, Search, Phone, Calendar, BookOpen, Edit, Trash2,
   X, CheckCircle2, TrendingUp, Clock, RefreshCw,
-  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart,
+  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart, Gauge
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { studentsApi, halaqatApi } from '@/services/api';
@@ -359,7 +359,11 @@ export default function Students() {
                     className="p-2 rounded-xl bg-[hsl(var(--primary-light))] text-[hsl(var(--primary))] hover:opacity-80 transition-all">
                     <Eye className="w-4 h-4" />
                   </button>
-                  <Link to={`/analytics/${student.id}`} title="تحليل الأداء"
+                  <Link to={`/performance/${student.id}`} title="الأداء والتنبؤ والأوسمة"
+                    className="p-2 flex items-center justify-center rounded-xl bg-[hsl(var(--lamp-wash))] text-[hsl(var(--lamp-strong))] border border-[hsl(var(--lamp-line))] hover:opacity-80 transition-all">
+                    <Gauge className="w-4 h-4" />
+                  </Link>
+                  <Link to={`/analytics/${student.id}`} title="الرسوم البيانية"
                     className="p-2 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:opacity-80 transition-all">
                     <LineChart className="w-4 h-4" />
                   </Link>

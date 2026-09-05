@@ -25,6 +25,7 @@ import {
   Sun,
   Moon,
   MessageSquare,
+  Medal,
 } from 'lucide-react';
 import type { UserRole } from '@/types';
 import MishkaatMark from '@/components/ui/MishkaatMark';
@@ -59,6 +60,7 @@ const navItems: NavItem[] = [
   { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'], group: 'manage' },
   { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'], group: 'manage' },
   { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'لوحات الصدارة',href: '/leaderboards', icon: Medal,           roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
   { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
   { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },

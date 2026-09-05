@@ -1,5 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { BookOpen, Calendar, TrendingUp, CheckCircle2, DollarSign, AlertCircle } from 'lucide-react';
+import { BookOpen, Calendar, TrendingUp, CheckCircle2, DollarSign, AlertCircle, Gauge
+} from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
@@ -179,6 +181,14 @@ export default function ParentDashboard() {
                   <div className="h-2.5 bg-[hsl(var(--muted))] rounded-full overflow-hidden">
                     <div className="h-full gradient-primary rounded-full" style={{ width: `${child.progress}%` }} />
                   </div>
+
+                  {/* السؤال الذي يطرحه وليّ الأمر أوّلاً — «متى يختم؟» — صار له جواب */}
+                  <Link
+                    to={`/performance/${child.id}`}
+                    className="mt-4 w-full btn-outline-teal text-sm"
+                  >
+                    <Gauge className="w-4 h-4" /> الأداء وموعد الختم المتوقَّع
+                  </Link>
                 </div>
               </div>
             ))}

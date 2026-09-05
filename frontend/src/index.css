@@ -221,16 +221,26 @@ input:not([dir]), textarea:not([dir]) { text-align: right; }
 @keyframes float-gentle { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
 @keyframes shimmer   { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
-.animate-fade-in     { animation: fadeIn .35s var(--ease) both; }
-.animate-slide-in-up { animation: slideInUp .4s var(--ease) both; }
+/* backwards لا both — والفرق ليس تجميلياً:
+   both يُبقي حالةَ الإطار الأخير مطبَّقةً بعد انتهاء الحركة، فتظلّ الخاصّية
+   transform محسوبةً matrix(1,0,0,1,0,0) لا none. والعنصر الذي transform عنده
+   ليس none يصير «الكتلة الحاوية» لكل سليل position:fixed تحته — فتتموضع نوافذ
+   التطبيق المنبثقة داخل صندوق محتوى الصفحة لا داخل الشاشة. كان رأس نافذة
+   «تسميع جديد» يُقتطع فوق حافّة الشاشة (top = −46px) لهذا السبب وحده.
+
+   backwards يطبّق الإطار الأوّل قبل البدء (فلا وميض) ثم يعيد العنصر إلى نمطه
+   الأساسي بعد الانتهاء. والنمط الأساسي هنا مطابق للإطار الأخير (شفافية 1، بلا
+   إزاحة) فلا يتغيّر المظهر إطلاقاً. */
+.animate-fade-in     { animation: fadeIn .35s var(--ease) backwards; }
+.animate-slide-in-up { animation: slideInUp .4s var(--ease) backwards; }
 .animate-float       { animation: float-gentle 4s ease-in-out infinite; }
 .animate-pulse-soft  { animation: pulse-soft 3s ease-in-out infinite; }
-.page-fade-in        { animation: fadeIn .3s var(--ease) both; }
-.stagger > *:nth-child(1) { animation: fadeIn .3s var(--ease) .03s both; }
-.stagger > *:nth-child(2) { animation: fadeIn .3s var(--ease) .06s both; }
-.stagger > *:nth-child(3) { animation: fadeIn .3s var(--ease) .09s both; }
-.stagger > *:nth-child(4) { animation: fadeIn .3s var(--ease) .12s both; }
-.stagger > *:nth-child(5) { animation: fadeIn .3s var(--ease) .15s both; }
+.page-fade-in        { animation: fadeIn .3s var(--ease) backwards; }
+.stagger > *:nth-child(1) { animation: fadeIn .3s var(--ease) .03s backwards; }
+.stagger > *:nth-child(2) { animation: fadeIn .3s var(--ease) .06s backwards; }
+.stagger > *:nth-child(3) { animation: fadeIn .3s var(--ease) .09s backwards; }
+.stagger > *:nth-child(4) { animation: fadeIn .3s var(--ease) .12s backwards; }
+.stagger > *:nth-child(5) { animation: fadeIn .3s var(--ease) .15s backwards; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
