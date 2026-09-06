@@ -99,7 +99,21 @@ async def build():
                 "student_id": sid, "student_name": f"طالب {tag}{i}", "amount": 5000,
                 "due_date": "2026-10-01", "fee_type": "monthly", "status": "pending",
                 "center_id": cid})
+        await db.academic_schedules.insert_one({
+            "subject": f"مادة {tag}", "day": "الأحد", "time_slot": "08:00",
+            "halaqa_id": hid, "teacher_id": tid, "center_id": cid,
+            "teacher_name": f"شيخ {tag}", "created_at": now})
         ids[tag] = {"user": uid, "teacher": tid, "halaqah": hid, "students": sids}
+
+    comp = str((await db.competitions.insert_one({
+        "title": "مسابقة", "date": "2026-10-01", "categories": ["جزء عم"],
+        "center_id": cid, "created_at": now})).inserted_id)
+    for tag in ("A", "B"):
+        await db.competition_contestants.insert_one({
+            "competition_id": comp, "student_id": ids[tag]["students"][0],
+            "student_name": f"طالب {tag}0", "category": "جزء عم",
+            "total_score": 90, "center_id": cid, "created_at": now})
+    ids["comp"] = comp
 
     stu_uid = await user("studA", "student")
     await db.students.update_one({"_id": ObjectId(ids["A"]["students"][0])},
@@ -192,6 +206,35 @@ async def main():
             {"student_id": A["students"][0], "halaqah_id": A["halaqah"], "status": "present"}]})
         check("  يُسجّل حضور طالبه", r.status_code == 200, str(r.status_code))
 
+        print("--- والأسطح الأخرى: الجدول، والمسابقة، والتقارير، والمالية ---")
+        for label, path in [
+            ("الجدول الدراسي", "/api/academic-schedules"),
+            ("متسابقو المسابقة", f"/api/competitions/{ids['comp']}/contestants"),
+        ]:
+            r = await c.get(path, headers=TA)
+            body = blob(r.json())
+            leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
+            check(f"  {label} بلا أثر من (ب)", r.status_code == 200 and not leaked,
+                  f"{r.status_code} {leaked}")
+        for label, path in [
+            ("تصدير الطلاب", "/api/export/students.csv"),
+            ("تصدير الحضور", "/api/export/attendance.csv"),
+            ("الملخّص المالي", "/api/finance/summary"),
+            ("الرواتب", "/api/salaries"),
+            ("المصروفات", "/api/expenses"),
+            ("سجلّ التدقيق", "/api/audit-logs"),
+            ("تفاصيل المركز", f"/api/centers/{ids['center']}/details"),
+        ]:
+            r = await c.get(path, headers=TA)
+            check(f"  {label} محجوب عن المحفّظ", r.status_code == 403, str(r.status_code))
+        r = await c.post("/api/academic-schedules", headers=TA, json={
+            "subject": "دسّ", "day": "الاثنين", "time_slot": "09:00",
+            "halaqa_id": B["halaqah"], "teacher_id": A["teacher"], "center_id": ids["center"]})
+        check("  حصّة في جدول حلقة (ب) → 403", r.status_code == 403, str(r.status_code))
+        r = await c.post(f"/api/competitions/{ids['comp']}/register", headers=TA,
+                         json={"student_id": B["students"][0], "category": "جزء عم"})
+        check("  تسجيل طالب (ب) في مسابقة → 403", r.status_code == 403, str(r.status_code))
+
         # ============================ مدير المركز: يقرأ ولا يُسجّل
         print()
         print("--- مدير المركز: يرى مركزه كلَّه ---")
@@ -201,6 +244,14 @@ async def main():
         check("  يرى الحلقتين", len(r.json()) == 2, str(len(r.json())))
         r = await c.get(f"/api/performance/students/{B['students'][0]}", headers=MG)
         check("  يقرأ أداء أيّ طالب في مركزه", r.status_code == 200, str(r.status_code))
+        r = await c.get("/api/academic-schedules", headers=MG)
+        check("  يرى جدول الحلقتين", len(r.json()) == 2, str(len(r.json())))
+        r = await c.get(f"/api/competitions/{ids['comp']}/contestants", headers=MG)
+        check("  يرى متسابقي الحلقتين", len(r.json()) == 2, str(len(r.json())))
+        for label, path in [("الملخّص المالي", "/api/finance/summary"),
+                            ("تصدير الطلاب", "/api/export/students.csv")]:
+            r = await c.get(path, headers=MG)
+            check(f"  {label} متاح له", r.status_code == 200, str(r.status_code))
 
         print("--- ولا يُسجّل ما هو من عمل الشيخ ---")
         r = await c.post("/api/recitations", headers=MG, json={
@@ -243,6 +294,29 @@ async def main():
         body = blob(r.json())
         check("  لوحة الصدارة: زملاء حلقته نعم، وحلقة (ب) لا",
               "طالب B0" not in body and "طالب B1" not in body, "")
+        for label, path in [
+            ("الجدول الدراسي", "/api/academic-schedules"),
+            ("متسابقو المسابقة", f"/api/competitions/{ids['comp']}/contestants"),
+        ]:
+            r = await c.get(path, headers=ST)
+            body = blob(r.json())
+            leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
+            check(f"  {label} بلا أثر من (ب)", r.status_code == 200 and not leaked,
+                  f"{r.status_code} {leaked}")
+        for label, path in [
+            ("خطط المراجعة", "/api/review-plans"),
+            ("الملخّص المالي", "/api/finance/summary"),
+            ("الرواتب", "/api/salaries"),
+            ("المصروفات", "/api/expenses"),
+            ("سجلّ التدقيق", "/api/audit-logs"),
+            ("تفاصيل المركز", f"/api/centers/{ids['center']}/details"),
+            ("تصدير الطلاب", "/api/export/students.csv"),
+        ]:
+            r = await c.get(path, headers=ST)
+            check(f"  {label} محجوب عن الطالب", r.status_code == 403, str(r.status_code))
+        r = await c.post("/api/messages/broadcast", headers=ST,
+                         json={"recipient_role": "teacher", "subject": "ع", "content": "ن"})
+        check("  بثّ رسالة → 403", r.status_code == 403, str(r.status_code))
 
     await mongo.drop_database(DBN)
     print()

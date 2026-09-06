@@ -10,6 +10,8 @@ from typing import List
 from app.common import safe_object_id, serialize_doc
 from app.db import db
 from app.models import CompetitionContestantCreate, CompetitionContestantResponse, CompetitionCreate, CompetitionResponse, ContestantGrades
+from app.common import check_student_access
+from app.scope import visible_student_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -75,6 +77,9 @@ async def register_contestant(
     center_id = current_user.get("center_id")
     if current_user["role"] not in ["admin", "super_admin"] and student.get("center_id") != center_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بتسجيل طالب من مركز آخر")
+
+    # [إصلاح 2026-09-06] المركز لا يكفي: الشيخ لا يُسجّل طالباً ليس من حلقته
+    await check_student_access(contestant.student_id, current_user)
         
     existing = await db.competition_contestants.find_one({
         "competition_id": comp_id,
@@ -112,6 +117,17 @@ async def get_contestants(comp_id: str, current_user: dict = Depends(get_current
         raise HTTPException(status_code=403, detail="غير مصرح لك بعرض متسابقي مركز آخر")
         
     query = {"competition_id": comp_id}
+    # [إصلاح 2026-09-06] كانت القائمة تُعيد متسابقي المركز كلَّه، فيرى شيخُ
+    # الحلقة والطالبُ أسماءَ طلاب حلقات أخرى ودرجاتِهم.
+    #
+    # ملاحظة تصميمية: لوحةُ المسابقة عُرفاً مركزية — ترتيبُها بلا سائر المتسابقين
+    # ناقص. لكن قاعدة المالك صريحة: لا يرى أحدٌ ما ليس من حلقته. فحُصرت. من أراد
+    # لوحةً مركزية فالمدير يراها كاملة، ورفعُ الحصر عن الشيخ سطرٌ واحد هنا.
+    scope_ids = await visible_student_ids(current_user)
+    if scope_ids is not None:
+        if not scope_ids:
+            return []
+        query["student_id"] = {"$in": scope_ids}
     contestants = await db.competition_contestants.find(query).sort("total_score", -1).to_list(200)
     
     student_ids = list(set([c.get("student_id") for c in contestants]))
@@ -144,6 +160,10 @@ async def grade_contestant(
     if not contestant:
         raise HTTPException(status_code=404, detail="المتسابق غير موجود")
         
+    # [إصلاح 2026-09-06] الشيخ لا يرصد درجةً لطالب من حلقة غيره
+    if contestant.get("student_id"):
+        await check_student_access(contestant["student_id"], current_user)
+
     center_id = current_user.get("center_id")
     if current_user["role"] not in ["admin", "super_admin"] and contestant.get("center_id") != center_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بتقييم متسابق لمركز آخر")
