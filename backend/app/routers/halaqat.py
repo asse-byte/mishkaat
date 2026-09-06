@@ -8,6 +8,7 @@ from typing import Optional
 from app.common import safe_object_id, serialize_doc
 from app.db import db
 from app.models import HalaqahCreate, HalaqahUpdate
+from app.scope import visible_halaqah_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -36,6 +37,14 @@ async def get_halaqat(
         if not current_user.get("center_id"):
             return []
         query["center_id"] = current_user["center_id"]
+
+    # [إصلاح 2026-09-06] الحصر بالمركز وحده كان يُري المحفّظَ كلَّ حلقات المركز،
+    # ويُري الطالبَ حلقاتٍ ليس فيها. الحلقة نطاقٌ قائم بذاته لا تفصيلٌ في المركز.
+    hids = await visible_halaqah_ids(current_user)
+    if hids is not None:
+        if not hids:
+            return []
+        query["_id"] = {"$in": [safe_object_id(h) for h in hids]}
 
     halaqat = await db.halaqat.find(query).to_list(100)
     result = []

@@ -48,6 +48,7 @@ export default function Centers() {
   const isAdmin = user?.role === 'admin';
   const [pending, setPending] = useState<CenterData[]>([]);
   const [decidingId, setDecidingId] = useState<string | null>(null);
+  const [pendingError, setPendingError] = useState('');
 
   const loadCenters = useCallback(async () => {
     try {
@@ -59,8 +60,15 @@ export default function Centers() {
       // المركز المسجَّل من الصفحة العامّة يبقى معلَّقاً إلى الأبد: صاحبُه لا
       // يستطيع الدخول، ومدير النظام لا يرى ما يعتمده.
       if (isAdmin) {
-        const p = await api.get('/centers/pending');
-        setPending(p.data || []);
+        // فشلُ هذا النداء كان يُبتلَع في catch الخارجي فتختفي لوحة الاعتماد
+        // بلا أثر: يرى المدير صفحةً سليمة ولا يعرف أن طلباً ينتظره. صار له
+        // catch خاصّ يُظهر السبب.
+        try {
+          const p = await api.get('/centers/pending');
+          setPending(p.data || []);
+        } catch (e: any) {
+          setPendingError(e.response?.data?.detail || 'تعذّر تحميل طلبات التسجيل');
+        }
       }
     } catch { /* silent */ }
     finally { setLoading(false); }
@@ -167,6 +175,12 @@ export default function Centers() {
           </button>
         )}
       </PageHeader>
+
+      {isAdmin && pendingError && (
+        <div className="card p-4 text-sm text-[hsl(var(--danger))]">
+          طلبات التسجيل: {pendingError}
+        </div>
+      )}
 
       {/* طابور الاعتماد — يظهر لمدير النظام حين يوجد طلب */}
       {isAdmin && pending.length > 0 && (

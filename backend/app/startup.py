@@ -356,6 +356,18 @@ async def startup_event():
         teacher_result = await db.teachers.insert_many(default_teachers)
         teacher_ids = [str(id) for id in teacher_result.inserted_ids]
         print(f"[SUCCESS] Default teachers created: {teacher_ids}")
+
+        # [إصلاح 2026-09-06] البذرة كانت تُنشئ حساب teacher1 وسجلات المحفّظين
+        # ولا تربط بينها إطلاقاً (user_id = None في كلّها). ومنذ صار نطاق المحفّظ
+        # حلقاتِه — يُستدلّ عليها من users → teachers.user_id → halaqat.teacher_id —
+        # فإن حسابَ محفّظ بلا سجلّ مرتبط لا يرى شيئاً على الإطلاق. الربط هنا.
+        teacher_user = await db.users.find_one({"username": "teacher1"})
+        if teacher_user and teacher_ids:
+            await db.teachers.update_one(
+                {"_id": teacher_result.inserted_ids[0]},
+                {"$set": {"user_id": str(teacher_user["_id"])}},
+            )
+            print("[SUCCESS] teacher1 linked to the first demo teacher record")
         
         # Seed halaqat
         default_halaqat = [

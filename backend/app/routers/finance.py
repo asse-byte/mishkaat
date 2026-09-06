@@ -37,7 +37,9 @@ async def get_fees(
     """
     # [AUDIT-2026-05-22 fix: enforce role-based scoping; admin sees all, others restricted to own data]
     role = current_user["role"]
-    if role not in ["admin", "center_manager", "teacher", "parent", "student"]:
+    # [إصلاح 2026-09-06] المحفّظ كان يقرأ رسوم المركز كلَّه — مبالغَ كل طالب
+    # وحالةَ سدادها. المال شأن الإدارة، ولا صلة له بعمل شيخ الحلقة.
+    if role not in ["admin", "center_manager", "parent", "student"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
 
     query: dict = {}

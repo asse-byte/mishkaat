@@ -32,6 +32,7 @@ from app.gamification import (
     total_xp_bulk,
 )
 from app.metrics import _PRESENT_STATUSES, _as_datetime, compute_all, pages_of
+from app.scope import assert_halaqah_in_scope, student_query
 from app.security import get_current_user
 
 router = APIRouter(tags=["الأداء والتنبؤ والتحفيز"])
@@ -220,15 +221,16 @@ async def leaderboards(
     الطالب ووليّ الأمر يريان اللوحات — وهي بيانات مجمّعة (اسم ورتبة وقيمة) لا
     سجلّات جلسات — ويُعاد لهما موقعُهما صراحةً في own_ranks.
     """
-    center_id = current_user.get("center_id")
     role = current_user.get("role")
 
-    query = {**NOT_DELETED, "is_active": True}
-    if role != "admin":
-        if not center_id:
-            raise HTTPException(status_code=403, detail="لا يوجد مركز مرتبط بحسابك")
-        query["center_id"] = center_id
+    # [إصلاح 2026-09-06] كان النطاق المركزَ كلَّه، فتضمّ لوحاتُ الصدارة طلاباً
+    # من حلقات أخرى: يراهم شيخُ الحلقة والطالبُ معاً. واللوحة تُحفّز بالمقارنة
+    # مع الأقران — وأقرانُ الطالب حلقتُه، لا كلُّ من في المركز.
+    query = await student_query(current_user, {**NOT_DELETED, "is_active": True})
+    if query is None:
+        return {"boards": [], "definitions": LEADERBOARDS, "own_ranks": {}}
     if halaqah_id:
+        await assert_halaqah_in_scope(halaqah_id, current_user)
         query["halaqah_id"] = halaqah_id
 
     students = [s async for s in db.students.find(query)]

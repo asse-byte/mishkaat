@@ -14,6 +14,7 @@ from app.common import check_student_access, safe_object_id, serialize_doc
 from app.db import db
 from app.models import StudentCreate, StudentUpdate
 from app.pii import decrypt_student_doc, encrypt_student_doc
+from app.scope import teacher_halaqah_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -56,12 +57,23 @@ async def get_students(
         if current_user.get("phone"):
             conditions.append({"phone": current_user["phone"]})
         query["$or"] = conditions
+    elif role == "teacher":
+        # [إصلاح 2026-09-06] كان المحفّظ يقع في فرع "else" فيرى طلاب المركز
+        # كلَّه. صار محصوراً في حلقاته هو.
+        hids = await teacher_halaqah_ids(current_user)
+        if not current_user.get("center_id") or not hids:
+            return []
+        query["center_id"] = current_user["center_id"]
+        query["halaqah_id"] = {"$in": hids}
     else:
         if not current_user.get("center_id"):
             return []
         query["center_id"] = current_user["center_id"]
 
     if halaqah_id:
+        # المحفّظ لا يوسّع نطاقه بتمرير حلقة غيره في المعامل
+        if role == "teacher" and halaqah_id not in (query.get("halaqah_id", {}).get("$in") or []):
+            return []
         # فلترة الحلقة تُطبَّق فوق نطاق الدور، فلا تُوسِّعه
         query["halaqah_id"] = halaqah_id
 

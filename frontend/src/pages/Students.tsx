@@ -313,7 +313,19 @@ export default function Students() {
       {filtered.length === 0 ? (
         <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
           <Users className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
-          <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
+          {/* [إضافة 2026-09-06] المحفّظ صار يرى طلاب حلقاته وحدها. ومن لم تُسنَد
+              إليه حلقة بعد يرى شاشةً فارغة لا تقول له لماذا — فيظنّ النظام
+              معطوباً. الفراغُ هنا له سببان مختلفان، ولكلٍّ رسالتُه. */}
+          {user?.role === 'teacher' && halaqat.length === 0 ? (
+            <>
+              <p className="text-[hsl(var(--foreground))] font-semibold">لم تُسنَد إليك حلقة بعد</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                تظهر لك أسماء طلابك حالما يُسنِد مديرُ المركز حلقةً إليك.
+              </p>
+            </>
+          ) : (
+            <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3 stagger">

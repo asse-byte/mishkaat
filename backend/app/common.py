@@ -105,12 +105,23 @@ async def check_student_access(student_id: str, current_user: dict) -> dict:
             )
         return student
         
-    # 3. Teacher: تطابق مركز الطالب مع مركز المعلم
+    # 3. Teacher: الطالب من إحدى حلقاته هو، لا من مركزه فحسب
+    # [إصلاح 2026-09-06] كان الشرط المركز وحده، فشيخُ الحلقة يقرأ ملفّ أيّ طالب
+    # في المركز — اسمَه وهاتفَ وليّه وتسميعاتِه وحضورَه ومقاييسَ أدائه وتاريخَ
+    # ختمه المتوقَّع — ولو كان في حلقة غيره. وهذه هي البوّابة التي تمرّ منها كل
+    # نقاط النهاية التي تأخذ student_id، فالثغرة كانت واحدة والتسريب في عشرة.
     if role == "teacher":
         if student.get("center_id") != current_user.get("center_id"):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="غير مصرح لك بالوصول لبيانات هذا الطالب في مركز آخر"
+            )
+        from app.scope import teacher_halaqah_ids
+        hids = await teacher_halaqah_ids(current_user)
+        if not student.get("halaqah_id") or student["halaqah_id"] not in hids:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="هذا الطالب ليس من حلقتك"
             )
         return student
         

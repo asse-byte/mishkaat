@@ -14,6 +14,7 @@ from app.audit import write_audit_log
 from app.common import redact_teacher, safe_object_id, serialize_doc
 from app.db import db
 from app.models import TeacherCreate, TeacherEvaluationCreate, TeacherEvaluationResponse, TeacherTransferRequest, TeacherUpdate
+from app.scope import teacher_record
 from app.security import get_current_user, get_password_hash, validate_password_complexity
 
 router = APIRouter()
@@ -40,6 +41,17 @@ async def get_teachers(
     if role in ["super_admin", "admin"]:
         if center_id:
             query["center_id"] = center_id
+    elif role in ("student", "parent"):
+        # [إصلاح 2026-09-06] كان الطالب ووليّ الأمر يريان قائمة محفّظي المركز
+        # كلَّهم. اسمُ شيخ حلقته يصله من الحلقة نفسها، ولا حاجة له بالقائمة.
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    elif role == "teacher":
+        # المحفّظ يرى نفسه فقط: زملاؤه ليسوا من شأنه، وبياناتُهم بيانات موظّفين.
+        me = await teacher_record(current_user)
+        if not me:
+            return []
+        query["_id"] = me["_id"]
+        query["center_id"] = current_user.get("center_id")
     else:
         if not current_user.get("center_id"):
             return []

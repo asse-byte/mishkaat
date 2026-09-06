@@ -19,6 +19,7 @@ from app.gamification import award_xp, evaluate_badges
 from app.metrics import compute_all, pages_of
 from app.models import RecitationCreate
 from app.routers.performance import invalidate_model
+from app.scope import teacher_only
 from app.security import get_current_user
 
 router = APIRouter()
@@ -138,10 +139,13 @@ async def _award_session_rewards(recitation_dict: dict, recitation_id: str, stud
 @router.post("/api/recitations")
 async def create_recitation(recitation: RecitationCreate, current_user: dict = Depends(get_current_user)):
     """تسجيل تسميع جديد"""
-    if current_user["role"] not in ["admin", "center_manager", "teacher"]:
-        raise HTTPException(status_code=403, detail="غير مصرح")
+    # [قرار المالك 2026-09-06] التسميع شهادةٌ على ما سمعه الشيخ بأذنه. مديرُ
+    # المركز يقرأ السجلّ كلَّه ويُصحّحه بالتعديل والحذف، ولا يُنشئ سجلّاً يشهد
+    # فيه على مجلسٍ لم يحضره.
+    teacher_only(current_user, "تسجيل التسميع")
 
     # [AUDIT-2026-05-22 fix: enforce student belongs to caller's center before logging recitation]
+    # ومنذ 2026-09-06 تفرض هذه البوّابة أن يكون الطالب من حلقة هذا الشيخ نفسه.
     student = await check_student_access(recitation.student_id, current_user)
 
     # [AUDIT-2026-05-22 fix: a teacher may only record recitations under their own teacher identity]

@@ -48,12 +48,14 @@ def check(name, cond, extra=""):
 
 
 async def _seed_student(center_id, name, *, weeks=14, errors_per_session=0,
-                        presence=1.0, verses=40, review_every=3, now=None):
+                        presence=1.0, verses=40, review_every=3, now=None,
+                        halaqah_id=None):
     """طالب بتاريخ مصنوع: نفس الكمّية، والجودة والحضور متغيّران بالمعامِلات."""
     now = now or utcnow()
     sid = str((await db.students.insert_one({
         "name": name, "center_id": center_id, "is_active": True,
-        "halaqah_name": "حلقة الفحص", "student_type": "memorizing",
+        "halaqah_id": halaqah_id, "halaqah_name": "حلقة الفحص",
+        "student_type": "memorizing",
     })).inserted_id)
     for w in range(weeks):
         d = now - timedelta(days=7 * (weeks - w))
@@ -94,20 +96,40 @@ async def main():
         "role": "center_manager", "center_id": center_id, "name": "مدير",
         "is_active": True, "created_at": now,
     })
+    # [تحديث 2026-09-06] تسجيل التسميع صار من عمل شيخ الحلقة وحده، والطلابُ
+    # يُسنَدون إلى حلقة حقيقية — وإلا لم يستطع أيّ شيخ الوصول إليهم أصلاً.
+    tu = await db.users.insert_one({
+        "username": "sheikh", "hashed_password": get_password_hash("Sheikh@1234"),
+        "role": "teacher", "center_id": center_id, "name": "الشيخ",
+        "is_active": True, "created_at": now,
+    })
+    tid = str((await db.teachers.insert_one({
+        "name": "الشيخ", "center_id": center_id, "user_id": str(tu.inserted_id),
+        "is_active": True,
+    })).inserted_id)
+    halaqah_id = str((await db.halaqat.insert_one({
+        "name": "حلقة الفحص", "center_id": center_id, "teacher_id": tid,
+        "teacher_name": "الشيخ", "schedule": "يومي", "is_active": True,
+    })).inserted_id)
 
     # مجموعة تدريب متنوّعة كي يجد النموذج ما يتعلّمه
     for i in range(8):
         await _seed_student(center_id, f"خلفية {i}", errors_per_session=i % 5,
-                            presence=0.5 + 0.06 * i, verses=20 + 5 * i, now=now)
+                            presence=0.5 + 0.06 * i, verses=20 + 5 * i, now=now,
+                            halaqah_id=halaqah_id)
 
     # زوج المقارنة: كل شيء متطابق إلا الأخطاء
-    clean_id = await _seed_student(center_id, "نظيف", errors_per_session=0, presence=1.0, now=now)
-    noisy_id = await _seed_student(center_id, "كثير الخطأ", errors_per_session=6, presence=1.0, now=now)
+    clean_id = await _seed_student(center_id, "نظيف", errors_per_session=0, presence=1.0, now=now,
+                                halaqah_id=halaqah_id)
+    noisy_id = await _seed_student(center_id, "كثير الخطأ", errors_per_session=6, presence=1.0, now=now,
+                                halaqah_id=halaqah_id)
 
     tr = httpx.ASGITransport(app=app)
     async with httpx.AsyncClient(transport=tr, base_url="http://t") as c:
         r = await c.post("/api/auth/login", data={"username": "mgr", "password": "Mgr@12345"})
         H = {"Authorization": f"Bearer {r.json()['access_token']}"}
+        rt = await c.post("/api/auth/login", data={"username": "sheikh", "password": "Sheikh@1234"})
+        TH = {"Authorization": f"Bearer {rt.json()['access_token']}"}
 
         # ---------------------------------------------------- FR6 التصنيف
         et = (await c.get("/api/performance/error-types", headers=H)).json()["error_types"]
@@ -185,8 +207,8 @@ async def main():
 
         # التسميع الجديد يمنح بعدد الصفحات
         x0 = (await c.get(f"/api/performance/students/{clean_id}", headers=H)).json()["total_xp"]
-        rr = await c.post("/api/recitations", headers=H, json={
-            "student_id": clean_id, "teacher_id": "t1", "surah_name": "يس",
+        rr = await c.post("/api/recitations", headers=TH, json={
+            "student_id": clean_id, "teacher_id": tid, "surah_name": "يس",
             "start_ayah": 1, "end_ayah": 30, "evaluation": "good",
             "recitation_type": "new", "error_tags": {"TAJ_ERR": 1}, "pages_count": 2,
         })
@@ -195,8 +217,8 @@ async def main():
               rr.status_code == 200 and x1 == x0 + 20, f"{x0} ← {x1}")
 
         # نوع خطأ مجهول يُرفض
-        bad = await c.post("/api/recitations", headers=H, json={
-            "student_id": clean_id, "teacher_id": "t1", "surah_name": "يس",
+        bad = await c.post("/api/recitations", headers=TH, json={
+            "student_id": clean_id, "teacher_id": tid, "surah_name": "يس",
             "start_ayah": 1, "end_ayah": 5, "evaluation": "good",
             "recitation_type": "new", "error_tags": {"MADE_UP": 3},
         })
@@ -230,7 +252,7 @@ async def main():
         # ---------------------------------- توافق البيانات القديمة
         legacy_id = str((await db.students.insert_one({
             "name": "بيانات قديمة", "center_id": center_id, "is_active": True,
-            "student_type": "memorizing"})).inserted_id)
+            "halaqah_id": halaqah_id, "student_type": "memorizing"})).inserted_id)
         for w in range(6):
             await db.recitations.insert_one({
                 "student_id": legacy_id, "teacher_id": "t1", "surah_name": "البقرة",
@@ -248,8 +270,8 @@ async def main():
         check("الدقّة لا تُحتسب من بيانات غير موسومة", leg["metrics"]["precision"] is None,
               f"دقّة={leg['metrics']['precision']}")
         # وتسميعة موسومة بلا أخطاء دقّتُها تامّة، لا «لا بيانات»
-        zero = await c.post("/api/recitations", headers=H, json={
-            "student_id": legacy_id, "teacher_id": "t1", "surah_name": "الفاتحة",
+        zero = await c.post("/api/recitations", headers=TH, json={
+            "student_id": legacy_id, "teacher_id": tid, "surah_name": "الفاتحة",
             "start_ayah": 1, "end_ayah": 7, "evaluation": "excellent",
             "recitation_type": "new", "error_tags": {},
         })

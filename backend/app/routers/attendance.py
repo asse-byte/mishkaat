@@ -16,6 +16,7 @@ from app.db import db
 from app.gamification import award_xp
 from app.metrics import _PRESENT_STATUSES
 from app.models import AttendanceCreate
+from app.scope import assert_halaqah_in_scope, teacher_only, visible_halaqah_ids
 from app.security import get_current_user
 from app.sse import push_notification
 
@@ -42,16 +43,23 @@ async def get_attendance(
     if role in ("center_manager", "teacher"):
         if not current_user.get("center_id"):
             return []
-        halaqat = await db.halaqat.find(
-            {"center_id": current_user["center_id"], "is_active": True}, {"_id": 1}
-        ).to_list(500)
-        halaqah_ids_in_scope = {str(h["_id"]) for h in halaqat}
+        # [إصلاح 2026-09-06] كان النطاق حلقات المركز كلَّها للاثنين معاً، فيقرأ
+        # المحفّظ حضور حلقات غيره. صار كلٌّ في نطاقه: المدير مركزَه، والمحفّظ
+        # حلقاته وحدها.
+        scope_hids = await visible_halaqah_ids(current_user)
+        if scope_hids is None:
+            halaqat = await db.halaqat.find(
+                {"center_id": current_user["center_id"], "is_active": True}, {"_id": 1}
+            ).to_list(500)
+            halaqah_ids_in_scope = {str(h["_id"]) for h in halaqat}
+        else:
+            halaqah_ids_in_scope = set(scope_hids)
         if not halaqah_ids_in_scope:
             return []
         query["halaqah_id"] = {"$in": list(halaqah_ids_in_scope)}
         if halaqah_id:
             if halaqah_id not in halaqah_ids_in_scope:
-                raise HTTPException(status_code=403, detail="حلقة لا تنتمي لمركزك")
+                raise HTTPException(status_code=403, detail="هذه الحلقة خارج نطاقك")
             query["halaqah_id"] = halaqah_id
     else:  # admin
         if halaqah_id:
@@ -94,6 +102,9 @@ async def get_halaqah_attendance(
     if role not in ["admin", "super_admin"]:
         if not current_user.get("center_id") or halaqah.get("center_id") != current_user.get("center_id"):
             raise HTTPException(status_code=403, detail="حلقة لا تنتمي لمركزك")
+        # [إصلاح 2026-09-06] المركز لا يكفي: كان المحفّظ يقرأ كشف حضور أيّ حلقة
+        # في مركزه بتمرير معرّفها.
+        await assert_halaqah_in_scope(halaqah_id, current_user)
 
     query: dict = {"halaqah_id": halaqah_id}
     if date:
@@ -111,8 +122,10 @@ async def get_halaqah_attendance(
 @router.post("/api/attendance")
 async def create_attendance(data: AttendanceCreate, current_user: dict = Depends(get_current_user)):
     """تسجيل حضور مجموعة"""
-    if current_user["role"] not in ["admin", "center_manager", "teacher"]:
-        raise HTTPException(status_code=403, detail="غير مصرح")
+    # [قرار المالك 2026-09-06] تسجيل الحضور شهادةٌ يؤدّيها من حضر المجلس.
+    # مديرُ المركز يقرأ ويُصحّح بالتعديل، ولا يُنشئ سجلّاً يشهد فيه على ما لم
+    # يحضره. والمحفّظ محصور في حلقاته عبر check_student_access أدناه.
+    teacher_only(current_user, "تسجيل الحضور")
 
     now = utcnow()
     date_str = data.date or now.strftime("%Y-%m-%d")
