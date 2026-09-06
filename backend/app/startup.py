@@ -150,6 +150,17 @@ async def startup_event():
     await db.competition_contestants.create_index([("competition_id", 1), ("student_id", 1)])
     await db.bulk_messages.create_index([("center_id", 1), ("sender_id", 1)])
 
+    # الشهادات: المنعُ من التكرار في القاعدة لا في الكود وحده. فحصٌ في الكود
+    # يسبق كتابةً ينجح مرّتين حين يُضغط الزرّ مرّتين في اللحظة نفسها.
+    await _safe_create_index(
+        db.certificates, [("student_id", 1), ("milestone", 1)], unique=True,
+        partialFilterExpression={"kind": "milestone"}, name="uniq_student_milestone")
+    await _safe_create_index(
+        db.certificates, [("competition_id", 1), ("student_id", 1)], unique=True,
+        partialFilterExpression={"kind": "competition"}, name="uniq_competition_student")
+    await _safe_create_index(db.certificates, [("center_id", 1), ("issued_at", -1)])
+    await _safe_create_index(db.certificates, [("serial", 1)], unique=True)
+
     # [AUDIT-2026-05-22 fix: admin bootstrap — never ship default password to production]
     SEED_DEMO_DATA = os.getenv("SEED_DEMO_DATA", "false").lower() in ("true", "1", "yes")
     INITIAL_ADMIN_PASSWORD = os.getenv("INITIAL_ADMIN_PASSWORD")

@@ -11,6 +11,7 @@ import PageHeader from '@/components/ui/PageHeader';
 const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
 
 interface ReportData {
+  center_id: string;
   center_name: string;
   generated_at: string;
   students: any[];
@@ -48,16 +49,27 @@ export default function Reports() {
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [stuResp, tchResp, halResp, recResp, attResp, feeResp] = await Promise.all([
+      const [stuResp, tchResp, halResp, recResp, attResp, feeResp, cenResp] = await Promise.all([
         api.get('/students').catch(() => ({ data: [] })),
         api.get('/teachers').catch(() => ({ data: [] })),
         api.get('/halaqat').catch(() => ({ data: [] })),
         api.get('/recitations?limit=500').catch(() => ({ data: [] })),
         api.get('/attendance/center?limit=500').catch(() => ({ data: [] })),
         api.get('/fees').catch(() => ({ data: [] })),
+        api.get('/centers').catch(() => ({ data: [] })),
       ]);
+      // [إصلاح 2026-09-07] كان اسمُ المركز يُؤخذ من `user.name` — وهو اسمُ
+      // **الشخص** المدير لا اسمُ المركز. فكانت ترويسة التقرير المطبوع تقول
+      // «مركز عبد الملك سيسي لتحفيظ القرآن الكريم»: اسمُ رجلٍ داخل قالبٍ
+      // ثابت. الاسم الآن من سجلّ المركز نفسه، وحُذف القالب معه فالاسم
+      // المسجَّل يحمل كلمة «مركز» إن أرادها صاحبُه.
+      const centersList = (cenResp.data || []) as Array<{ id: string; name: string }>;
+      const myCenter = user?.center_id
+        ? centersList.find(c => c.id === user.center_id) || centersList[0]
+        : centersList[0];
       setData({
-        center_name: user?.name || 'المركز',
+        center_id: myCenter?.id || '',
+        center_name: myCenter?.name || 'مركز تحفيظ القرآن الكريم',
         generated_at: new Date().toLocaleString('ar-SA'),
         students:    stuResp.data || [],
         teachers:    tchResp.data || [],
@@ -170,7 +182,12 @@ export default function Reports() {
 
       {/* ── PRINT HEADER (shown only when printing) ─────────── */}
       <div className="hidden print:block text-center border-b-2 border-gray-200 pb-4 mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">مركز {data?.center_name} لتحفيظ القرآن الكريم</h1>
+        {data?.center_id && (
+          <img src={`/api/centers/${data.center_id}/logo`} alt=""
+            className="h-14 object-contain mx-auto mb-2"
+            onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+        )}
+        <h1 className="text-3xl font-bold text-gray-900">{data?.center_name}</h1>
         <h2 className="text-xl font-bold text-gray-700 mt-1">
           {REPORT_TYPES.find(r => r.id === activeReport)?.label}
         </h2>

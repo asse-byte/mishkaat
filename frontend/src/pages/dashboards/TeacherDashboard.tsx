@@ -9,7 +9,6 @@ import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
-import { useTranslation } from '@/lib/i18n';
 
 interface TeacherStats {
   students_count: number;
@@ -46,7 +45,6 @@ const evalLabel: Record<string, { text: string; cls: string }> = {
 export default function TeacherDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { t } = useTranslation();
   const [stats, setStats]             = useState<TeacherStats | null>(null);
   const [recentRecitations, setRecent] = useState<RecitationData[]>([]);
   const [topStudents, setTopStudents] = useState<StudentData[]>([]);
@@ -120,7 +118,7 @@ export default function TeacherDashboard() {
       {/* Hero */}
       <WelcomeHero
         name={stats?.teacher_name || user?.name || null}
-        roleTitle={t('role_teacher')}
+        roleTitle="محفظ"
         subtext={stats?.halaqat && stats.halaqat.length > 0 ? stats.halaqat.join(' · ') : undefined}
       />
 
@@ -133,19 +131,19 @@ export default function TeacherDashboard() {
           gradientClass="stat-card-blue"
         />
         <StatCard
-          title={t('recitations_today')}
+          title="تسميع اليوم"
           value={stats?.recitations_today ?? 0}
           icon={BookOpen}
           gradientClass="stat-card-green"
         />
         <StatCard
-          title={t('rate_attendance')}
+          title="نسبة الحضور"
           value={`${stats?.attendance_rate ?? 0}%`}
           icon={Calendar}
           gradientClass="stat-card-amber"
         />
         <StatCard
-          title={t('term_halaqat')}
+          title="الحلقات"
           value={stats?.halaqat.length ?? 0}
           icon={BookOpen}
           gradientClass="stat-card-purple"
@@ -170,7 +168,7 @@ export default function TeacherDashboard() {
                 <EmptyState
                   icon={FileText}
                   title="لا توجد تسميعات مسجَّلة"
-                  description={t('empty_no_recitations')}
+                  description="لا توجد جلسات تسميع مسجلة اليوم."
                 />
               </div>
             ) : recentRecitations.map((r, i) => (
@@ -211,7 +209,7 @@ export default function TeacherDashboard() {
               <EmptyState
                 icon={Award}
                 title="لا يوجد طلاب"
-                description={t('empty_no_students')}
+                description="لا يوجد طلاب مسجلين حالياً."
               />
             ) : topStudents.map((s, i) => (
               <div key={s.id} className="flex items-center gap-3">

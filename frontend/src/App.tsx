@@ -31,6 +31,7 @@ import StudentPerformance from '@/pages/StudentPerformance';
 import Leaderboards from '@/pages/Leaderboards';
 import AcademicSchedules from '@/pages/AcademicSchedules';
 import Competitions from '@/pages/Competitions';
+import Certificates from '@/pages/Certificates';
 import BulkMessages from '@/pages/BulkMessages';
 import { NotFoundPage, ForbiddenPage } from '@/pages/ErrorPages';
 import DashboardLayout from '@/components/layout/DashboardLayout';
@@ -77,6 +78,11 @@ const AUDIT: UserRole[] = ['admin', 'super_admin'];
 const STAFF: UserRole[] = ['admin', 'super_admin', 'center_manager', 'teacher'];
 const ATTENDANCE: UserRole[] = ['admin', 'center_manager', 'teacher'];
 const PLANS: UserRole[] = ['admin', 'center_manager', 'teacher'];
+// [إصلاح 2026-09-07] الجدول الدراسي يقرؤه الجميع، كلٌّ في نطاقه. كان حارسه
+// STAFF فيُردّ الطالبُ بـ403 من صفحةٍ يعرضها له الشريطُ الجانبي نفسه — والخادم
+// يسمح له بها أصلاً: لا حارسَ دورٍ على القراءة في schedules.py، والنطاق محصورٌ
+// بحلقته عبر visible_halaqah_ids. فكان المنعُ في الواجهة وحدها، بلا سبب.
+const SCHEDULE_VIEWERS: UserRole[] = ['admin', 'super_admin', 'center_manager', 'teacher', 'student', 'parent'];
 
 function PublicRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -220,7 +226,7 @@ function AppRoutes() {
       <Route
         path="/academic-schedules"
         element={
-          <ProtectedRoute roles={STAFF}>
+          <ProtectedRoute roles={SCHEDULE_VIEWERS}>
             <AcademicSchedules />
           </ProtectedRoute>
         }
@@ -230,6 +236,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Competitions />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/certificates"
+        element={
+          <ProtectedRoute>
+            <Certificates />
           </ProtectedRoute>
         }
       />

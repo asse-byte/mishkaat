@@ -6,7 +6,6 @@ import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
 import StatCard from '@/components/ui/StatCard';
 import EmptyState from '@/components/ui/EmptyState';
-import { useTranslation } from '@/lib/i18n';
 
 interface StudentInfo {
   id: string;
@@ -37,7 +36,6 @@ const evalMap: Record<string, { text: string; cls: string }> = {
 
 export default function StudentDashboard() {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const [studentInfo, setStudentInfo]     = useState<StudentInfo | null>(null);
   const [recitations, setRecitations]     = useState<RecitationData[]>([]);
   const [attendedDays, setAttendedDays]   = useState(0);
@@ -108,7 +106,7 @@ export default function StudentDashboard() {
       {/* Hero */}
       <WelcomeHero
         name={studentInfo?.name || user?.name || null}
-        roleTitle={t('role_student')}
+        roleTitle="طالب"
         subtext={studentInfo?.current_surah ? `${studentInfo.current_surah} · آية ${studentInfo.current_ayah} · ${studentInfo?.halaqah_name || ''}` : undefined}
       />
 
@@ -186,7 +184,7 @@ export default function StudentDashboard() {
                 <EmptyState
                   icon={BookOpen}
                   title="لا توجد تسميعات مسجَّلة"
-                  description={t('empty_no_recitations')}
+                  description="لا توجد جلسات تسميع مسجلة اليوم."
                 />
               </div>
             ) : recitations.slice(0, 5).map((r, i) => (

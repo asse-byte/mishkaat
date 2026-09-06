@@ -9,12 +9,16 @@ from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Request
+from fastapi import Response
+from fastapi import UploadFile
+from fastapi import File
 import sys
 
 from app.audit import write_audit_log
 from app.common import client_ip, safe_object_id, serialize_doc, NOT_VOIDED
 from app.config import DB_NAME
 from app.db import db
+from app.files import IMAGE_TYPES, MAX_LOGO_BYTES, delete_file, read_file, save_upload
 from pymongo.errors import DuplicateKeyError
 from app.routers.finance import _sum_amounts
 from app.models import CenterCreate, SuperCenterCreate, SuperCenterStatusUpdate
@@ -381,6 +385,96 @@ async def update_center(center_id: str, center: CenterCreate, current_user: dict
 
     updated = await db.centers.find_one({"_id": center_obj_id})
     return serialize_doc(updated)
+
+# ==================== هويّة المركز: الشعار ====================
+#
+# [قرار المالك 2026-09-07] «يُسمح لمدير المركز أن يرفع شعار المركز لكي يظهر في
+# الشهادات والفواتير وكل الوثائق الإلكترونية التي يصدرها النظام باسم مركز
+# تحفيظ القرآن.»
+#
+# وكانت كلُّ وثيقةٍ تُطبع تحمل علامة «المشكاة» — اسمَ البرنامج لا اسمَ المركز
+# الذي يمنح الشهادة. والشهادة تُنسب إلى من يمنحها.
+
+
+@router.post("/api/centers/{center_id}/logo")
+async def upload_center_logo(center_id: str, file: UploadFile = File(...),
+                             current_user: dict = Depends(get_current_user)):
+    """رفع شعار المركز — لمديره أو لمدير النظام."""
+    if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    if (current_user["role"] == "center_manager"
+            and center_id != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل مركز آخر")
+
+    center = await db.centers.find_one({"_id": safe_object_id(center_id)})
+    if not center:
+        raise HTTPException(status_code=404, detail="المركز غير موجود")
+
+    saved = await save_upload(
+        file, kind="center_logo", center_id=center_id,
+        owner_id=str(current_user["_id"]),
+        max_bytes=MAX_LOGO_BYTES, allowed=IMAGE_TYPES)
+
+    old = center.get("logo_file_id")
+    await db.centers.update_one(
+        {"_id": center["_id"]},
+        {"$set": {"logo_file_id": saved["file_id"], "logo_updated_at": utcnow()}})
+    # الشعار القديم يُحذف بعد نجاح الجديد لا قبله: لو فشل الرفع لبقي المركز بلا شعار
+    if old:
+        await delete_file(old)
+
+    await write_audit_log(
+        actor_id=str(current_user["_id"]), center_id=center_id,
+        action="CENTER_LOGO_UPDATED", payload={"size": saved["size"]})
+    return {"message": "رُفع شعار المركز", **saved}
+
+
+@router.get("/api/centers/{center_id}/logo")
+async def get_center_logo(center_id: str):
+    """
+    شعار المركز — **بلا مصادقة عن قصد**.
+
+    الشعار علامةٌ عامّة تظهر على شهادةٍ تُسلَّم للطالب وفاتورةٍ تُعطى لوليّه،
+    فليس فيه ما يُحمى. والبديل — قراءتُه بترويسة مصادقة — يعني أن كل `<img>`
+    في كل وثيقةٍ تُطبع يحتاج إلى جلبٍ يدويّ وتحويلٍ إلى عنوان بيانات، وهو
+    تعقيدٌ يُشترى بلا ثمنٍ يقابله.
+    """
+    center = await db.centers.find_one({"_id": safe_object_id(center_id)},
+                                       {"logo_file_id": 1})
+    if not center or not center.get("logo_file_id"):
+        raise HTTPException(status_code=404, detail="لا شعار لهذا المركز")
+    data, meta = await read_file(center["logo_file_id"])
+    return Response(
+        content=data,
+        media_type=meta.get("content_type", "application/octet-stream"),
+        headers={
+            "Cache-Control": "public, max-age=300",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
+        },
+    )
+
+
+@router.delete("/api/centers/{center_id}/logo")
+async def remove_center_logo(center_id: str,
+                             current_user: dict = Depends(get_current_user)):
+    """إزالة الشعار — تعود الوثائق إلى علامة النظام."""
+    if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    if (current_user["role"] == "center_manager"
+            and center_id != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل مركز آخر")
+
+    center = await db.centers.find_one({"_id": safe_object_id(center_id)})
+    if not center:
+        raise HTTPException(status_code=404, detail="المركز غير موجود")
+    if center.get("logo_file_id"):
+        await delete_file(center["logo_file_id"])
+    await db.centers.update_one(
+        {"_id": center["_id"]},
+        {"$unset": {"logo_file_id": "", "logo_updated_at": ""}})
+    return {"message": "أُزيل شعار المركز"}
+
 
 @router.delete("/api/centers/{center_id}")
 async def delete_center(center_id: str, current_user: dict = Depends(get_current_user)):

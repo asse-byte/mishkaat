@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
+import { useTheme } from '@/lib/theme';
 import { cn, getInitials } from '@/lib/utils';
 import {
   BookOpen,
@@ -19,6 +20,7 @@ import {
   RefreshCw,
   Bell,
   Shield,
+  Award,
   User,
   Settings,
   BarChart3,
@@ -70,6 +72,8 @@ const navItems: NavItem[] = [
   // [قرار المالك 2026-09-06] المسابقات تظهر لشيخ الحلقة فقط إن كان عضواً في
   // لجنة تحكيم مسابقة جارية — يُحسم ذلك في وقت التشغيل لا هنا (isJudge).
   { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','student'], group: 'manage' },
+  // الشهادات: يُصدرها المدير، ويراها المعلّم والطالب ووليّه ويطبعونها
+  { title: 'الشهادات',     href: '/certificates',  icon: Award,           roles: ['center_manager','teacher','student','parent'], group: 'manage' },
   { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
   { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
@@ -101,28 +105,9 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      return true;
-    } else {
-      document.documentElement.classList.remove('dark');
-      return false;
-    }
-  });
-
-  const toggleDarkMode = () => {
-    if (darkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setDarkMode(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setDarkMode(true);
-    }
-  };
+  // المظهر من مصدرٍ واحد يشترك فيه هذا الزرّ وصفحة الإعدادات (lib/theme.ts)
+  const { theme, toggle: toggleDarkMode } = useTheme();
+  const darkMode = theme === 'dark';
 
   /**
    * المسابقات لشيخ الحلقة: تظهر وتختفي بحسب عضويّته في لجنة تحكيمٍ **جارية**.

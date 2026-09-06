@@ -81,12 +81,17 @@ export default function Finance() {
       setExpenses(exp.data);
       setStudents(s as unknown as Student[]);
       setTeachers(t as unknown as Teacher[]);
-      if (centersList.data && centersList.data.length > 0) {
-        setCenter(centersList.data[0]);
-      }
+      // [إصلاح 2026-09-07] كان يأخذ أوّل مركزٍ في القائمة. لمدير المركز
+      // القائمةُ مركزُه وحده فيصحّ، أمّا مدير النظام فقائمتُه كلُّ المراكز —
+      // فيُطبع إيصالُ مركزٍ باسم مركزٍ آخر، عشوائياً بحسب ترتيب القائمة.
+      const list = (centersList.data || []) as Center[];
+      const mine = user?.center_id
+        ? list.find(c => c.id === user.center_id) || list[0]
+        : list[0];
+      if (mine) setCenter(mine);
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, []);
+  }, [user?.center_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -242,11 +247,23 @@ export default function Finance() {
         <div id="print-section" className="hidden print:block" dir="rtl">
           <div className="border-4 border-double border-[#1B233C] p-6 rounded-[var(--radius)] flex flex-col justify-between h-[90vh] text-center">
             
-            {/* Header */}
-            <div>
-              <div className="text-xs font-bold text-[#1B233C]">المملكة المغربية / الشؤون الإسلامية المعتمدة</div>
-              <h1 className="text-xl font-extrabold text-[#1B233C] mt-2">سند إيصال مالي رسمي</h1>
-              <p className="text-[10px] text-[#5B6474] mt-1">إدارة التحفيظ والتعليم الأكاديمي المتكامل</p>
+            {/* الترويسة: شعار المركز واسمُه.
+                [قرار المالك 2026-09-07] حُذف من هنا سطرُ «المملكة المغربية /
+                الشؤون الإسلامية المعتمدة». كان يُطبع على كل إيصالٍ وكل فاتورة
+                في النظام، وهو نسبةٌ إلى دولةٍ وجهةٍ رسمية لا يملك المركزُ أن
+                يدّعيها — والمشكاة تُباع لمراكز في بلدانٍ شتّى.
+                ومكانَه صار شعارُ المركز نفسه واسمُه: الوثيقة تُنسب إلى من
+                أصدرها. */}
+            <div className="flex flex-col items-center gap-1">
+              {center?.id && (
+                <img src={`/api/centers/${center.id}/logo`} alt=""
+                  className="h-12 object-contain mb-1"
+                  onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none'; }} />
+              )}
+              <div className="text-sm font-extrabold text-[#1B233C]">
+                {center?.name || 'مركز تحفيظ القرآن الكريم'}
+              </div>
+              <h1 className="text-xl font-extrabold text-[#1B233C] mt-1">سند إيصال مالي</h1>
             </div>
 
             {/* Voucher Details */}

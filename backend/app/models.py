@@ -391,6 +391,61 @@ class CompetitionContestantResponse(CompetitionContestantBase):
     halaqah_name: Optional[str] = None
     created_at: datetime
 
+# ==================== الشهادات ====================
+#
+# [قرار المالك 2026-09-07] «مدير المركز هو الذي يصدر الشهادة للطالب وليس
+# المعلّم. بعدما تُدخل اللجنة الدرجات يعتمدها المدير ثمّ يُصدر الشهادة. وحتى
+# بعد ختم الطالب للقرآن يظهر إصدار الشهادة للحافظ، وكذلك بعد نصف القرآن
+# و15 جزءاً.»
+#
+# والإصدار **فعلٌ يُسجَّل** لا زرَّ طباعةٍ عابر: له رقمٌ متسلسل، ومَن أصدره،
+# ومتى. فشهادةٌ يُشكَّك فيها تُراجَع في السجلّ، ولا تُطبع مرّتين بلا علم.
+
+MilestoneKind = Literal["juz5", "juz10", "half", "khatm"]
+
+# الحدّ بالصفحات لا بالأجزاء: التسميع يُقاس بالصفحات، والجزء ≈ 20.13 صفحة.
+MILESTONES: Dict[str, Dict[str, object]] = {
+    "juz5":  {"label": "حفظ خمسة أجزاء",      "juz": 5,  "order": 1},
+    "juz10": {"label": "حفظ عشرة أجزاء",      "juz": 10, "order": 2},
+    "half":  {"label": "حفظ نصف القرآن الكريم", "juz": 15, "order": 3},
+    "khatm": {"label": "ختم القرآن الكريم كاملاً", "juz": 30, "order": 4},
+}
+
+CertificateKind = Literal["competition", "milestone"]
+
+
+class MilestoneCertificateCreate(BaseModel):
+    student_id: str
+    milestone: MilestoneKind
+    notes: Optional[str] = None
+
+
+class CertificateResponse(BaseModel):
+    id: str
+    serial: str
+    kind: CertificateKind
+    center_id: str
+    center_name: Optional[str] = None
+    student_id: str
+    student_name: Optional[str] = None
+    halaqah_name: Optional[str] = None
+    title: str
+    subtitle: Optional[str] = None
+    # المسابقات
+    competition_id: Optional[str] = None
+    branch: Optional[str] = None
+    rank: Optional[int] = None
+    score: Optional[float] = None
+    judges_names: List[str] = []
+    # المحطّات
+    milestone: Optional[str] = None
+    pages_memorized: Optional[float] = None
+    notes: Optional[str] = None
+    issued_by: Optional[str] = None
+    issued_by_name: Optional[str] = None
+    issued_at: datetime
+
+
 class MessageReply(BaseModel):
     teacher_id: str
     teacher_name: str

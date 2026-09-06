@@ -22,12 +22,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/ui/loading';
 import {
   Trophy, Plus, User, Star, Award, Lock, Archive,
-  CheckCircle2, Printer, Gavel, ShieldCheck, Calendar,
+  CheckCircle2, Gavel, ShieldCheck, Calendar,
 } from 'lucide-react';
 import { errorMessage } from '@/lib/errors';
 import api, { studentsApi, teachersApi } from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
-import MishkaatMark from '@/components/ui/MishkaatMark';
 
 type CompStatus = 'draft' | 'active' | 'grading' | 'approved' | 'archived';
 
@@ -112,7 +111,6 @@ export default function Competitions() {
   const [showGradeModal, setShowGradeModal] = useState<Contestant | null>(null);
   /** تعديل اللجنة بعد الإنشاء: يُضاف محكّم ويُرفع آخر ما لم تُعتمد النتائج */
   const [editJudges, setEditJudges] = useState<string[] | null>(null);
-  const [printCert, setPrintCert] = useState<Contestant | null>(null);
 
   const [compForm, setCompForm] = useState<{
     title: string; date: string; branches: string[]; judges: string[];
@@ -261,6 +259,28 @@ export default function Competitions() {
     }
   };
 
+  /**
+   * إصدار شهادة المسابقة — لمدير المركز بعد اعتماد النتائج.
+   *
+   * [قرار المالك 2026-09-07] «مدير المركز هو الذي يصدر الشهادة للطالب وليس
+   * المعلّم.» وكان زرُّ الشهادة يظهر لكل من يرى صفّاً مرصوداً — للمحكّم
+   * وللطالب نفسه — ويطبع ورقةً بلا رقمٍ ولا سجلّ. صار الإصدار فعلاً يُسجَّل،
+   * والطباعةُ من صفحة الشهادات.
+   */
+  const issueCertificate = async (con: Contestant) => {
+    try {
+      setSubmitting(true);
+      setError('');
+      const r = await api.post<{ serial: string }>(
+        `/certificates/competition/${con.id}`);
+      setNotice(`صدرت شهادة ${con.student_name} برقم ${r.data.serial} — تُطبع من صفحة «الشهادات».`);
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر إصدار الشهادة'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const handleArchive = async () => {
     if (!selectedComp) return;
     try {
@@ -343,59 +363,6 @@ export default function Competitions() {
 
   return (
     <div className="space-y-6 animate-fade-in text-[hsl(var(--foreground))]">
-
-      {/* شهادة التقدير — تُطبع على ورق أبيض، فألوانها قيم ثابتة لا رموز النظام
-          (الرموز تنقلب في الوضع الليلي فتُطبع فاتحاً على أبيض). */}
-      {printCert && (
-        <div className="hidden print:block fixed inset-0 bg-white z-[9999] p-8 text-[#151A24]" dir="rtl">
-          <div className="border-[12px] border-double border-[#1B233C] p-8 h-[95vh] flex flex-col justify-between items-center text-center rounded-[var(--radius-lg)] relative">
-            <div className="absolute top-4 right-4 text-4xl text-[#B0801F]">❖</div>
-            <div className="absolute top-4 left-4 text-4xl text-[#B0801F]">❖</div>
-            <div className="absolute bottom-4 right-4 text-4xl text-[#B0801F]">❖</div>
-            <div className="absolute bottom-4 left-4 text-4xl text-[#B0801F]">❖</div>
-            <div>
-              <h4 className="text-xs font-semibold mb-6">المشكاة لإدارة دور ومراكز تحفيظ القرآن الكريم</h4>
-              <div className="w-20 h-20 mx-auto mb-4 border-2 border-[#1B233C] rounded-full flex items-center justify-center text-[#B0801F]">
-                <MishkaatMark className="w-11 h-11" title="المشكاة" />
-              </div>
-            </div>
-            <div className="space-y-6">
-              <h1 className="text-4xl font-extrabold text-[#1B233C] font-serif tracking-wide">شـهادة تـقدير وتـكريم</h1>
-              <p className="text-base font-medium max-w-xl mx-auto leading-relaxed">
-                يسرّ إدارة مركز تحفيظ القرآن الكريم أن تمنح هذه الشهادة للطالب:
-              </p>
-              <h2 className="text-3xl font-bold text-[#B0801F] underline decoration-double decoration-1 my-4">{printCert.student_name}</h2>
-              <p className="text-sm leading-loose max-w-lg mx-auto">
-                لحصوله على المركز <strong className="text-[#1B233C]">{printCert.rank_in_branch}</strong> في فرع
-                {' '}<strong className="text-[#1B233C]">«{printCert.category}»</strong> من
-                <br />
-                <strong>{selectedComp?.title}</strong>
-                <br />
-                بمجموع <strong className="text-[#1B233C]">{printCert.total_score} / 100</strong>
-                {printCert.judges_count > 0 && (
-                  <span className="text-xs"> (متوسّط درجات {printCert.judges_count} من المحكّمين)</span>
-                )}
-              </p>
-              <p className="text-xs text-[#5B6474] italic">«خيركم من تعلّم القرآن وعلّمه»</p>
-            </div>
-            <div className="w-full grid grid-cols-2 gap-20 px-12 pt-8 border-t border-[#D8DCE4]">
-              <div className="text-right">
-                <span className="text-xs block text-[#5B6474]">رئيس لجنة التحكيم</span>
-                <div className="h-10" />
-                <span className="text-sm font-bold">{selectedComp?.judges[0]?.teacher_name || '—'}</span>
-              </div>
-              <div className="text-left">
-                <span className="text-xs block text-[#5B6474]">مدير المركز</span>
-                <div className="h-10" />
-                <span className="text-sm font-semibold">{selectedComp?.approved_by || '—'}</span>
-              </div>
-            </div>
-            <div className="text-[10px] text-[#767E8C]">
-              حُرّر بتاريخ: {selectedComp?.date}
-            </div>
-          </div>
-        </div>
-      )}
 
       <div className="print:hidden space-y-6">
         <PageHeader
@@ -617,10 +584,13 @@ export default function Competitions() {
                                     ? 'تعديل درجتي' : 'رصد درجتي'}
                                 </button>
                               )}
-                              {graded && (
-                                <button onClick={() => { setPrintCert(con); setTimeout(() => window.print(), 250); }}
-                                  className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs flex items-center gap-1">
-                                  <Printer className="w-3.5 h-3.5" /> شهادة
+                              {graded && isManager && frozen && (
+                                <button onClick={() => issueCertificate(con)}
+                                  disabled={submitting}
+                                  className="px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100
+                                             text-blue-700 font-bold text-xs flex items-center gap-1
+                                             disabled:opacity-60">
+                                  <Award className="w-3.5 h-3.5" /> إصدار شهادة
                                 </button>
                               )}
                             </div>
