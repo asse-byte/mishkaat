@@ -54,7 +54,10 @@ const navItems: NavItem[] = [
   { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'], group: 'manage' },
   { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'], group: 'manage' },
   { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'], group: 'daily' },
-  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'], group: 'manage' },
+  // [قرار المالك 2026-09-06] صفحة الحلقات إدارةُ حلقات، وشيخُ الحلقة لا
+  // يُنشئ حلقةً ولا يُسنِد شيوخاً — فلا داعي لها عنده. وهو يعرف حلقته من
+  // كل شاشة يعمل فيها.
+  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager'], group: 'manage' },
   { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'], group: 'daily' },
   { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'], group: 'manage' },
@@ -63,7 +66,9 @@ const navItems: NavItem[] = [
   { title: 'لوحات الصدارة',href: '/leaderboards', icon: Medal,           roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
   { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
-  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },
+  // [قرار المالك 2026-09-06] المسابقات تظهر لشيخ الحلقة فقط إن كان عضواً في
+  // لجنة تحكيم مسابقة جارية — يُحسم ذلك في وقت التشغيل لا هنا (isJudge).
+  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','student'], group: 'manage' },
   { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
   { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },

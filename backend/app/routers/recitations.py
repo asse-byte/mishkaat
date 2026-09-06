@@ -148,13 +148,23 @@ async def create_recitation(recitation: RecitationCreate, current_user: dict = D
     # ومنذ 2026-09-06 تفرض هذه البوّابة أن يكون الطالب من حلقة هذا الشيخ نفسه.
     student = await check_student_access(recitation.student_id, current_user)
 
-    # [AUDIT-2026-05-22 fix: a teacher may only record recitations under their own teacher identity]
-    if current_user["role"] == "teacher":
-        teacher_row = await db.teachers.find_one({"user_id": str(current_user["_id"]), "is_active": True})
-        if not teacher_row or recitation.teacher_id != str(teacher_row["_id"]):
-            raise HTTPException(status_code=403, detail="لا يمكن تسجيل تسميع باسم معلم آخر")
+    # [إصلاح 2026-09-06] كان الشرط: أن يُطابق teacher_id المُرسَل سجلَّ المحفّظ.
+    # والواجهة ترسل معرّف **الحساب** (user.id) لا معرّف **سجلّ المحفّظ**، وهما
+    # مختلفان دائماً — فكان كل تسميع يُسجّله شيخٌ يُردّ بـ403 «لا يمكن تسجيل
+    # تسميع باسم معلم آخر». أي أن تسجيل التسميع لم يعمل لشيخٍ قطّ.
+    #
+    # والعلاج ليس تصحيح ما تُرسله الواجهة: هوية المُسجِّل تُؤخذ من توكنه لا
+    # ممّا يُرسله، فلا يبقى للعميل أن يُخطئ فيها ولا أن يتلاعب بها.
+    teacher_row = await db.teachers.find_one(
+        {"user_id": str(current_user["_id"]), "is_active": True})
+    if not teacher_row:
+        raise HTTPException(
+            status_code=403,
+            detail="حسابك غير مرتبط بسجلّ محفّظ — راجع مدير المركز")
 
     recitation_dict = recitation.model_dump()
+    recitation_dict["teacher_id"] = str(teacher_row["_id"])
+    recitation_dict["teacher_name"] = teacher_row.get("name") or recitation_dict.get("teacher_name")
     recitation_dict["date"] = utcnow()
     result = await db.recitations.insert_one(recitation_dict)
     recitation_id = str(result.inserted_id)

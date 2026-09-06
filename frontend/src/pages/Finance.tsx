@@ -13,6 +13,8 @@ import {
 import api from '@/services/api';
 import { studentsApi, teachersApi } from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatAmount } from '@/lib/format';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface Fee { id: string; student_id: string; student_name?: string; amount: number; due_date: string; fee_type: string; status: string; notes?: string; }
 interface Salary { id: string; teacher_id: string; teacher_name?: string; amount: number; month: string; center_id: string; notes?: string; created_at: string; }
@@ -91,7 +93,7 @@ export default function Finance() {
   // Dynamic currency format matching center setting
   const formatCurrency = useCallback((amount: number) => {
     const code = center?.currency || 'FCFA';
-    return new Intl.NumberFormat('fr-FR', { style: 'decimal' }).format(Math.round(amount)) + ' ' + code;
+    return formatAmount(Math.round(amount), code);
   }, [center]);
 
   const handlePayFee = async (id: string) => {
@@ -396,7 +398,9 @@ export default function Finance() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold block mb-1">المبلغ *</label>
-                    <input type="number" placeholder="0" dir="ltr" value={feeForm.amount} onChange={e => setFeeForm({...feeForm, amount: e.target.value})}
+                    <NumberInput value={feeForm.amount}
+                      onChange={v => setFeeForm({...feeForm, amount: v})}
+                      placeholder="0" min={0} suffix={center?.currency || "FCFA"}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
@@ -499,7 +503,9 @@ export default function Finance() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold block mb-1">المبلغ *</label>
-                    <input type="number" placeholder="0" dir="ltr" value={salaryForm.amount} onChange={e => setSalaryForm({...salaryForm, amount: e.target.value})}
+                    <NumberInput value={salaryForm.amount}
+                      onChange={v => setSalaryForm({...salaryForm, amount: v})}
+                      placeholder="0" min={0} suffix={center?.currency || "FCFA"}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>
@@ -582,7 +588,9 @@ export default function Finance() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold block mb-1">المبلغ *</label>
-                    <input type="number" placeholder="0" dir="ltr" value={expenseForm.amount} onChange={e => setExpenseForm({...expenseForm, amount: e.target.value})}
+                    <NumberInput value={expenseForm.amount}
+                      onChange={v => setExpenseForm({...expenseForm, amount: v})}
+                      placeholder="0" min={0} suffix={center?.currency || "FCFA"}
                       className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm" />
                   </div>
                   <div>

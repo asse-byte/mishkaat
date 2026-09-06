@@ -7,6 +7,7 @@ import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
 import EmptyState from '@/components/ui/EmptyState';
 import { useTranslation } from '@/lib/i18n';
+import { formatAmount } from '@/lib/format';
 
 interface ChildInfo {
   id: string;
@@ -35,7 +36,7 @@ interface RecentRec {
   student_name?: string;
 }
 
-const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+const FCFA = (n: number) => formatAmount(Math.round(n));
 
 const evalMap: Record<string, string> = {
   excellent: 'ممتاز', good: 'جيد', acceptable: 'مقبول', needs_improvement: 'يحتاج تحسين',

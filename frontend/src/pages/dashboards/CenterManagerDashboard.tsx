@@ -10,6 +10,7 @@ import api from '@/services/api';
 import type { Recitation, Attendance, Fee } from '@/types';
 import EmptyState from '@/components/ui/EmptyState';
 import { useTranslation } from '@/lib/i18n';
+import { formatAmount } from '@/lib/format';
 
 interface Stats {
   students: number;
@@ -29,7 +30,8 @@ interface HonorRollStudent {
   score: number;
 }
 
-const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+// [توحيد 2026-09-06] كان fr-FR يُخرج مسافة رفيعة لا فاصلة، فيختلف عن بقيّة الشاشات
+const FCFA = (n: number) => formatAmount(Math.round(n));
 
 const EVAL_LABEL: Record<string, string> = {
   excellent: 'ممتاز', good: 'جيد', acceptable: 'مقبول', needs_improvement: 'يحتاج تحسين',

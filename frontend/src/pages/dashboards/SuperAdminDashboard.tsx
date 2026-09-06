@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
 import StatCard from '@/components/ui/StatCard';
+import { formatAmount } from '@/lib/format';
 
 interface CenterData {
   id: string;
@@ -197,13 +198,13 @@ export default function SuperAdminDashboard() {
           />
           <StatCard
             title="إجمالي المصروفات والرواتب"
-            value={`${(stats.total_salaries_paid_fcfa + stats.total_expenses_fcfa).toLocaleString()} FCFA`}
+            value={formatAmount(stats.total_salaries_paid_fcfa + stats.total_expenses_fcfa)}
             icon={Landmark}
             gradientClass="stat-card-rose"
           />
           <StatCard
             title="صافي الرصيد الإجمالي العام"
-            value={`${stats.global_balance_fcfa.toLocaleString()} FCFA`}
+            value={formatAmount(stats.global_balance_fcfa)}
             icon={TrendingUp}
             gradientClass={stats.global_balance_fcfa >= 0 ? "stat-card-green" : "stat-card-rose"}
           />

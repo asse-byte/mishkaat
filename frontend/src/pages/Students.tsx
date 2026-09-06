@@ -66,6 +66,8 @@ export default function Students() {
   const [editMode, setEditMode]         = useState(false);
   const [editForm, setEditForm]         = useState<Partial<StudentData>>({});
   const [expandedId, setExpandedId]     = useState<string | null>(null);
+  // إنشاء الطالب وتعديلُه وحذفُه من عمل الإدارة، لا من عمل شيخ الحلقة
+  const canManageRoster = user?.role === 'center_manager' || user?.role === 'admin';
 
   const loadData = useCallback(async () => {
     try {
@@ -184,10 +186,15 @@ export default function Students() {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <button onClick={() => setShowAddForm(true)}
-          className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all">
-          <Plus className="w-5 h-5" /> تسجيل طالب جديد
-        </button>
+        {/* [إصلاح 2026-09-06] الخادم يحصر إنشاء الطالب في المدير منذ البداية،
+            والواجهة كانت تعرض الزرّ للشيخ أيضاً — فيملأ النموذج كلَّه ثم يُردّ
+            بـ403. تسجيلُ الطالب من عمل الإدارة (قرار المالك). */}
+        {canManageRoster && (
+          <button onClick={() => setShowAddForm(true)}
+            className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all">
+            <Plus className="w-5 h-5" /> تسجيل طالب جديد
+          </button>
+        )}
         <div className="relative flex-1">
           <Search className="absolute right-4 top-3.5 h-5 w-5 text-[hsl(var(--muted-foreground))]" />
           <input
@@ -379,10 +386,12 @@ export default function Students() {
                     className="p-2 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:opacity-80 transition-all">
                     <LineChart className="w-4 h-4" />
                   </Link>
-                  <button onClick={() => handleDelete(student.id)} title="حذف الطالب"
-                    className="p-2 rounded-xl bg-red-50 text-red-500 hover:opacity-80 transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManageRoster && (
+                    <button onClick={() => handleDelete(student.id)} title="حذف الطالب"
+                      className="p-2 rounded-xl bg-red-50 text-red-500 hover:opacity-80 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => setExpandedId(expandedId === student.id ? null : student.id)} title="توسيع/طي"
                     className="p-2 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:opacity-80 transition-all">
                     {expandedId === student.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -447,6 +456,7 @@ export default function Students() {
                 <button onClick={() => setSelectedStudent(null)} className="text-[hsl(var(--ink-3))] hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
               </div>
               <div className="flex gap-2 mt-4">
+                {canManageRoster && (<>
                 <button onClick={() => setEditMode(!editMode)} title="تبديل وضع التعديل"
                   className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <Edit className="w-4 h-4" /> {editMode ? 'إلغاء' : 'تعديل'}
@@ -455,6 +465,7 @@ export default function Students() {
                   className="px-4 py-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white text-sm font-bold">
                   <Trash2 className="w-4 h-4" />
                 </button>
+                </>)}
               </div>
             </div>
 

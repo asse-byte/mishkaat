@@ -9,6 +9,7 @@ import {
 import { teachersApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface TeacherData {
   id: string;
@@ -250,8 +251,9 @@ export default function Teachers() {
                 </div>
                 <div>
                   <label className="text-sm font-semibold block mb-1">الراتب (FCFA)</label>
-                  <input type="number" placeholder="0" dir="ltr" value={formData.salary}
-                    onChange={e => setFormData({ ...formData, salary: e.target.value })}
+                  <NumberInput value={formData.salary}
+                    onChange={v => setFormData({ ...formData, salary: v })}
+                    placeholder="0" min={0} suffix="FCFA"
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
               </div>
