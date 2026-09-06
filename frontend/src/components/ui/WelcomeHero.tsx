@@ -13,12 +13,11 @@ interface WelcomeHeroProps {
 }
 
 export default function WelcomeHero({ name, roleTitle, subtext, stats }: WelcomeHeroProps) {
-  const { t, locale, isRTL } = useTranslation();
+  const { t } = useTranslation();
 
-  const formattedDate = new Date().toLocaleDateString(
-    locale === 'ar' ? 'ar-SA' : locale === 'fr' ? 'fr-FR' : 'en-US',
-    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  );
+  const formattedDate = new Date().toLocaleDateString('ar-SA', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   return (
     <div className="relative overflow-hidden bg-[hsl(var(--sidebar))] text-white rounded-[var(--radius-lg)] p-6 md:p-8 shadow-lg border border-white/5 transition-all mb-6">

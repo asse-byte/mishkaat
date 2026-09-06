@@ -1,6 +1,17 @@
-import { useState, useEffect } from 'react';
-
-type Locale = 'ar' | 'en' | 'fr';
+/**
+ * نصوصٌ مشتركة — بالعربية وحدها.
+ *
+ * [قرار المالك 2026-09-06] «النظام يكون باللغة العربية فقط، وليس لديّ النيّة
+ * إطلاقاً إضافةُ لغةٍ أخرى.»
+ *
+ * وكان هنا ثلاثة قواميس (ar / en / fr) تُختار بـ localStorage.language، وفي
+ * الإعدادات مُنتقي لغةٍ يَعِد بـ«English (قريباً)». فلم يكن هذا اختياراً
+ * معطَّلاً بل قنبلةً موقوتة: قيمةٌ واحدة في التخزين المحلّي تقلب نصفَ لوحات
+ * التحكّم إلى الإنجليزية وتقلب اتجاه الصفحة معها، بلا زرٍّ يُعيدها.
+ *
+ * فبقي `t()` كما هو حتى لا تتغيّر الشاشات التي تستدعيه، وذهب ما سواه.
+ */
+import { useMemo } from 'react';
 
 const translations = {
   ar: {
@@ -32,107 +43,12 @@ const translations = {
     role_student: 'طالب',
     role_parent: 'ولي أمر',
   },
-  en: {
-    welcome_greeting: 'Welcome back,',
-    welcome_subtext: 'We pray for your success and guidance in your Quranic journey today.',
-    term_students: 'Students',
-    term_teachers: 'Teachers',
-    term_halaqat: 'Halaqat (Circles)',
-    term_attendance: 'Attendance',
-    term_recitations: 'Recitations',
-    finance_fees: 'Finance & Fees',
-    action_add: 'Add New',
-    empty_no_students: 'No students registered at the moment.',
-    empty_no_recitations: 'No recitations recorded today.',
-    empty_no_halaqat: 'No active halaqat at the moment.',
-    empty_general: 'No data available to display.',
-    status_present: 'Present',
-    status_absent: 'Absent',
-    status_excused: 'Excused',
-    rate_attendance: 'Attendance Rate',
-    recitations_today: "Today's Recitations",
-    top_students: 'Top Performing Students',
-    recent_activity: 'Recent Activity',
-    stats_overview: 'Statistics Overview',
-    role_admin: 'System Admin',
-    role_super_admin: 'Super Admin',
-    role_center_manager: 'Center Manager',
-    role_teacher: 'Teacher',
-    role_student: 'Student',
-    role_parent: 'Parent',
-  },
-  fr: {
-    welcome_greeting: 'Bienvenue,',
-    welcome_subtext: 'Que Dieu vous accorde le succès et la guidée dans votre parcours coranique aujourd\'hui.',
-    term_students: 'Élèves',
-    term_teachers: 'Enseignants',
-    term_halaqat: 'Cercles (Halaqat)',
-    term_attendance: 'Présence',
-    term_recitations: 'Récitations',
-    finance_fees: 'Finance & Frais',
-    action_add: 'Ajouter',
-    empty_no_students: 'Aucun élève inscrit pour le moment.',
-    empty_no_recitations: 'Aucune récitation enregistrée aujourd\'hui.',
-    empty_no_halaqat: 'Aucun cercle actif pour le moment.',
-    empty_general: 'Aucune donnée disponible à afficher.',
-    status_present: 'Présent',
-    status_absent: 'Absent',
-    status_excused: 'Excusé',
-    rate_attendance: 'Taux de Présence',
-    recitations_today: "Récitations d'aujourd'hui",
-    top_students: 'Élèves les plus performants',
-    recent_activity: 'Activité Récente',
-    stats_overview: 'Aperçu des Statistiques',
-    role_admin: 'Administrateur',
-    role_super_admin: 'Super Administrateur',
-    role_center_manager: 'Directeur de Centre',
-    role_teacher: 'Enseignant',
-    role_student: 'Élève',
-    role_parent: 'Parent',
-  }
 };
 
+type Key = keyof typeof translations['ar'];
+
 export function useTranslation() {
-  const [locale, setLocale] = useState<Locale>(() => {
-    return (localStorage.getItem('language') as Locale) || 'ar';
-  });
-
-  useEffect(() => {
-    const handleStorageChange = () => {
-      const currentLanguage = (localStorage.getItem('language') as Locale) || 'ar';
-      if (currentLanguage !== locale) {
-        setLocale(currentLanguage);
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    // Custom event to handle direct local updates
-    window.addEventListener('languagechange', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('languagechange', handleStorageChange);
-    };
-  }, [locale]);
-
-  const changeLanguage = (newLocale: Locale) => {
-    localStorage.setItem('language', newLocale);
-    setLocale(newLocale);
-    // Dispatch a custom event to notify other hook instances
-    window.dispatchEvent(new Event('languagechange'));
-  };
-
-  const t = (key: keyof typeof translations['ar']) => {
-    const dict = translations[locale] || translations['ar'];
-    return dict[key] || translations['ar'][key] || String(key);
-  };
-
-  const isRTL = locale === 'ar';
-
-  return {
-    t,
-    locale,
-    changeLanguage,
-    isRTL,
-  };
+  const t = useMemo(() => (key: Key) => translations.ar[key] || String(key), []);
+  // يبقيان في الواجهة لأن الشاشات تقرؤهما، وقيمتُهما ثابتة
+  return { t, locale: 'ar' as const, isRTL: true };
 }

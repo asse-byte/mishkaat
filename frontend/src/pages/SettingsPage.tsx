@@ -6,7 +6,6 @@ export default function SettingsPage() {
   const [isSaved, setIsSaved] = useState(false);
 
   const [settings, setSettings] = useState({
-    language: 'ar',
     theme: 'light',
     emailNotifications: true,
     smsNotifications: false,
@@ -79,18 +78,9 @@ export default function SettingsPage() {
               <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">إعدادات عامة</h2>
               
               <div className="space-y-5">
-                <div>
-                  <label className="block text-sm font-semibold mb-2">لغة النظام</label>
-                  <select 
-                    className="form-input w-full md:w-1/2"
-                    value={settings.language}
-                    onChange={e => setSettings({...settings, language: e.target.value})}
-                  >
-                    <option value="ar">العربية</option>
-                    <option value="en">English (قريباً)</option>
-                  </select>
-                </div>
-
+                {/* [قرار المالك 2026-09-06] النظام بالعربية وحدها، ولا نيّة
+                    لإضافة لغةٍ أخرى. وكان هنا مُنتقٍ يَعِد بـ«English (قريباً)»
+                    — وعدٌ لا يُوفى، ومفتاحٌ يقلب نصفَ الشاشات لو ضُبط. */}
                 <div>
                   <label className="block text-sm font-semibold mb-2">المظهر</label>
                   <div className="flex gap-4">
