@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   GraduationCap, Plus, Search, Phone, BookOpen, Edit, Trash2,
   X, CheckCircle2, Users, AlertCircle, Heart, Clock,
-  ArrowLeftRight, ChevronRight, Save, Eye,
+  ArrowLeftRight, ChevronRight, Save, Eye, Star, Briefcase,
 } from 'lucide-react';
+import TeacherEvaluationModal from '@/components/teachers/TeacherEvaluationModal';
 import { teachersApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
@@ -16,6 +17,8 @@ interface TeacherData {
   name: string;
   phone?: string;
   specialization?: string;
+  teacher_type?: 'halaqah' | 'external';
+  job_title?: string;
   marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
   work_schedule?: 'full_time' | 'part_time';
   salary?: number;
@@ -38,6 +41,8 @@ const specializationOptions = ['حفص عن عاصم', 'ورش عن نافع', '
 
 const emptyForm = {
   name: '', phone: '', specialization: '',
+  teacher_type: 'halaqah' as 'halaqah' | 'external',
+  job_title: '',
   marital_status: '' as any,
   work_schedule: '' as any,
   salary: '',
@@ -58,6 +63,7 @@ export default function Teachers() {
   const [editMode, setEditMode]         = useState(false);
   const [editForm, setEditForm]         = useState<Partial<Omit<TeacherData, 'salary'> & { salary: string }>>({});
   const [showTransfer, setShowTransfer] = useState(false);
+  const [evaluating, setEvaluating] = useState<TeacherData | null>(null);
   const [transferData, setTransferData] = useState({ from_halaqah_id: '', to_halaqah_id: '' });
 
   const loadData = useCallback(async () => {
@@ -80,6 +86,8 @@ export default function Teachers() {
         name: formData.name,
         phone: formData.phone || undefined,
         specialization: formData.specialization || undefined,
+        teacher_type: formData.teacher_type,
+        job_title: formData.job_title || undefined,
         marital_status: formData.marital_status || undefined,
         work_schedule: formData.work_schedule || undefined,
         salary: formData.salary ? Number(formData.salary) : undefined,
@@ -112,6 +120,8 @@ export default function Teachers() {
         name: editForm.name,
         phone: editForm.phone,
         specialization: editForm.specialization,
+        teacher_type: editForm.teacher_type,
+        job_title: editForm.job_title,
         marital_status: editForm.marital_status,
         work_schedule: editForm.work_schedule,
         salary: editForm.salary ? Number(editForm.salary) : undefined,
@@ -153,6 +163,8 @@ export default function Teachers() {
       name: teacher.name,
       phone: teacher.phone || '',
       specialization: teacher.specialization || '',
+      teacher_type: teacher.teacher_type || 'halaqah',
+      job_title: teacher.job_title || '',
       marital_status: teacher.marital_status,
       work_schedule: teacher.work_schedule,
       salary: teacher.salary?.toString() || '',
@@ -218,6 +230,25 @@ export default function Teachers() {
                     onChange={e => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
+                <div>
+                  {/* [قرار المالك 2026-09-06] في المركز معلّمون ليسوا شيوخ حلقات.
+                      و«خارج الحلقات» نطاقٌ أضيق لا أوسع: لا حلقة له فلا طلاب في نطاقه. */}
+                  <label className="text-sm font-semibold block mb-1">نوع المعلّم</label>
+                  <select value={formData.teacher_type} title="نوع المعلّم"
+                    onChange={e => setFormData({ ...formData, teacher_type: e.target.value as 'halaqah' | 'external' })}
+                    className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]">
+                    <option value="halaqah">شيخ حلقة</option>
+                    <option value="external">معلّم خارج الحلقات</option>
+                  </select>
+                </div>
+                {formData.teacher_type === 'external' && (
+                  <div>
+                    <label className="text-sm font-semibold block mb-1">المهمّة</label>
+                    <input placeholder="معلّم لغة عربية، مشرف تجويد…" value={formData.job_title}
+                      onChange={e => setFormData({ ...formData, job_title: e.target.value })}
+                      className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
+                  </div>
+                )}
                 <div>
                   <label className="text-sm font-semibold block mb-1">التخصص</label>
                   <select value={formData.specialization}
@@ -295,6 +326,15 @@ export default function Teachers() {
         </div>
       )}
 
+      {evaluating && (
+        <TeacherEvaluationModal
+          teacherId={evaluating.id}
+          teacherName={evaluating.name}
+          canEvaluate={user?.role === 'center_manager' || user?.role === 'admin'}
+          onClose={() => setEvaluating(null)}
+        />
+      )}
+
       {/* Teachers Grid */}
       {filtered.length === 0 ? (
         <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
@@ -318,12 +358,23 @@ export default function Teachers() {
                       {teacher.specialization && (
                         <p className="eyebrow">{teacher.specialization}</p>
                       )}
+                      {teacher.teacher_type === 'external' && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold
+                                         bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+                          <Briefcase className="w-3 h-3" />
+                          {teacher.job_title || 'معلّم خارج الحلقات'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => { setSelectedTeacher(teacher); setEditMode(false); setShowTransfer(false); }} title="عرض التفاصيل"
                       className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
                       <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setEvaluating(teacher)} title="تقييم الأداء"
+                      className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--gold))] hover:bg-[hsl(var(--surface-2))] transition-colors">
+                      <Star className="w-4 h-4" />
                     </button>
                     <button onClick={() => openEdit(teacher)} title="تعديل"
                       className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
@@ -431,6 +482,15 @@ export default function Teachers() {
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-semibold block mb-1">نوع المعلّم</label>
+                      <select value={editForm.teacher_type || 'halaqah'} title="نوع المعلّم"
+                        onChange={e => setEditForm({ ...editForm, teacher_type: e.target.value as 'halaqah' | 'external' })}
+                        className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
+                        <option value="halaqah">شيخ حلقة</option>
+                        <option value="external">معلّم خارج الحلقات</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="text-sm font-semibold block mb-1">التخصص</label>
                       <select value={editForm.specialization || ''} title="التخصص"

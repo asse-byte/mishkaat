@@ -24,6 +24,7 @@ import {
   Trophy, Plus, User, Star, Award, Lock, Archive,
   CheckCircle2, Printer, Gavel, ShieldCheck, Calendar,
 } from 'lucide-react';
+import { errorMessage } from '@/lib/errors';
 import api, { studentsApi, teachersApi } from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
 import MishkaatMark from '@/components/ui/MishkaatMark';
@@ -109,6 +110,8 @@ export default function Competitions() {
   const [showAddComp, setShowAddComp] = useState(false);
   const [showRegContestant, setShowRegContestant] = useState(false);
   const [showGradeModal, setShowGradeModal] = useState<Contestant | null>(null);
+  /** تعديل اللجنة بعد الإنشاء: يُضاف محكّم ويُرفع آخر ما لم تُعتمد النتائج */
+  const [editJudges, setEditJudges] = useState<string[] | null>(null);
   const [printCert, setPrintCert] = useState<Contestant | null>(null);
 
   const [compForm, setCompForm] = useState<{
@@ -168,9 +171,9 @@ export default function Competitions() {
     try {
       const resp = await api.get<{ branches: BranchBlock[] }>(`/competitions/${compId}/contestants`);
       setBlocks(resp.data.branches || []);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setBlocks([]);
-      setError(err.response?.data?.detail || 'تعذّر تحميل نتائج المسابقة.');
+      setError(errorMessage(err, 'تعذّر تحميل نتائج المسابقة.'));
     }
   }, []);
 
@@ -208,8 +211,27 @@ export default function Competitions() {
       setShowAddComp(false);
       setCompForm({ title: '', date: '', branches: branchOptions, judges: [] });
       setNotice('أُنشئت المسابقة وعُيّنت لجنتها.');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'تعذّر حفظ المسابقة');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر حفظ المسابقة'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const saveJudges = async () => {
+    if (!selectedComp || !editJudges) return;
+    try {
+      setSubmitting(true);
+      setError('');
+      const resp = await api.put<Competition>(`/competitions/${selectedComp.id}`, {
+        judges: editJudges.map(id => ({ teacher_id: id })),
+      });
+      setSelectedComp(resp.data);
+      setCompetitions(prev => prev.map(c => (c.id === resp.data.id ? resp.data : c)));
+      setEditJudges(null);
+      setNotice('حُدّثت لجنة التحكيم.');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر تحديث اللجنة'));
     } finally {
       setSubmitting(false);
     }
@@ -232,8 +254,8 @@ export default function Competitions() {
       await loadCompetitions(yearFilter);
       await loadContestants(selectedComp.id);
       setSelectedComp(c => (c ? { ...c, status: 'approved' } : c));
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'تعذّر اعتماد النتائج');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر اعتماد النتائج'));
     } finally {
       setSubmitting(false);
     }
@@ -247,8 +269,8 @@ export default function Competitions() {
       setNotice('نُقلت المسابقة إلى الأرشيف.');
       setSelectedComp(c => (c ? { ...c, status: 'archived' } : c));
       await loadCompetitions(yearFilter);
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'تعذّرت الأرشفة');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّرت الأرشفة'));
     } finally {
       setSubmitting(false);
     }
@@ -266,8 +288,8 @@ export default function Competitions() {
       await loadContestants(selectedComp.id);
       setShowRegContestant(false);
       setRegForm({ student_id: '', category: '' });
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'تعذّر تسجيل المتسابق');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر تسجيل المتسابق'));
     } finally {
       setSubmitting(false);
     }
@@ -296,8 +318,8 @@ export default function Competitions() {
       setShowGradeModal(null);
       setGradeForm({ hifdh_score: '', tajweed_score: '', voice_score: '' });
       setNotice('رُصدت درجتُك. الدرجة النهائية متوسّط درجات اللجنة.');
-    } catch (err: any) {
-      setError(err.response?.data?.detail || 'تعذّر رصد الدرجة');
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر رصد الدرجة'));
     } finally {
       setSubmitting(false);
     }
@@ -469,12 +491,50 @@ export default function Competitions() {
                 {j.teacher_name || j.teacher_id}
               </span>
             ))}
+            {isManager && !frozen && (
+              <button
+                onClick={() => setEditJudges(selectedComp.judges.map(j => j.teacher_id))}
+                className="text-xs font-bold px-3 py-1.5 rounded-full border-2 border-[hsl(var(--border))]
+                           hover:border-[hsl(var(--primary))] transition-colors">
+                تعديل اللجنة
+              </button>
+            )}
             {frozen && (
               <span className="text-xs font-bold text-slate-600 flex items-center gap-1.5 w-full sm:w-auto">
                 <Lock className="w-3.5 h-3.5" />
                 النتائج معتمَدة ومجمَّدة — لا تُعدَّل
                 {selectedComp.approved_by ? ` (اعتمدها ${selectedComp.approved_by})` : ''}
               </span>
+            )}
+
+            {editJudges && (
+              <div className="w-full border-t border-[hsl(var(--border))] pt-3 mt-1">
+                <div className="space-y-1.5 max-h-44 overflow-y-auto">
+                  {teachers.map(t => (
+                    <label key={t.id} className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+                      <input type="checkbox" className="w-4 h-4"
+                        checked={editJudges.includes(t.id)}
+                        onChange={e => setEditJudges(list => (
+                          e.target.checked
+                            ? [...(list || []), t.id]
+                            : (list || []).filter(x => x !== t.id)
+                        ))} />
+                      {t.name}
+                    </label>
+                  ))}
+                </div>
+                <div className="flex gap-2 mt-3">
+                  <button onClick={saveJudges} disabled={submitting}
+                    className="gradient-primary text-white font-bold px-5 py-2.5 rounded-xl text-xs">
+                    {submitting ? 'جارٍ الحفظ...' : 'حفظ اللجنة'}
+                  </button>
+                  <button onClick={() => setEditJudges(null)}
+                    className="px-4 py-2.5 border rounded-xl text-xs font-semibold">إلغاء</button>
+                </div>
+                <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-2">
+                  رفعُ محكّمٍ من اللجنة يُخفي المسابقة عنه، وتبقى درجتُه المرصودة في الحساب.
+                </p>
+              </div>
             )}
           </div>
         )}

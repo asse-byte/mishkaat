@@ -40,6 +40,19 @@ async def _load_history(student_ids: List[str]):
     return recs, atts
 
 
+def _attendance_pct(records: List[dict]) -> Optional[float]:
+    """نسبة الحضور مئويةً، و None لمن لا سجلَّ حضورٍ له.
+
+    `metrics.attendance_rate` كسرٌ بين صفر وواحد وسمةٌ للتنبؤ، ويُعيد 1.0 لمن
+    لا سجلَّ له. وعرضُه كما هو يكتب «0.9%» بدل «90%»، ويُعطي طالباً لم يُرصد
+    له حضورٌ قطُّ حضوراً كاملاً فيرفع متوسّط حلقته. فيُحوَّل هنا، ويُقال «لا
+    خبر» حيث لا خبر.
+    """
+    if not records:
+        return None
+    return round(100.0 * attendance_rate(records), 1)
+
+
 def _avg(values: List[Optional[float]]) -> Optional[float]:
     """متوسّطٌ يتجاهل «لا بيانات».
 
@@ -97,7 +110,7 @@ async def halaqat_overview(current_user: dict = Depends(get_current_user)):
             "momentum": _avg([m.get("momentum") for m in metrics]),
             "consistency": _avg([m.get("consistency") for m in metrics]),
             "attendance_rate": _avg([
-                attendance_rate(atts.get(str(s["_id"]), [])) for s in members]),
+                _attendance_pct(atts.get(str(s["_id"]), [])) for s in members]),
         })
 
     rows.sort(key=lambda r: (r["mastery"] is None, -(r["mastery"] or 0)))
@@ -143,7 +156,7 @@ async def halaqah_detail(halaqah_id: str, current_user: dict = Depends(get_curre
             "level": s.get("level"),
             "memorized_pages": s.get("memorized_pages"),
             "recitations_count": len(recs.get(sid, [])),
-            "attendance_rate": round(attendance_rate(atts.get(sid, [])), 1),
+            "attendance_rate": _attendance_pct(atts.get(sid, [])),
             **{k: m.get(k) for k in
                ("mastery", "momentum", "precision", "consistency", "review_depth")},
         })

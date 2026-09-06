@@ -161,9 +161,12 @@ async def my_competition_role(current_user: dict = Depends(get_current_user)):
     tid = await _judge_teacher_id(current_user)
     if not tid:
         return {"can_see": False, "is_judge": False, "teacher_id": None, "judging": []}
+    # «ما لم تُجمَّد» لا «active أو grading»: المسابقات المُنشأة قبل هذا البناء
+    # لا تحمل حقل status أصلاً، و $in لا يطابق حقلاً غائباً — فكان المحكّم في
+    # مسابقةٍ قديمة لا يرى بندَه ولا يعرف لماذا.
     rows = await db.competitions.find({
         "center_id": current_user.get("center_id"),
-        "status": {"$in": ["active", "grading"]},
+        "status": {"$nin": list(FROZEN)},
         "judges.teacher_id": tid,
     }).to_list(50)
     judging = [{"id": str(r["_id"]), "title": r.get("title")} for r in rows]
@@ -274,6 +277,10 @@ async def update_competition(comp_id: str, patch: CompetitionUpdate,
             t = await db.teachers.find_one({"_id": safe_object_id(j["teacher_id"])})
             if not t:
                 raise HTTPException(status_code=400, detail="محكّم غير موجود")
+            # كفحص الإنشاء: لا يُعيَّن محكّمٌ من مركزٍ آخر
+            if (current_user["role"] not in ("admin", "super_admin")
+                    and t.get("center_id") != current_user.get("center_id")):
+                raise HTTPException(status_code=400, detail="محكّم لا ينتمي لمركزك")
             judges.append({"teacher_id": str(t["_id"]), "teacher_name": t.get("name")})
         changes["judges"] = judges
     if not changes:
@@ -392,9 +399,28 @@ async def get_contestants(comp_id: str, branch: Optional[str] = None,
 
     rows = await db.competition_contestants.find(query).to_list(1000)
 
+    # متسابقون سُجّلوا قبل هذا البناء لا يحملون اسم الطالب ولا حلقته، فيظهر
+    # صفٌّ بلا اسم. يُقرأ الاسم من سجلّ الطالب عند العرض — ولا يُكتب على السجلّ
+    # القديم: قراءةٌ لا هجرةَ بيانات.
+    missing = [r["student_id"] for r in rows
+               if r.get("student_id") and not r.get("student_name")]
+    lookup: dict = {}
+    if missing:
+        async for st in db.students.find(
+                {"_id": {"$in": [safe_object_id(m) for m in missing]}}):
+            lookup[str(st["_id"])] = st
+
     grouped: dict = {}
     for r in rows:
-        grouped.setdefault(r.get("category") or "غير محدَّد", []).append(serialize_doc(r))
+        doc = serialize_doc(r)
+        doc.setdefault("judge_scores", [])
+        doc["judges_count"] = doc.get("judges_count") or len(doc["judge_scores"])
+        doc["total_score"] = doc.get("total_score") or 0.0
+        st = lookup.get(doc.get("student_id"))
+        if st:
+            doc["student_name"] = doc.get("student_name") or st.get("name")
+            doc["halaqah_name"] = doc.get("halaqah_name") or st.get("halaqah_name")
+        grouped.setdefault(doc.get("category") or "غير محدَّد", []).append(doc)
 
     out = []
     for b in _branches_of(comp):

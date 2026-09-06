@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Users, Plus, Search, Phone, Calendar, BookOpen, Edit, Trash2,
   X, CheckCircle2, TrendingUp, Clock, RefreshCw,
-  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart, Gauge
+  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart, Gauge, KeyRound
 } from 'lucide-react';
+import StudentAccountsModal from '@/components/students/StudentAccountsModal';
 import { Link } from 'react-router-dom';
 import { studentsApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
@@ -68,6 +69,8 @@ export default function Students() {
   const [expandedId, setExpandedId]     = useState<string | null>(null);
   // إنشاء الطالب وتعديلُه وحذفُه من عمل الإدارة، لا من عمل شيخ الحلقة
   const canManageRoster = user?.role === 'center_manager' || user?.role === 'admin';
+  /** إصدار حسابَي الطالب ووليّه — بعد التسجيل، وبيد المدير وحده */
+  const [accountsFor, setAccountsFor] = useState<{ id: string; name: string } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -461,6 +464,12 @@ export default function Students() {
                   className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <Edit className="w-4 h-4" /> {editMode ? 'إلغاء' : 'تعديل'}
                 </button>
+                <button
+                  onClick={() => setAccountsFor({ id: selectedStudent.id, name: selectedStudent.name })}
+                  title="حسابات الطالب ووليّ أمره"
+                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
+                  <KeyRound className="w-4 h-4" /> الحسابات
+                </button>
                 <button onClick={() => handleDelete(selectedStudent.id)} title="حذف الطالب"
                   className="px-4 py-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white text-sm font-bold">
                   <Trash2 className="w-4 h-4" />
@@ -542,6 +551,14 @@ export default function Students() {
             </div>
           </div>
         </div>
+      )}
+
+      {accountsFor && (
+        <StudentAccountsModal
+          studentId={accountsFor.id}
+          studentName={accountsFor.name}
+          onClose={() => setAccountsFor(null)}
+        />
       )}
     </div>
   );

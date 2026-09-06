@@ -83,6 +83,8 @@ async def get_teachers(
         mine = halaqat_by_teacher.get(doc["id"], [])
         doc["halaqat"] = [h["name"] for h in mine]
         doc["students_count"] = sum(students_per_halaqah.get(str(h["_id"]), 0) for h in mine)
+        # المحفّظون المسجَّلون قبل حقل النوع لا يحملونه — والافتراض شيخُ حلقة
+        doc["teacher_type"] = doc.get("teacher_type") or "halaqah"
         doc["hire_date"] = doc.get("hire_date", utcnow())
         if isinstance(doc["hire_date"], datetime):
             doc["hire_date"] = doc["hire_date"].isoformat()
