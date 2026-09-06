@@ -75,6 +75,7 @@ async def own_student_ids(current_user: dict) -> List[str]:
         if phone:
             ors.append({"phone": phone})
     elif role == "parent":
+        ors.append({"parent_user_id": uid})
         if phone:
             ors += [{"parent_phone": phone}, {"phone": phone}]
     if not ors:

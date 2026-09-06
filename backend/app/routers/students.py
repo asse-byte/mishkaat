@@ -14,7 +14,7 @@ from app.common import check_student_access, safe_object_id, serialize_doc
 from app.db import db
 from app.models import StudentCreate, StudentUpdate
 from app.pii import decrypt_student_doc, encrypt_student_doc
-from app.scope import teacher_halaqah_ids
+from app.scope import student_query, teacher_halaqah_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -36,39 +36,17 @@ async def get_students(
     if role not in ["admin", "center_manager", "teacher", "super_admin", "parent", "student"]:
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول")
 
-    query: dict = {"is_active": True}
+    # [إصلاح 2026-09-06] النطاق من scope.student_query لا من نسخةٍ محلّية.
+    # كانت هذه الدالة تعيد بناء قواعد كل دور بنفسها، فتباعدت عن المصدر: وليّ
+    # الأمر كان يُطابَق برقم هاتفه وحده، فحسابٌ أصدره المدير ورُبط بالمعرّف
+    # (parent_user_id) بلا هاتفٍ مسجَّل يرى قائمةً فارغة ولا يفهم لماذا.
+    base: dict = {"is_active": True}
+    if role in ["super_admin", "admin"] and center_id:
+        base["center_id"] = center_id
 
-    # SaaS Multi-tenant & Role Isolation
-    if role in ["super_admin", "admin"]:
-        if center_id:
-            query["center_id"] = center_id
-    elif role == "parent":
-        # [AUDIT-2026-09-03 fix: كانت المطابقة تشمل parent_name، وهو حقل مُشفَّر في قاعدة البيانات
-        #  منذ تشفير بيانات PII — فلا يطابق النص الصريح أبداً، ووليّ أمر بلا رقم هاتف مسجَّل كان
-        #  يرى قائمة فارغة دائماً بلا سبب ظاهر. المطابقة الآن برقم هاتف وليّ الأمر فقط،
-        #  وهو حقل غير مشفَّر ولم يعد قابلاً للتعديل الذاتي (انظر PUT /api/auth/profile).]
-        parent_phone = current_user.get("phone")
-        if not parent_phone:
-            return []
-        query["parent_phone"] = parent_phone
-    elif role == "student":
-        # [AUDIT-2026-09-03 fix: كانت المطابقة بالاسم، والاسم يعدّله الطالب بنفسه]
-        conditions = [{"user_id": str(current_user["_id"])}]
-        if current_user.get("phone"):
-            conditions.append({"phone": current_user["phone"]})
-        query["$or"] = conditions
-    elif role == "teacher":
-        # [إصلاح 2026-09-06] كان المحفّظ يقع في فرع "else" فيرى طلاب المركز
-        # كلَّه. صار محصوراً في حلقاته هو.
-        hids = await teacher_halaqah_ids(current_user)
-        if not current_user.get("center_id") or not hids:
-            return []
-        query["center_id"] = current_user["center_id"]
-        query["halaqah_id"] = {"$in": hids}
-    else:
-        if not current_user.get("center_id"):
-            return []
-        query["center_id"] = current_user["center_id"]
+    query = await student_query(current_user, base)
+    if query is None:
+        return []
 
     if halaqah_id:
         # المحفّظ لا يوسّع نطاقه بتمرير حلقة غيره في المعامل

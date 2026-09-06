@@ -207,15 +207,21 @@ async def main():
         check("  يُسجّل حضور طالبه", r.status_code == 200, str(r.status_code))
 
         print("--- والأسطح الأخرى: الجدول، والمسابقة، والتقارير، والمالية ---")
-        for label, path in [
-            ("الجدول الدراسي", "/api/academic-schedules"),
-            ("متسابقو المسابقة", f"/api/competitions/{ids['comp']}/contestants"),
-        ]:
-            r = await c.get(path, headers=TA)
-            body = blob(r.json())
-            leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
-            check(f"  {label} بلا أثر من (ب)", r.status_code == 200 and not leaked,
-                  f"{r.status_code} {leaked}")
+        r = await c.get("/api/academic-schedules", headers=TA)
+        body = blob(r.json())
+        leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
+        check("  الجدول الدراسي بلا أثر من (ب)", r.status_code == 200 and not leaked,
+              f"{r.status_code} {leaked}")
+        # [2026-09-06] المسابقة لا تُفتح لشيخٍ ليس في لجنتها أصلاً. والقاعدة
+        # أشدّ من «يراها بلا تسريب»: لا يراها.
+        r = await c.get(f"/api/competitions/{ids['comp']}/contestants", headers=TA)
+        check("  متسابقو مسابقةٍ ليس محكّماً فيها → 403", r.status_code == 403,
+              str(r.status_code))
+        r = await c.get("/api/competitions", headers=TA)
+        check("  قائمة المسابقات فارغة لغير المحكّم", r.json() == [], str(r.json()))
+        r = await c.get("/api/competitions/my-role", headers=TA)
+        check("  my-role: لا يظهر له بند المسابقات",
+              r.json().get("can_see") is False, str(r.json()))
         for label, path in [
             ("تصدير الطلاب", "/api/export/students.csv"),
             ("تصدير الحضور", "/api/export/attendance.csv"),
@@ -247,7 +253,8 @@ async def main():
         r = await c.get("/api/academic-schedules", headers=MG)
         check("  يرى جدول الحلقتين", len(r.json()) == 2, str(len(r.json())))
         r = await c.get(f"/api/competitions/{ids['comp']}/contestants", headers=MG)
-        check("  يرى متسابقي الحلقتين", len(r.json()) == 2, str(len(r.json())))
+        seen = sum(b["count"] for b in r.json()["branches"])
+        check("  يرى متسابقي الحلقتين", seen == 2, str(seen))
         for label, path in [("الملخّص المالي", "/api/finance/summary"),
                             ("تصدير الطلاب", "/api/export/students.csv")]:
             r = await c.get(path, headers=MG)

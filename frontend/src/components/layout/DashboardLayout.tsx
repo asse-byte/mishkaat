@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import api from '@/services/api';
 import { cn, getInitials } from '@/lib/utils';
 import {
   BookOpen,
@@ -123,7 +124,27 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const filteredNavItems = navItems.filter(item => item.roles.some(r => hasRole(r)));
+  /**
+   * المسابقات لشيخ الحلقة: تظهر وتختفي بحسب عضويّته في لجنة تحكيمٍ **جارية**.
+   *
+   * [قرار المالك 2026-09-06] التحكيم مهمّةٌ لها وقت لا صلاحيةٌ دائمة: يراها
+   * المحكّم ما دامت المسابقة قائمة، فإذا اعتُمدت نتائجُها اختفى البند عنه.
+   * والخادم يمنعه من الرصد على كل حال — هذا إخفاء البند لا حراسته.
+   */
+  const [judgingNow, setJudgingNow] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    if (user?.role !== 'teacher') { setJudgingNow(false); return; }
+    api.get<{ is_judge: boolean }>('/competitions/my-role')
+      .then(r => { if (alive) setJudgingNow(!!r.data.is_judge); })
+      .catch(() => { if (alive) setJudgingNow(false); });
+    return () => { alive = false; };
+  }, [user?.role, user?.id]);
+
+  const filteredNavItems = navItems.filter(item => {
+    if (item.href === '/competitions' && user?.role === 'teacher') return judgingNow;
+    return item.roles.some(r => hasRole(r));
+  });
   const currentTitle = filteredNavItems.find(item => item.href === location.pathname)?.title || 'لوحة التحكم';
 
   const handleLogout = async () => {

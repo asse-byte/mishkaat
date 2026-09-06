@@ -144,10 +144,16 @@ async def check_student_access(student_id: str, current_user: dict) -> dict:
         return student
         
     # 5. Parent: تطابق رقم هاتف ولي الأمر مع حساب ولي الأمر الحالي
+    # [2026-09-06] الربط بالمعرّف أوّلاً: حسابُ وليّ الأمر يُصدره المدير ويُكتب
+    # معرّفُه على الطالب (parent_user_id)، فلا يبقى الربطُ معلّقاً برقم هاتفٍ
+    # يتغيّر أو يُترك فارغاً. ومطابقةُ الهاتف تبقى للحسابات القديمة.
     if role == "parent":
         allowed = False
+        uid = str(current_user.get("_id"))
         user_phone = current_user.get("phone")
-        if user_phone and (
+        if student.get("parent_user_id") == uid:
+            allowed = True
+        elif user_phone and (
             student.get("parent_phone") == user_phone or
             student.get("phone") == user_phone
         ):

@@ -110,6 +110,8 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
         "marital_status": teacher.marital_status,
         "work_schedule": teacher.work_schedule,
         "salary": teacher.salary,
+        "teacher_type": teacher.teacher_type,
+        "job_title": teacher.job_title,
         "is_active": True,
         "hire_date": utcnow(),
     }
@@ -149,6 +151,8 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
         "marital_status": teacher_dict.get("marital_status"),
         "work_schedule": teacher_dict.get("work_schedule"),
         "salary": teacher_dict.get("salary"),
+        "teacher_type": teacher_dict.get("teacher_type", "halaqah"),
+        "job_title": teacher_dict.get("job_title"),
         "is_active": teacher_dict["is_active"],
         "hire_date": hire_date.isoformat(),
         "user_id": teacher_dict.get("user_id"),
@@ -287,19 +291,37 @@ async def create_teacher_evaluation(
     if not center_id:
         center_id = teacher.get("center_id") or "default"
         
-    att_part = evaluation.attendance_rate * 0.2
-    taj_part = evaluation.tajweed_proficiency * 10 * 0.3
-    ret_part = evaluation.student_retention * 10 * 0.2
-    speed_part = min(100.0, evaluation.average_memorization_speed * 15.0) * 0.15
-    disc_part = evaluation.discipline * 10 * 0.15
-    
-    tpi = round(att_part + taj_part + ret_part + speed_part + disc_part, 2)
-    
+    # المجموع من 100: معايير المالك الخمسة كلٌّ من 10 (×2). فإن جاء تقييمٌ
+    # بالمعايير القديمة وحدها حُسب بصيغته القديمة، لئلّا تفقد التقييماتُ
+    # السابقة درجتَها بمجرّد تغيّر النموذج.
+    from app.models import TEACHER_CRITERIA
+    new_scores = [getattr(evaluation, k) for k in TEACHER_CRITERIA]
+    given = [v for v in new_scores if v is not None]
+    if given:
+        if len(given) < len(TEACHER_CRITERIA):
+            missing = [TEACHER_CRITERIA[k] for k in TEACHER_CRITERIA
+                       if getattr(evaluation, k) is None]
+            raise HTTPException(
+                status_code=400,
+                detail="أكمل درجات المعايير: " + "، ".join(missing))
+        tpi = round(sum(given) * 2.0, 2)
+    elif evaluation.attendance_rate is not None:
+        tpi = round(
+            evaluation.attendance_rate * 0.2
+            + (evaluation.tajweed_proficiency or 0) * 10 * 0.3
+            + (evaluation.student_retention or 0) * 10 * 0.2
+            + min(100.0, (evaluation.average_memorization_speed or 0) * 15.0) * 0.15
+            + (evaluation.discipline or 0) * 10 * 0.15,
+            2)
+    else:
+        raise HTTPException(status_code=400, detail="لا توجد درجات في هذا التقييم")
+
     eval_dict = evaluation.model_dump()
     eval_dict["center_id"] = center_id
     eval_dict["tpi"] = tpi
+    eval_dict["evaluated_by"] = current_user.get("username")
     eval_dict["created_at"] = utcnow()
-    
+
     result = await db.teacher_evaluations.insert_one(eval_dict)
     
     return {
@@ -324,6 +346,16 @@ async def get_teacher_evaluations(
     center_id = current_user.get("center_id")
     if role not in ["admin", "super_admin"] and teacher.get("center_id") != center_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بعرض تقييمات محفظ في مركز آخر")
+
+    # تقييمُ الرجل شأنُه: المحفّظ يقرأ تقييمَ نفسه ولا يقرأ تقييمَ زميله.
+    # وكان فحصُ المركز وحده يفتح تقييمات المحفّظين كلِّهم لكل محفّظ في المركز.
+    if role == "teacher":
+        from app.scope import teacher_record
+        me = await teacher_record(current_user)
+        if not me or str(me["_id"]) != str(teacher_obj_id):
+            raise HTTPException(status_code=403, detail="لا تُقرأ تقييمات محفّظٍ آخر")
+    elif role not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
         
     query = {"teacher_id": teacher_id}
     if role != "super_admin":
