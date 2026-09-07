@@ -4,6 +4,7 @@ import { Loader2, Target, TrendingUp, CalendarCheck, RefreshCw } from 'lucide-re
 import api from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/ui/PageHeader';
+import HalaqatRanking from '@/components/halaqat/HalaqatRanking';
 
 /**
  * لوحات الصدارة الأربع.
@@ -46,6 +47,9 @@ export default function Leaderboards() {
 
   // الطالب ووليّ الأمر يريان اللوحات دون روابط إلى ملفّات غيرهم
   const canOpenProfiles = hasRole('admin') || hasRole('center_manager') || hasRole('teacher');
+  // وترتيبُ الحلقات لأهل المركز: المحفّظ والمدير. لا يراه الطالب ولا وليُّه —
+  // مقارنةُ الحلقات شأنُ من يُدير الحلقة لا من يجلس فيها.
+  const canSeeHalaqatRanking = hasRole('center_manager') || hasRole('teacher') || hasRole('admin');
 
   const load = useCallback(async () => {
     try {
@@ -89,6 +93,11 @@ export default function Leaderboards() {
           لا توجد بيانات كافية بعد. تظهر اللوحات بعد تسجيل التسميع والحضور.
         </div>
       )}
+
+      {/* [قرار المالك 2026-09-07] تنافسُ الحلقات بين المعلّمين — أرقامٌ مجمّعة
+          للحلقات كلِّها، لا سجلّاتُ طلابها. وموضعُه هنا لأن الصفحة هي صفحة
+          الترتيب أصلاً، ولأن المعلّم يفتحها كلَّ يوم. */}
+      {canSeeHalaqatRanking && <HalaqatRanking />}
 
       <div className="grid lg:grid-cols-2 gap-5">
         {boards.map(board => {

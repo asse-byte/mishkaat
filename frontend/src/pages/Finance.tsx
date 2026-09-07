@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  Pencil,
   DollarSign, Plus, TrendingUp, TrendingDown, Users, GraduationCap,
   CheckCircle2, AlertCircle, X, Wallet, Receipt, Landmark, Filter,
   Calendar, Trash2, Printer, Sparkles, Award, Home,
@@ -13,7 +14,8 @@ import {
 import api from '@/services/api';
 import { studentsApi, teachersApi } from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
-import { formatAmount } from '@/lib/format';
+import { formatAmount, stripGrouping } from '@/lib/format';
+import { errorMessage } from '@/lib/errors';
 import NumberInput from '@/components/ui/NumberInput';
 
 interface Fee { id: string; student_id: string; student_name?: string; amount: number; due_date: string; fee_type: string; status: string; notes?: string; }
@@ -177,6 +179,104 @@ export default function Finance() {
       await loadData();
     } catch (e: any) {
       setError(e.response?.data?.detail || 'تعذّر إبطال المصروف');
+    }
+  };
+
+  /**
+   * تصحيح الأعمال المالية.
+   *
+   * [قرار المالك 2026-09-07] «أيّ عمل إداري يقوم به مدير المركز اجعله قابلاً
+   * للتعديل بعد قيامه به.» ولم يكن للرسوم ولا للرواتب زرُّ تعديلٍ ولا إلغاء:
+   * مبلغٌ كُتب خطأً يبقى في مجاميع المركز أبداً.
+   *
+   * والمالُ يُبطَل ولا يُمحى — كما المصروفات منذ زمن: يخرج من المجاميع ويبقى
+   * في السجلّ بسببه، فتبقى المراجعةُ ممكنة.
+   */
+  const askReason = (what: string): string | null => {
+    const reason = prompt(`سبب إلغاء ${what}؟ (يبقى القيد في السجلّ ويخرج من المجاميع)`);
+    if (reason === null) return null;
+    if (!reason.trim()) { setError('يجب ذكر سبب الإلغاء'); return null; }
+    return reason.trim();
+  };
+
+  const handleVoidFee = async (fee: Fee) => {
+    const reason = askReason(`رسوم ${fee.student_name || 'الطالب'}`);
+    if (!reason) return;
+    try {
+      await api.delete(`/fees/${fee.id}`, { params: { reason } });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر إلغاء الرسم'));
+    }
+  };
+
+  const handleEditFee = async (fee: Fee) => {
+    const raw = prompt(`المبلغ الجديد لرسوم ${fee.student_name || 'الطالب'}؟`,
+                       String(fee.amount));
+    if (raw === null) return;
+    const amount = Number(stripGrouping(raw));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('المبلغ يجب أن يكون رقماً أكبر من صفر');
+      return;
+    }
+    try {
+      await api.put(`/fees/${fee.id}`, {
+        student_id: fee.student_id, amount,
+        due_date: fee.due_date, fee_type: fee.fee_type, notes: fee.notes,
+      });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر تعديل الرسم'));
+    }
+  };
+
+  const handleVoidSalary = async (sal: Salary) => {
+    const reason = askReason(`راتب ${sal.teacher_name || 'المحفّظ'}`);
+    if (!reason) return;
+    try {
+      await api.delete(`/salaries/${sal.id}`, { params: { reason } });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر إلغاء الراتب'));
+    }
+  };
+
+  const handleEditSalary = async (sal: Salary) => {
+    const raw = prompt(`المبلغ الجديد لراتب ${sal.teacher_name || 'المحفّظ'}؟`,
+                       String(sal.amount));
+    if (raw === null) return;
+    const amount = Number(stripGrouping(raw));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('المبلغ يجب أن يكون رقماً أكبر من صفر');
+      return;
+    }
+    try {
+      await api.put(`/salaries/${sal.id}`, {
+        teacher_id: sal.teacher_id, teacher_name: sal.teacher_name,
+        amount, month: sal.month, center_id: sal.center_id, notes: sal.notes,
+      });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر تعديل الراتب'));
+    }
+  };
+
+  const handleEditExpense = async (exp: Expense) => {
+    const raw = prompt(`المبلغ الجديد لمصروف «${exp.title}»؟`, String(exp.amount));
+    if (raw === null) return;
+    const amount = Number(stripGrouping(raw));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      setError('المبلغ يجب أن يكون رقماً أكبر من صفر');
+      return;
+    }
+    try {
+      await api.put(`/expenses/${exp.id}`, {
+        title: exp.title, amount, category: exp.category,
+        center_id: exp.center_id, notes: exp.notes,
+      });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر تعديل المصروف'));
     }
   };
 
@@ -491,6 +591,14 @@ export default function Finance() {
                         <Printer className="w-4 h-4" />
                       </button>
                     )}
+                    <button onClick={() => handleEditFee(fee)} title="تعديل المبلغ"
+                      className="p-1.5 rounded-lg text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--muted))] transition-all">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleVoidFee(fee)} title="إلغاء الرسم"
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -578,6 +686,14 @@ export default function Finance() {
                       title="طباعة سند صرف الراتب"
                     >
                       <Printer className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleEditSalary(sal)} title="تعديل المبلغ"
+                      className="p-1.5 rounded-lg text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--muted))] transition-all">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleVoidSalary(sal)} title="إلغاء صرف الراتب"
+                      className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-all">
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
@@ -672,7 +788,11 @@ export default function Finance() {
                     >
                       <Printer className="w-4 h-4" />
                     </button>
-                    <button onClick={() => handleDeleteExpense(exp.id)} className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-all">
+                    <button onClick={() => handleEditExpense(exp)} title="تعديل المبلغ"
+                      className="p-1.5 rounded-lg text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--muted))] transition-all">
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => handleDeleteExpense(exp.id)} title="إبطال المصروف" className="p-1.5 rounded-lg text-red-400 hover:bg-red-50 transition-all">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
