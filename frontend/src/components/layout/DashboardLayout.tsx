@@ -74,7 +74,7 @@ const navItems: NavItem[] = [
   { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','student'], group: 'manage' },
   // الشهادات: يُصدرها المدير، ويراها المعلّم والطالب ووليّه ويطبعونها
   { title: 'الشهادات',     href: '/certificates',  icon: Award,           roles: ['center_manager','teacher','student','parent'], group: 'manage' },
-  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
+  { title: 'المراسلات',    href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'manage' },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
   { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
   { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },

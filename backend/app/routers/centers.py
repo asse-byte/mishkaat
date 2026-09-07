@@ -328,18 +328,32 @@ async def create_center(center: CenterCreate, current_user: dict = Depends(get_c
             "user_version": 0,
             "created_at": utcnow()
         }
-        manager_result = await db.users.insert_one(manager_user)
+        try:
+            manager_result = await db.users.insert_one(manager_user)
+        except DuplicateKeyError:
+            # سباقٌ بين طلبين باسم المستخدم نفسه: الفحصُ فوق يسبق الكتابة،
+            # وبينهما ثغرةٌ يملؤها الفهرس الفريد — وكانت تخرج 500 مبهماً.
+            # (عولج هذا في مسارَي التسجيل العامّ والإشراف، وفات هذا المسار.)
+            raise HTTPException(status_code=400, detail="اسم المستخدم موجود بالفعل")
         center_dict["manager_id"] = str(manager_result.inserted_id)
-    
+
     result = await db.centers.insert_one(center_dict)
     center_id = str(result.inserted_id)
-    
+
     # Update manager's center_id
     if center_dict.get("manager_id"):
         await db.users.update_one(
             {"_id": ObjectId(center_dict["manager_id"])},
             {"$set": {"center_id": center_id}}
         )
+
+    # كان هذا المسار وحده بلا تدقيق، والمساران الآخران يُسجّلان — فمركزٌ يُنشئه
+    # مديرُ النظام كان يظهر في القائمة بلا أثرٍ يقول من أنشأه ومتى.
+    await write_audit_log(
+        actor_id=str(current_user["_id"]), center_id=center_id,
+        action="ADMIN_REGISTER_CENTER",
+        payload={"name": center_dict["name"],
+                 "manager_username": center.manager_username})
     
     return {
         "id": center_id,

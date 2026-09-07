@@ -446,6 +446,14 @@ class CertificateResponse(BaseModel):
     issued_at: datetime
 
 
+class MessageAttachment(BaseModel):
+    """وثيقةٌ مرفقة برسالة — تُرفع أوّلاً ثمّ تُذكر أوصافُها هنا."""
+    file_id: str
+    filename: str
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+
+
 class MessageReply(BaseModel):
     teacher_id: str
     teacher_name: str
@@ -456,6 +464,7 @@ class BulkMessageBase(BaseModel):
     recipient_role: str
     subject: str
     content: str
+    attachments: List[MessageAttachment] = []
 
 class BulkMessageCreate(BulkMessageBase):
     pass
@@ -464,6 +473,8 @@ class BulkMessageResponse(BulkMessageBase):
     id: str
     center_id: str
     sender_id: str
+    sender_role: Optional[str] = None
+    edited_at: Optional[datetime] = None
     sender_name: Optional[str] = None
     sent_at: datetime
     replies: List[MessageReply] = []

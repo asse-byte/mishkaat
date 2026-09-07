@@ -11,7 +11,8 @@ import uuid
 from app.config import ALLOWED_ORIGINS, APP_VERSION, IS_PRODUCTION, logger
 from app.startup import startup_event
 from app.routers import (
-    accounts, attendance, audit_logs, auth, centers, certificates, competitions,
+    accounts, attendance, audit_logs, auth, center_activity, centers, certificates,
+    competitions,
     dashboard, exports,
     finance, halaqat, halaqat_overview, health, messages, notifications,
     performance, recitations, review_plans, schedules, students, teachers,
@@ -25,6 +26,7 @@ ROUTERS = (
     notifications.router,
     dashboard.router,
     centers.router,
+    center_activity.router,
     students.router,
     accounts.router,
     teachers.router,
