@@ -234,6 +234,9 @@ class ExpenseCreate(BaseModel):
 # [AUDIT-2026-05-22 fix: typed model replaces previous untyped `dict` (mass-assignment risk)]
 class ReviewPlanCreate(BaseModel):
     center_id: str
+    # معدّل المراجعة اليوميّ لهذا الطالب بالأجزاء. يُحدّده الشيخ حين يرى أن
+    # الافتراض (جزءٌ في اليوم) لا يناسبه — صغيراً كان أو حافظاً متمكّناً.
+    juz_per_day: Optional[float] = None
     teacher_id: Optional[str] = None
     student_id: Optional[str] = None
     halaqah_id: Optional[str] = None

@@ -67,7 +67,7 @@ const navItems: NavItem[] = [
   { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'], group: 'manage' },
   { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'], group: 'manage' },
   { title: 'لوحات الصدارة',href: '/leaderboards', icon: Medal,           roles: ['center_manager','teacher','student','parent'], group: 'daily' },
-  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'خطة المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
   // [قرار المالك 2026-09-06] المسابقات تظهر لشيخ الحلقة فقط إن كان عضواً في
   // لجنة تحكيم مسابقة جارية — يُحسم ذلك في وقت التشغيل لا هنا (isJudge).

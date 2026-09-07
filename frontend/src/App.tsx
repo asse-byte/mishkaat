@@ -218,7 +218,7 @@ function AppRoutes() {
       <Route
         path="/review-plans"
         element={
-          <ProtectedRoute roles={PLANS}>
+          <ProtectedRoute roles={SCHEDULE_VIEWERS}>
             <ReviewPlans />
           </ProtectedRoute>
         }
