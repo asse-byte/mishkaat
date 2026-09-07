@@ -85,3 +85,43 @@ async def create_review_plan(plan: ReviewPlanCreate, current_user: dict = Depend
     data["id"] = str(result.inserted_id)
     data["created_at"] = data["created_at"].isoformat()
     return data
+
+
+@router.put("/api/review-plans/{plan_id}")
+async def update_review_plan(plan_id: str, patch: ReviewPlanCreate,
+                             current_user: dict = Depends(get_current_user)):
+    """تعديل خطّة مراجعة — لمن يملك إنشاءها."""
+    if current_user["role"] not in ["admin", "center_manager", "teacher"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    plan = await db.review_plans.find_one({"_id": safe_object_id(plan_id)})
+    if not plan:
+        raise HTTPException(status_code=404, detail="الخطّة غير موجودة")
+    if (current_user["role"] != "admin"
+            and plan.get("center_id") != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="هذه الخطّة تخصّ مركزاً آخر")
+
+    changes = {k: v for k, v in patch.model_dump(exclude_unset=True).items()
+               if k not in ("center_id",)}
+    changes["updated_at"] = utcnow()
+    changes["updated_by"] = str(current_user["_id"])
+    await db.review_plans.update_one({"_id": plan["_id"]}, {"$set": changes})
+    return serialize_doc({**plan, **changes})
+
+
+@router.delete("/api/review-plans/{plan_id}")
+async def delete_review_plan(plan_id: str,
+                             current_user: dict = Depends(get_current_user)):
+    """حذف خطّة مراجعة."""
+    if current_user["role"] not in ["admin", "center_manager", "teacher"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    plan = await db.review_plans.find_one({"_id": safe_object_id(plan_id)})
+    if not plan:
+        raise HTTPException(status_code=404, detail="الخطّة غير موجودة")
+    if (current_user["role"] != "admin"
+            and plan.get("center_id") != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="هذه الخطّة تخصّ مركزاً آخر")
+
+    await db.review_plans.delete_one({"_id": plan["_id"]})
+    return {"message": "حُذفت الخطّة"}

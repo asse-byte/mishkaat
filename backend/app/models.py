@@ -549,6 +549,12 @@ class AttendanceBase(BaseModel):
     status: AttendanceStatus
     notes: Optional[str] = None
 
+class AttendanceUpdate(BaseModel):
+    """تصحيح حالة حضورٍ مرصودة. الطالب واليوم لا يتغيّران — ذاك سجلٌّ آخر."""
+    status: AttendanceStatus
+    notes: Optional[str] = None
+
+
 class AttendanceCreate(BaseModel):
     records: List[AttendanceBase]
     date: Optional[str] = None

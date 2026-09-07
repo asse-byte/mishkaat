@@ -390,12 +390,16 @@ async def get_contestants(comp_id: str, branch: Optional[str] = None,
     query: dict = {"competition_id": comp_id}
     if branch:
         query["category"] = branch
-    # الطالب ووليّ الأمر يريان نتائجهما وحدها
-    if role in ("student", "parent"):
-        ids = await visible_student_ids(current_user)
-        if not ids:
-            return {"branches": [], "competition": _shape(comp)}
-        query["student_id"] = {"$in": ids}
+
+    # [قرار المالك 2026-09-07] «الطالب يرى كلَّ شيء في المسابقات القرآنية:
+    # ترتيبَه وترتيبَ الآخرين وجميعَ الفروع الأخرى — ولا يمكنه إصدار الشهادة.»
+    #
+    # وكان يُرشَّح إلى صفّه هو وحده. والأسوأ أن الترتيب يُحسب بعد الترشيح، فيخرج
+    # «رتبتُه 1» في كل فرعٍ يظهر فيه — رقمٌ خاطئ لا نطاقٌ مضيَّق. والمسابقة
+    # حدثٌ مُعلَن: نتائجُها تُقرأ على المنبر ويعرفها الحاضرون كلُّهم.
+    #
+    # وهذا **قرارٌ يخالف** ما استقرّ عليه سابقاً في نطاق الطالب (بياناته وحده)،
+    # ومحصورٌ في المسابقات: أسماءُ المتسابقين ودرجاتُهم فقط، لا ملفّاتُهم.
 
     rows = await db.competition_contestants.find(query).to_list(1000)
 
@@ -487,6 +491,33 @@ async def grade_contestant(contestant_id: str, grades: ContestantGrades,
         await db.competitions.update_one({"_id": comp["_id"]}, {"$set": {"status": "grading"}})
 
     return serialize_doc({**updated, **calc, "_id": contestant["_id"]})
+
+
+@router.delete("/api/competitions/contestants/{contestant_id}")
+async def withdraw_contestant(contestant_id: str,
+                              current_user: dict = Depends(get_current_user)):
+    """
+    سحبُ متسابقٍ سُجّل خطأً — في فرعٍ ليس فرعَه، أو انسحب.
+
+    ولم يكن ثمّة سبيل: المتسابق يُسجَّل ولا يُرفع إلا بحذف المسابقة كلِّها.
+    ولا يُسحَب بعد اعتماد النتائج — الترتيب المُعلَن لا يتغيّر تحت أقدام من
+    نُشر ترتيبُهم معه.
+    """
+    if current_user["role"] not in MANAGERS:
+        raise HTTPException(status_code=403, detail="سحبُ المتسابقين من عمل الإدارة")
+
+    contestant = await db.competition_contestants.find_one(
+        {"_id": safe_object_id(contestant_id)})
+    if not contestant:
+        raise HTTPException(status_code=404, detail="المتسابق غير موجود")
+
+    comp = await _get_comp(contestant["competition_id"], current_user)
+    if comp.get("status") in FROZEN:
+        raise HTTPException(
+            status_code=409, detail="المسابقة معتمَدة — لا يُسحَب منها متسابق")
+
+    await db.competition_contestants.delete_one({"_id": contestant["_id"]})
+    return {"message": "سُحب المتسابق", "student_name": contestant.get("student_name")}
 
 
 @router.delete("/api/competitions/{comp_id}")

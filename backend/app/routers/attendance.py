@@ -12,10 +12,11 @@ from typing import Optional
 
 from app.common import check_student_access, safe_object_id, serialize_doc
 from app.config import XP_PER_SESSION, logger
+from app.audit import write_audit_log
 from app.db import db
 from app.gamification import award_xp
 from app.metrics import _PRESENT_STATUSES
-from app.models import AttendanceCreate
+from app.models import AttendanceCreate, AttendanceUpdate
 from app.scope import assert_halaqah_in_scope, teacher_only, visible_halaqah_ids
 from app.security import get_current_user
 from app.sse import push_notification
@@ -269,3 +270,66 @@ async def get_center_attendance(
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
     return result
+
+
+# ==================== تصحيح الحضور ====================
+#
+# [قرار المالك 2026-09-07] العملُ الإداري يُصحَّح بعد وقوعه.
+#
+# ولم يكن للحضور تعديلٌ ولا حذف بأيّ حال: من وسم طالباً غائباً وهو حاضر لا
+# سبيل له إلا إعادةُ إرسال كشف اليوم كلِّه — ولا سبيل للمدير أصلاً، لأن
+# التسجيل محصورٌ بالشيخ. فيبقى غيابٌ خاطئ في سجلّ الطالب ويُنبَّه وليُّه به.
+
+
+@router.put("/api/attendance/{record_id}")
+async def update_attendance_record(record_id: str, patch: AttendanceUpdate,
+                                   current_user: dict = Depends(get_current_user)):
+    """تصحيح حالة حضورٍ مرصودة — للشيخ صاحب الحلقة وللإدارة."""
+    if current_user["role"] not in ["admin", "super_admin", "center_manager", "teacher"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    rec = await db.attendance.find_one({"_id": safe_object_id(record_id)})
+    if not rec:
+        raise HTTPException(status_code=404, detail="سجلّ الحضور غير موجود")
+
+    # البوّابة نفسها التي تحرس بقية مسارات الطالب — تحصر الشيخ بحلقته
+    await check_student_access(rec.get("student_id"), current_user)
+
+    changes = {"status": patch.status, "updated_at": utcnow(),
+               "updated_by": str(current_user["_id"])}
+    if patch.notes is not None:
+        changes["notes"] = patch.notes
+    await db.attendance.update_one({"_id": rec["_id"]}, {"$set": changes})
+
+    await write_audit_log(
+        actor_id=str(current_user["_id"]),
+        center_id=rec.get("center_id") or current_user.get("center_id", "system"),
+        action="UPDATE_ATTENDANCE",
+        payload={"record_id": record_id, "student_id": rec.get("student_id"),
+                 "from": rec.get("status"), "to": patch.status,
+                 "date": rec.get("date_str")})
+
+    updated = await db.attendance.find_one({"_id": rec["_id"]})
+    return serialize_doc(updated)
+
+
+@router.delete("/api/attendance/{record_id}")
+async def delete_attendance_record(record_id: str,
+                                   current_user: dict = Depends(get_current_user)):
+    """حذف سجلّ حضورٍ رُصد خطأً — لطالبٍ لم يكن في المجلس أصلاً."""
+    if current_user["role"] not in ["admin", "super_admin", "center_manager", "teacher"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    rec = await db.attendance.find_one({"_id": safe_object_id(record_id)})
+    if not rec:
+        raise HTTPException(status_code=404, detail="سجلّ الحضور غير موجود")
+    await check_student_access(rec.get("student_id"), current_user)
+
+    await db.attendance.delete_one({"_id": rec["_id"]})
+    await write_audit_log(
+        actor_id=str(current_user["_id"]),
+        center_id=rec.get("center_id") or current_user.get("center_id", "system"),
+        action="DELETE_ATTENDANCE",
+        payload={"record_id": record_id, "student_id": rec.get("student_id"),
+                 "date": rec.get("date_str"), "status": rec.get("status")})
+    return {"message": "حُذف سجلّ الحضور"}

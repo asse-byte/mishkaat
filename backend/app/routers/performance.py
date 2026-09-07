@@ -32,7 +32,7 @@ from app.gamification import (
     total_xp_bulk,
 )
 from app.metrics import _PRESENT_STATUSES, _as_datetime, compute_all, pages_of
-from app.scope import assert_halaqah_in_scope, student_query
+from app.scope import assert_halaqah_in_scope, leaderboard_query, student_query
 from app.security import get_current_user
 
 router = APIRouter(tags=["الأداء والتنبؤ والتحفيز"])
@@ -226,7 +226,11 @@ async def leaderboards(
     # [إصلاح 2026-09-06] كان النطاق المركزَ كلَّه، فتضمّ لوحاتُ الصدارة طلاباً
     # من حلقات أخرى: يراهم شيخُ الحلقة والطالبُ معاً. واللوحة تُحفّز بالمقارنة
     # مع الأقران — وأقرانُ الطالب حلقتُه، لا كلُّ من في المركز.
-    query = await student_query(current_user, {**NOT_DELETED, "is_active": True})
+    #
+    # [إصلاح 2026-09-07] ثمّ تبيّن أن الطالب كان يرى **نفسَه وحده**: نطاقُ
+    # بياناته هو نفسُه، فتُبنى اللوحة على صفٍّ واحد ويظهر «الأوّل من 1» في كل
+    # لوحة. فصار للّوحة نطاقٌ خاصّ: حلقةُ الطالب — أقرانُه الذين يُقارَن بهم.
+    query = await leaderboard_query(current_user)
     if query is None:
         return {"boards": [], "definitions": LEADERBOARDS, "own_ranks": {}}
     if halaqah_id:

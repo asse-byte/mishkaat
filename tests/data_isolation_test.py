@@ -301,15 +301,24 @@ async def main():
         body = blob(r.json())
         check("  لوحة الصدارة: زملاء حلقته نعم، وحلقة (ب) لا",
               "طالب B0" not in body and "طالب B1" not in body, "")
-        for label, path in [
-            ("الجدول الدراسي", "/api/academic-schedules"),
-            ("متسابقو المسابقة", f"/api/competitions/{ids['comp']}/contestants"),
-        ]:
-            r = await c.get(path, headers=ST)
-            body = blob(r.json())
-            leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
-            check(f"  {label} بلا أثر من (ب)", r.status_code == 200 and not leaked,
-                  f"{r.status_code} {leaked}")
+        r = await c.get("/api/academic-schedules", headers=ST)
+        body = blob(r.json())
+        leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
+        check("  الجدول الدراسي بلا أثر من (ب)", r.status_code == 200 and not leaked,
+              f"{r.status_code} {leaked}")
+
+        # [قرار المالك 2026-09-07] المسابقة **استثناءٌ مقصود**: «الطالب يرى كلّ
+        # شيء في المسابقات القرآنية — ترتيبَه وترتيبَ الآخرين وجميع الفروع.»
+        # فهي حدثٌ مُعلَن تُقرأ نتائجُه على الملأ. والحدُّ دقيق: أسماءُ
+        # المتسابقين ودرجاتُهم، لا ملفّاتُهم — وذاك ما يفحصه ما بعده.
+        r = await c.get(f"/api/competitions/{ids['comp']}/contestants", headers=ST)
+        body = blob(r.json())
+        check("  المسابقة: يرى متسابقي الحلقتين معاً (قرار المالك)",
+              r.status_code == 200 and "طالب B0" in body and "طالب A0" in body,
+              f"{r.status_code}")
+        r = await c.get(f"/api/students/{B['students'][0]}", headers=ST)
+        check("  ومع ذلك لا يفتح ملفّ من رآه في النتائج → 403",
+              r.status_code == 403, str(r.status_code))
         for label, path in [
             ("خطط المراجعة", "/api/review-plans"),
             ("الملخّص المالي", "/api/finance/summary"),

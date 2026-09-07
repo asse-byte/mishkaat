@@ -178,6 +178,33 @@ async def student_query(current_user: dict, base: Optional[dict] = None) -> Opti
     return None
 
 
+async def leaderboard_query(current_user: dict) -> Optional[dict]:
+    """
+    نطاق لوحة الصدارة — يختلف عن نطاق البيانات عن قصد.
+
+    [قرار المالك 2026-09-07] «الطالب يرى في لوحة الصدارة كلَّ شيء لكن ضمن
+    حلقته فقط: يرى من هم أفضل منه أو هو أفضل منهم، من ناحية الزخم والدقّة
+    والانتظام وعمق المراجعة.»
+
+    وكان `student_query` يُعيد للطالب **نفسَه وحده**، فتُبنى اللوحةُ على صفٍّ
+    واحد: هو الأوّل من واحد في كل لوحة، و«ترتيبك 1 من 1». لوحةُ صدارةٍ بلا
+    أقران ليست ناقصةً، بل هي ضدُّ الغرض الذي وُضعت له.
+
+    فالنطاق هنا **الحلقة**: اسمُ الزميل ورتبتُه وقيمةُ مقياسه — وهي بياناتٌ
+    مجمّعة يراها الطلاب في كل مسجدٍ على السبّورة. ولا يُفتح بها ملفُّ أحد:
+    قراءةُ ملفّ زميلٍ تمرّ بـ check_student_access كما كانت.
+    """
+    role = current_user.get("role")
+    if role not in SELF_ROLES:
+        return await student_query(current_user, {**NOT_DELETED, "is_active": True})
+
+    hids = await visible_halaqah_ids(current_user)
+    if not hids:
+        # طالبٌ بلا حلقة: يرى نفسه، ولا حلقةَ يُقارَن بها
+        return await student_query(current_user, {**NOT_DELETED, "is_active": True})
+    return {**NOT_DELETED, "is_active": True, "halaqah_id": {"$in": hids}}
+
+
 async def assert_halaqah_in_scope(halaqah_id: str, current_user: dict) -> None:
     """يمنع قراءة حلقة خارج نطاق المستخدم (BOLA على مستوى الحلقة)."""
     hids = await visible_halaqah_ids(current_user)

@@ -50,6 +50,11 @@ async def startup_event():
     await db.recitations.create_index("student_id")
     await db.recitations.create_index([("student_id", 1), ("date", -1)])
     await db.recitations.create_index("teacher_id")
+    # مفتاح اليوم: عليه يقوم فحصُ «تسميعٌ واحد لكل طالب في اليوم» وقراءةُ اليوم.
+    # غير فريد عن قصد: للطالب تسميعُ حفظٍ وتسميعُ مراجعةٍ في اليوم نفسه،
+    # والتفريقُ بينهما في الكود لا في الفهرس — وسجلّاتٌ قديمة بلا date_str.
+    await _safe_create_index(db.recitations, [("student_id", 1), ("date_str", 1)])
+    await _safe_create_index(db.recitations, [("center_id", 1), ("date", -1)])
     await db.attendance.create_index("student_id")
     await db.attendance.create_index([("student_id", 1), ("date", -1)])
     await db.attendance.create_index("halaqah_id")

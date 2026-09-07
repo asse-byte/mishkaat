@@ -120,6 +120,83 @@ async def halaqat_overview(current_user: dict = Depends(get_current_user)):
     }
 
 
+@router.get("/api/halaqat-overview/ranking")
+async def halaqat_ranking(current_user: dict = Depends(get_current_user)):
+    """
+    ترتيب حلقات المركز بالأداء — يراه المحفّظ أيضاً.
+
+    [قرار المالك 2026-09-07] «لخلق التنافس بين المعلّمين، أودّ أن يرى المعلّم
+    نسبة الأداء أو التفوّق: أيّ حلقة أفضل في المركز.»
+
+    وهذا **استثناءٌ مقصود** من قاعدة عزل الحلقات، وحدُّه دقيق: تُعاد **أرقامٌ
+    مجمّعة واسمُ الحلقة وشيخِها** — متوسّطُ الإتقان والاندفاع والانتظام
+    والحضور، وعددُ الطلاب. ولا يُعاد اسمُ طالبٍ واحد من حلقةٍ أخرى ولا مقياسُه
+    ولا سجلُّه. فالمحفّظ يعرف موقعَ حلقته بين أخواتها ولا يقرأ بيانات غيره —
+    وهو ما يجعل التنافس ممكناً بلا فتح الملفّات.
+
+    وتفصيلُ الحلقة (`/{halaqah_id}`) يبقى محصوراً كما كان: لا يفتحه إلا
+    صاحبُها والإدارة.
+    """
+    if current_user["role"] not in READERS:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    cid = current_user.get("center_id")
+    if not cid and current_user["role"] not in ("admin", "super_admin"):
+        return {"halaqat": [], "mine": []}
+
+    query = {"center_id": cid} if cid else {}
+    halaqat = await db.halaqat.find(query).to_list(500)
+    ids = [str(h["_id"]) for h in halaqat]
+    if not ids:
+        return {"halaqat": [], "mine": []}
+
+    students = await db.students.find(
+        {**NOT_DELETED, "halaqah_id": {"$in": ids}, "is_active": True}).to_list(5000)
+    recs, atts = await _load_history([str(s["_id"]) for s in students])
+
+    by_halaqah: Dict[str, List[dict]] = {}
+    for st in students:
+        by_halaqah.setdefault(st.get("halaqah_id"), []).append(st)
+
+    mine = await visible_halaqah_ids(current_user)
+    mine_set = set(mine) if mine is not None else set()
+
+    rows = []
+    for h in halaqat:
+        hid = str(h["_id"])
+        members = by_halaqah.get(hid, [])
+        metrics = [compute_all(recs.get(str(st["_id"]), []), atts.get(str(st["_id"]), []))
+                   for st in members]
+        rows.append({
+            "id": hid,
+            "name": h.get("name"),
+            "teacher_name": h.get("teacher_name"),
+            "students_count": len(members),
+            "mastery": _avg([m.get("mastery") for m in metrics]),
+            "momentum": _avg([m.get("momentum") for m in metrics]),
+            "consistency": _avg([m.get("consistency") for m in metrics]),
+            "attendance_rate": _avg([
+                _attendance_pct(atts.get(str(st["_id"]), [])) for st in members]),
+            "is_mine": hid in mine_set,
+        })
+
+    # الترتيب بالإتقان، ومن لا بيانات له في الذيل لا في الصدر
+    rows.sort(key=lambda r: (r["mastery"] is None, -(r["mastery"] or 0)))
+    for i, r in enumerate(rows, 1):
+        r["rank"] = i
+
+    return {
+        "halaqat": rows,
+        "mine": [r["id"] for r in rows if r["is_mine"]],
+        "center_average": {
+            "mastery": _avg([r["mastery"] for r in rows]),
+            "momentum": _avg([r["momentum"] for r in rows]),
+            "consistency": _avg([r["consistency"] for r in rows]),
+            "attendance_rate": _avg([r["attendance_rate"] for r in rows]),
+        },
+    }
+
+
 @router.get("/api/halaqat-overview/{halaqah_id}")
 async def halaqah_detail(halaqah_id: str, current_user: dict = Depends(get_current_user)):
     """تفصيل حلقة: شيخُها وآخرُ تقييمٍ له، وطلابُها ومستوى كلِّ واحد."""

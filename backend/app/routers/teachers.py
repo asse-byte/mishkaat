@@ -371,3 +371,26 @@ async def get_teacher_evaluations(
         result.append(item)
         
     return result
+
+
+@router.delete("/api/teachers/{teacher_id}/evaluations/{evaluation_id}")
+async def delete_teacher_evaluation(teacher_id: str, evaluation_id: str,
+                                    current_user: dict = Depends(get_current_user)):
+    """
+    حذف تقييمٍ سُجّل خطأً — للإدارة.
+
+    تقييمٌ خاطئ في سجلّ رجلٍ ليس رقماً في جدول: يُقرأ عند النظر في راتبه
+    وترقيته. فوجب أن يُرفع لا أن يُترك مع تقييمٍ ثانٍ يُصحّحه.
+    """
+    if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    ev = await db.teacher_evaluations.find_one({"_id": safe_object_id(evaluation_id)})
+    if not ev or ev.get("teacher_id") != teacher_id:
+        raise HTTPException(status_code=404, detail="التقييم غير موجود")
+    if (current_user["role"] not in ["admin", "super_admin"]
+            and ev.get("center_id") != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="هذا التقييم يخصّ مركزاً آخر")
+
+    await db.teacher_evaluations.delete_one({"_id": ev["_id"]})
+    return {"message": "حُذف التقييم"}
