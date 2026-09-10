@@ -2,9 +2,10 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
   BookOpen, Plus, Search, Calendar, User,
-  CheckCircle2, X, AlertCircle, Filter, Trash2,
+  CheckCircle2, X, AlertCircle, Filter, Trash2, Pencil,
 } from 'lucide-react';
-import { recitationsApi, studentsApi } from '@/services/api';
+import api, { recitationsApi, studentsApi } from '@/services/api';
+import { errorMessage } from '@/lib/errors';
 import PageHeader from '@/components/ui/PageHeader';
 import ErrorTagger, { useErrorTypes } from '@/components/ui/ErrorTagger';
 
@@ -132,6 +133,45 @@ export default function Recitations() {
     } catch (e: any) {
       setError(e.response?.data?.detail || 'حدث خطأ أثناء حفظ التسميع');
     } finally { setSubmitting(false); }
+  };
+
+  /**
+   * تصحيح تقدير تسميعٍ مسجَّل.
+   *
+   * [قرار المالك 2026-09-07] العملُ الإداري يُصحَّح بعد وقوعه. وكان التسميع
+   * يُحذف ولا يُعدَّل: من أخطأ في التقدير يحذف السجلّ ويكتبه من جديد، فيفقد
+   * وقتَه الأصلي ويسقط ما بُني عليه من نقاط.
+   *
+   * والتقدير أكثرُ ما يُخطأ فيه — نقرةٌ في قائمةٍ من أربع. أمّا تغيير السورة
+   * والنطاق فيُفتح بحذف السجلّ وكتابته، وهو نادرٌ يستحقّ التأنّي.
+   */
+  const handleEditEvaluation = async (rec: RecitationData) => {
+    const keys = Object.keys(evalMap);
+    const options = keys.map((k, i) => `${i + 1}) ${evalMap[k].text}`).join('  ');
+    const raw = prompt(
+      `تقدير جديد لتسميع ${rec.student_name || 'الطالب'} (${rec.surah_name}):
+${options}`,
+      String(keys.indexOf(rec.evaluation) + 1));
+    if (raw === null) return;
+    const idx = Number(raw.trim()) - 1;
+    if (!(idx >= 0 && idx < keys.length)) {
+      setError('اختر رقماً من القائمة');
+      return;
+    }
+    try {
+      await api.put(`/recitations/${rec.id}`, {
+        student_id: rec.student_id,
+        teacher_id: '',
+        surah_name: rec.surah_name,
+        start_ayah: rec.start_ayah,
+        end_ayah: rec.end_ayah,
+        evaluation: keys[idx],
+        recitation_type: rec.recitation_type,
+      });
+      await loadData();
+    } catch (e: unknown) {
+      setError(errorMessage(e, 'تعذّر تعديل التسميع'));
+    }
   };
 
   const handleDelete = async (id: string) => {
@@ -288,7 +328,13 @@ export default function Recitations() {
                   <p className="text-[10px] text-[hsl(var(--muted-foreground))]">أخطاء</p>
                 </div>
 
-                {/* Delete (teacher/manager only) */}
+                {/* تصحيح وحذف — للشيخ صاحب التسميع وللإدارة */}
+                {canAdd && (
+                  <button onClick={() => handleEditEvaluation(rec)} title="تعديل التقدير"
+                    className="p-2 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--muted))] transition-all shrink-0">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                )}
                 {canAdd && (
                   <button onClick={() => handleDelete(rec.id)} title="حذف"
                     className="p-2 rounded-xl text-[hsl(var(--muted-foreground))] hover:text-red-600 hover:bg-red-50 transition-all shrink-0">

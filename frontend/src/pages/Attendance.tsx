@@ -13,6 +13,8 @@ interface StudentRow {
   id: string;
   name: string;
   status: 'present' | 'absent' | 'late' | 'excused';
+  /** معرّف سجلّ الحضور المرصود، إن كان قد رُصد */
+  recordId?: string;
 }
 interface HalaqahOption { id: string; name: string; }
 
@@ -39,6 +41,15 @@ function TeacherAttendance() {
   const [saving, setSaving]            = useState(false);
   const [savedMsg, setSavedMsg]        = useState('');
 
+  /**
+   * [قرار المالك 2026-09-06] التسجيل لشيخ الحلقة وحده — والمدير يُصحّح.
+   *
+   * وكانت الشاشة تعرض للمدير زرّ «حفظ الحضور» كاملاً، ويردّه الخادم بـ403 في
+   * كل مرّة: زرٌّ لا يعمل ولا يقول لماذا. فصارت له شاشةَ تصحيحٍ صريحة: يُبدّل
+   * حالةَ سجلٍّ واحد بنقطة النهاية المخصّصة لذلك، ولا يُنشئ كشفاً لم يحضره.
+   */
+  const isTeacher = user?.role === 'teacher';
+
   useEffect(() => {
     halaqatApi.getAll().then((data: any) => {
       setHalaqat(data || []);
@@ -60,7 +71,12 @@ function TeacherAttendance() {
       const existing: any[] = attResp.data || [];
       setStudents(stuData.map((s: any) => {
         const rec = existing.find((a: any) => a.student_id === s.id);
-        return { id: s.id, name: s.name, status: (rec?.status as StatusKey) || 'present' };
+        return {
+          id: s.id, name: s.name,
+          status: (rec?.status as StatusKey) || 'present',
+          // معرّف السجلّ المرصود إن وُجد — به يُصحّح المدير سجلّاً بعينه
+          recordId: rec?.id as string | undefined,
+        };
       }));
       setSavedMsg('');
     } catch { /* silent */ }
@@ -69,9 +85,25 @@ function TeacherAttendance() {
 
   useEffect(() => { loadStudents(); }, [loadStudents]);
 
-  const updateStatus = (id: string, status: StatusKey) => {
+  const updateStatus = async (id: string, status: StatusKey) => {
     setStudents(prev => prev.map(s => s.id === id ? { ...s, status } : s));
     setSavedMsg('');
+    if (isTeacher) return;   // الشيخ يحفظ الكشف كلَّه بزرّ واحد
+
+    // المدير: تصحيحٌ فوريّ لسجلٍّ قائم. ولا يُنشئ سجلّاً غيرَ موجود — ذاك
+    // تسجيلُ حضورٍ لمجلسٍ لم يحضره، وهو ما مُنع منه عن قصد.
+    const row = students.find(s => s.id === id);
+    if (!row?.recordId) {
+      setSavedMsg('لا سجلّ لهذا الطالب في هذا اليوم — يُسجّله شيخ الحلقة أوّلاً');
+      return;
+    }
+    try {
+      await api.put(`/attendance/${row.recordId}`, { status });
+      setSavedMsg('✅ صُحّح السجلّ');
+    } catch {
+      setSavedMsg('❌ تعذّر التصحيح');
+      await loadStudents();
+    }
   };
 
   const handleSave = async () => {
@@ -99,7 +131,11 @@ function TeacherAttendance() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <PageHeader title="تسجيل الحضور والغياب" subtitle="سجّل حضور طلابك يومياً" />
+      <PageHeader
+        title={isTeacher ? 'تسجيل الحضور والغياب' : 'مراجعة الحضور وتصحيحه'}
+        subtitle={isTeacher
+          ? 'سجّل حضور طلابك يومياً'
+          : 'التسجيل لشيخ الحلقة — وهنا تُراجع كشوفه وتُصحّح ما وقع فيه خطأ'} />
 
       {/* Filters */}
       <div className="card p-5">
@@ -180,11 +216,17 @@ function TeacherAttendance() {
               <button onClick={loadStudents} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-[hsl(var(--border))] font-bold hover:bg-[hsl(var(--muted))] transition-all text-sm">
                 <RefreshCw className="w-4 h-4" /> تحديث
               </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex items-center gap-2 gradient-primary text-white font-bold px-6 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-60 text-sm shadow-md">
-                {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
-                حفظ الحضور
-              </button>
+              {isTeacher ? (
+                <button onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-2 gradient-primary text-white font-bold px-6 py-2.5 rounded-xl hover:opacity-90 transition-all disabled:opacity-60 text-sm shadow-md">
+                  {saving ? <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : <Save className="w-4 h-4" />}
+                  حفظ الحضور
+                </button>
+              ) : (
+                <span className="text-xs text-[hsl(var(--muted-foreground))] self-center max-w-xs">
+                  التسجيل لشيخ الحلقة. وتبديلُك لحالةِ طالبٍ هنا يُصحّح سجلَّه فوراً.
+                </span>
+              )}
             </div>
           </div>
         )}
