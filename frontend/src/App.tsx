@@ -78,6 +78,9 @@ const AUDIT: UserRole[] = ['admin', 'super_admin'];
 const STAFF: UserRole[] = ['admin', 'super_admin', 'center_manager', 'teacher'];
 const ATTENDANCE: UserRole[] = ['admin', 'center_manager', 'teacher'];
 const PLANS: UserRole[] = ['admin', 'center_manager', 'teacher'];
+// [قرار المالك 2026-09-10] الشهادات لا تخصّ المعلّم: يُصدرها المدير، ويراها
+// الطالب ووليُّه ويطبعانها.
+const CERTIFICATE_VIEWERS: UserRole[] = ['admin', 'super_admin', 'center_manager', 'student', 'parent'];
 // [إصلاح 2026-09-07] الجدول الدراسي يقرؤه الجميع، كلٌّ في نطاقه. كان حارسه
 // STAFF فيُردّ الطالبُ بـ403 من صفحةٍ يعرضها له الشريطُ الجانبي نفسه — والخادم
 // يسمح له بها أصلاً: لا حارسَ دورٍ على القراءة في schedules.py، والنطاق محصورٌ
@@ -242,7 +245,7 @@ function AppRoutes() {
       <Route
         path="/certificates"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute roles={CERTIFICATE_VIEWERS}>
             <Certificates />
           </ProtectedRoute>
         }

@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
-import api from '@/services/api';
 import { useTheme } from '@/lib/theme';
 import { cn, getInitials } from '@/lib/utils';
 import {
@@ -71,9 +70,11 @@ const navItems: NavItem[] = [
   { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
   // [قرار المالك 2026-09-06] المسابقات تظهر لشيخ الحلقة فقط إن كان عضواً في
   // لجنة تحكيم مسابقة جارية — يُحسم ذلك في وقت التشغيل لا هنا (isJudge).
-  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','student'], group: 'manage' },
-  // الشهادات: يُصدرها المدير، ويراها المعلّم والطالب ووليّه ويطبعونها
-  { title: 'الشهادات',     href: '/certificates',  icon: Award,           roles: ['center_manager','teacher','student','parent'], group: 'manage' },
+  // [قرار المالك 2026-09-10] المسابقات سجلٌّ يراه كلُّ معلّم — والرصدُ للجنة
+  { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },
+  // [قرار المالك 2026-09-10] الشهادات لا تخصّ المعلّم: يُصدرها المدير، ويراها
+  // الطالب ووليُّه ويطبعانها. فحُذف البند عن شيخ الحلقة.
+  { title: 'الشهادات',     href: '/certificates',  icon: Award,           roles: ['center_manager','student','parent'], group: 'manage' },
   { title: 'المراسلات',    href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'manage' },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
   { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
@@ -109,27 +110,13 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const { theme, toggle: toggleDarkMode } = useTheme();
   const darkMode = theme === 'dark';
 
-  /**
-   * المسابقات لشيخ الحلقة: تظهر وتختفي بحسب عضويّته في لجنة تحكيمٍ **جارية**.
-   *
-   * [قرار المالك 2026-09-06] التحكيم مهمّةٌ لها وقت لا صلاحيةٌ دائمة: يراها
-   * المحكّم ما دامت المسابقة قائمة، فإذا اعتُمدت نتائجُها اختفى البند عنه.
-   * والخادم يمنعه من الرصد على كل حال — هذا إخفاء البند لا حراسته.
+  /*
+   * [قرار المالك 2026-09-10] بندُ المسابقات يظهر لكل معلّم — سجلٌّ يقرؤه.
+   * وكان يظهر ويختفي بحسب عضويّته في لجنةٍ جارية (قرار 2026-09-06)، فيرى
+   * البندَ يوماً ويفقده يوماً، ولا يبلغ تاريخَ مسابقات مركزه أبداً.
+   * والرصدُ وحده هو المحصور باللجنة، ويحرسه الخادم.
    */
-  const [judgingNow, setJudgingNow] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    if (user?.role !== 'teacher') { setJudgingNow(false); return; }
-    api.get<{ is_judge: boolean }>('/competitions/my-role')
-      .then(r => { if (alive) setJudgingNow(!!r.data.is_judge); })
-      .catch(() => { if (alive) setJudgingNow(false); });
-    return () => { alive = false; };
-  }, [user?.role, user?.id]);
-
-  const filteredNavItems = navItems.filter(item => {
-    if (item.href === '/competitions' && user?.role === 'teacher') return judgingNow;
-    return item.roles.some(r => hasRole(r));
-  });
+  const filteredNavItems = navItems.filter(item => item.roles.some(r => hasRole(r)));
   const currentTitle = filteredNavItems.find(item => item.href === location.pathname)?.title || 'لوحة التحكم';
 
   const handleLogout = async () => {

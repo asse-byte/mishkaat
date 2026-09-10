@@ -146,9 +146,13 @@ async def my_competition_role(current_user: dict = Depends(get_current_user)):
     """
     هل يظهر بند «المسابقات» لهذا المستخدم؟
 
-    القائمة الجانبية لا تعرض المسابقات لشيخ الحلقة إلا إن كان عضو لجنة تحكيم في
-    مسابقة **جارية**. وحين تنتهي المسابقة وتُعتمد يختفي البند عنه — فالتحكيم
-    مهمّةٌ لها وقت، لا صلاحية دائمة.
+    [قرار المالك 2026-09-10] «جميع المعلّمين يرون سجلّات المسابقات — يكون لديهم
+    صفحة المسابقات ويرونها كالسجلّات فقط بدون فعل أيّ شيء. والمعلّم الذي اختير
+    في لجنة التصحيح هو الذي تكون لديه صلاحية رصد الدرجات.»
+
+    فـ`can_see` صار حقّاً لكل معلّم، و`is_judge` وحده يفتح الرصد. وكان البند
+    يظهر ويختفي بحسب لجنةٍ جارية (قرار 2026-09-06)، فيرى المعلّم بندَه يوماً
+    ويفقده يوماً، ولا يبلغ تاريخَ مسابقات مركزه أبداً.
     """
     role = current_user.get("role")
     if role in MANAGERS:
@@ -160,7 +164,8 @@ async def my_competition_role(current_user: dict = Depends(get_current_user)):
 
     tid = await _judge_teacher_id(current_user)
     if not tid:
-        return {"can_see": False, "is_judge": False, "teacher_id": None, "judging": []}
+        # محفّظٌ بلا سجلّ مرتبط: يقرأ السجلّات ولا يرصد
+        return {"can_see": True, "is_judge": False, "teacher_id": None, "judging": []}
     # «ما لم تُجمَّد» لا «active أو grading»: المسابقات المُنشأة قبل هذا البناء
     # لا تحمل حقل status أصلاً، و $in لا يطابق حقلاً غائباً — فكان المحكّم في
     # مسابقةٍ قديمة لا يرى بندَه ولا يعرف لماذا.
@@ -170,7 +175,7 @@ async def my_competition_role(current_user: dict = Depends(get_current_user)):
         "judges.teacher_id": tid,
     }).to_list(50)
     judging = [{"id": str(r["_id"]), "title": r.get("title")} for r in rows]
-    return {"can_see": bool(judging), "is_judge": bool(judging),
+    return {"can_see": True, "is_judge": bool(judging),
             "teacher_id": tid, "judging": judging}
 
 
@@ -233,11 +238,9 @@ async def list_competitions(
     if not include_archived:
         query["status"] = {"$ne": "archived"}
 
-    if role == "teacher":
-        tid = await _judge_teacher_id(current_user)
-        if not tid:
-            return []
-        query["judges.teacher_id"] = tid
+    # [قرار المالك 2026-09-10] المعلّم يرى **سجلّات** مسابقات مركزه كلَّها،
+    # قديمَها وحديثَها. وكان يُرشَّح إلى ما هو محكّمٌ فيه وحده، فيرى صفراً ولا
+    # يعرف أنّ لمركزه مسابقاتٍ أصلاً. والرصدُ وحده هو المحصور باللجنة.
 
     rows = await db.competitions.find(query).sort([("year", -1), ("date", -1)]).to_list(200)
     return [_shape(r) for r in rows]
@@ -382,10 +385,8 @@ async def get_contestants(comp_id: str, branch: Optional[str] = None,
     comp = await _get_comp(comp_id, current_user)
     role = current_user["role"]
 
-    if role == "teacher":
-        tid = await _judge_teacher_id(current_user)
-        if not _is_judge(comp, tid):
-            raise HTTPException(status_code=403, detail="لست في لجنة تحكيم هذه المسابقة")
+    # قراءةُ النتائج مفتوحة لمعلّمي المركز — سجلٌّ يقرؤه كلُّ معلّم (قرار
+    # المالك 2026-09-10). وكان غيرُ المحكّم يُردّ بـ403.
 
     query: dict = {"competition_id": comp_id}
     if branch:

@@ -148,12 +148,15 @@ async def run():
               blob(r.json()))
         check("  my-role يُرجع سجلّ المحفّظ ليُعرف أيّ درجةٍ درجتُه",
               r.json()["teacher_id"] == A["teacher"], str(r.json().get("teacher_id")))
+        # [قرار المالك 2026-09-10] غيرُ المحكّم يقرأ السجلّ ولا يرصد
         r = await c.get("/api/competitions/my-role", headers=TB)
-        check("  غيرُ المحكّم: لا يظهر له البند", r.json()["can_see"] is False, blob(r.json()))
+        check("  غيرُ المحكّم: البند يظهر له",
+              r.json()["can_see"] is True, blob(r.json()))
+        check("  ولا يُوسَم محكّماً", r.json()["is_judge"] is False, blob(r.json()))
         r = await c.get("/api/competitions", headers=TB)
-        check("  ولا يرى المسابقة في قائمته", r.json() == [], blob(r.json()))
+        check("  ويرى المسابقة في قائمته", len(r.json()) >= 1, str(len(r.json())))
         r = await c.get(f"/api/competitions/{cmp_id}/contestants", headers=TB)
-        check("  ولا يفتحها بمعرّفها → 403", r.status_code == 403, str(r.status_code))
+        check("  ويفتح نتائجها", r.status_code == 200, str(r.status_code))
 
         # ==================================================== التسجيل
         print()
@@ -264,9 +267,12 @@ async def run():
         r = await c.delete(f"/api/competitions/{cmp_id}", headers=MG)
         check("  ولا حذفَ: تُؤرشَف ولا تُمحى → 409", r.status_code == 409, str(r.status_code))
 
+        # البندُ باقٍ (سجلٌّ يُقرأ)، وصفةُ التحكيم هي التي تسقط بالاعتماد
         r = await c.get("/api/competitions/my-role", headers=TA)
-        check("  ويختفي البند عن المحكّم بعد الاعتماد",
-              r.json()["can_see"] is False, blob(r.json()))
+        check("  البند باقٍ للمعلّم بعد الاعتماد",
+              r.json()["can_see"] is True, blob(r.json()))
+        check("  وتسقط عنه صفةُ التحكيم فلا يرصد",
+              r.json()["is_judge"] is False, blob(r.json()))
 
         r = await c.post(f"/api/competitions/{cmp_id}/archive", headers=MG)
         check("  الأرشفة بعد الاعتماد تمرّ", r.status_code == 200, str(r.status_code))

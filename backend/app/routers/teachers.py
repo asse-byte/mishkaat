@@ -119,6 +119,21 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
     }
     hire_date = teacher_dict["hire_date"]
     
+    # [قرار المالك 2026-09-10] «المعلّم الذي ليس شيخ حلقة — يأتي من خارج
+    # ويُدرّس مادّةً معيّنة لطلاب الحلقة — لا يكون لديه حساب في النظام، يعني
+    # لا يمكن إنشاء الحساب له.»
+    #
+    # والسببُ بيّن: الحسابُ في هذا النظام يفتح بيانات الطلاب — تسميعَهم
+    # وحضورَهم ومقاييسَهم — وهي أمانةُ الحلقة لا أمانةُ من يزورها لدرسٍ في
+    # مادّة. ومن لا يُسمّع ولا يرصد حضوراً لا يحتاج بابَ دخولٍ أصلاً.
+    #
+    # ويُردّ صراحةً لا يُهمَل بصمت: مديرٌ كتب اسم مستخدمٍ وكلمة مرور ثمّ لم
+    # يجدهما يعملان يظنّ الخللَ في النظام لا في طلبه.
+    if teacher.teacher_type == "external" and (teacher.username or teacher.password):
+        raise HTTPException(
+            status_code=400,
+            detail="المعلّم الخارجي لا حساب له في النظام — يُسجَّل باسمه ومهمّته فقط")
+
     # Create user account if credentials provided
     user_id = None
     if teacher.username and teacher.password:
@@ -185,9 +200,24 @@ async def update_teacher(teacher_id: str, teacher: TeacherUpdate, current_user: 
         {"_id": teacher_obj_id},
         {"$set": update_data}
     )
-    
+
+    # تحويلُ محفّظٍ إلى «معلّم خارجي» يُغلق حسابَه القائم: القاعدةُ أن الخارجي
+    # لا حساب له، وتركُ الحساب عاملاً يُبقي البابَ الذي مُنع منه مفتوحاً. ورفعُ
+    # user_version يُخرجه من كل جهازٍ في الحال لا عند انتهاء رمزه.
+    closed_account = False
+    if (update_data.get("teacher_type") == "external"
+            and existing.get("teacher_type") != "external"
+            and existing.get("user_id")):
+        await db.users.update_one(
+            {"_id": safe_object_id(existing["user_id"])},
+            {"$set": {"is_active": False}, "$inc": {"user_version": 1}})
+        closed_account = True
+
     updated = await db.teachers.find_one({"_id": teacher_obj_id})
-    return serialize_doc(updated)
+    doc = serialize_doc(updated)
+    if closed_account:
+        doc["notice"] = "أُغلق حساب هذا المعلّم — المعلّم الخارجي لا حساب له في النظام"
+    return doc
 
 @router.post("/api/teachers/{teacher_id}/transfer")
 async def transfer_teacher(teacher_id: str, data: TeacherTransferRequest, current_user: dict = Depends(get_current_user)):

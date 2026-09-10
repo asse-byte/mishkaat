@@ -212,16 +212,18 @@ async def main():
         leaked = [n for n in ("طالب B0", "حلقة B", "شيخ B", "مادة B") if n in body]
         check("  الجدول الدراسي بلا أثر من (ب)", r.status_code == 200 and not leaked,
               f"{r.status_code} {leaked}")
-        # [2026-09-06] المسابقة لا تُفتح لشيخٍ ليس في لجنتها أصلاً. والقاعدة
-        # أشدّ من «يراها بلا تسريب»: لا يراها.
+        # [قرار المالك 2026-09-10] المسابقة **سجلٌّ يقرؤه كلُّ معلّم**: يرى
+        # مسابقات مركزه ونتائجَها ولا يفعل فيها شيئاً، والرصدُ وحده محصورٌ
+        # باللجنة. وكان غيرُ المحكّم يُردّ بـ403 ولا يعرف أنّ لمركزه مسابقات.
         r = await c.get(f"/api/competitions/{ids['comp']}/contestants", headers=TA)
-        check("  متسابقو مسابقةٍ ليس محكّماً فيها → 403", r.status_code == 403,
+        check("  المعلّم يقرأ نتائج مسابقةٍ ليس محكّماً فيها", r.status_code == 200,
               str(r.status_code))
         r = await c.get("/api/competitions", headers=TA)
-        check("  قائمة المسابقات فارغة لغير المحكّم", r.json() == [], str(r.json()))
+        check("  ويرى مسابقات مركزه في قائمته", len(r.json()) >= 1, str(len(r.json())))
         r = await c.get("/api/competitions/my-role", headers=TA)
-        check("  my-role: لا يظهر له بند المسابقات",
-              r.json().get("can_see") is False, str(r.json()))
+        check("  my-role: البند يظهر له، والرصد لا",
+              r.json().get("can_see") is True and r.json().get("is_judge") is False,
+              str(r.json()))
         for label, path in [
             ("تصدير الطلاب", "/api/export/students.csv"),
             ("تصدير الحضور", "/api/export/attendance.csv"),

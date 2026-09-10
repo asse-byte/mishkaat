@@ -235,7 +235,12 @@ export default function Teachers() {
                       و«خارج الحلقات» نطاقٌ أضيق لا أوسع: لا حلقة له فلا طلاب في نطاقه. */}
                   <label className="text-sm font-semibold block mb-1">نوع المعلّم</label>
                   <select value={formData.teacher_type} title="نوع المعلّم"
-                    onChange={e => setFormData({ ...formData, teacher_type: e.target.value as 'halaqah' | 'external' })}
+                    onChange={e => {
+                      const t = e.target.value as 'halaqah' | 'external';
+                      // مسحُ ما كُتب: تركُه يُرسل بيانات حسابٍ يردّها الخادم
+                      setFormData({ ...formData, teacher_type: t,
+                        ...(t === 'external' ? { username: '', password: '' } : {}) });
+                    }}
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]">
                     <option value="halaqah">شيخ حلقة</option>
                     <option value="external">معلّم خارج الحلقات</option>
@@ -288,8 +293,21 @@ export default function Teachers() {
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
               </div>
-              {/* Login account */}
+              {/* حساب الدخول — للمحفّظ لا للمعلّم الخارجي.
+                  [قرار المالك 2026-09-10] الخارجيّ يُدرّس مادّةً لطلاب الحلقة
+                  ولا يُسمّع ولا يرصد حضوراً، وبياناتُ الطلاب أمانةُ الحلقة.
+                  فلا بابَ دخولٍ له، والخادمُ يردّ محاولةَ إنشائه. */}
               <div className="border-t pt-4">
+                {formData.teacher_type === 'external' ? (
+                  <div className="rounded-xl bg-[hsl(var(--muted))] p-4">
+                    <h4 className="font-bold text-sm mb-1">لا حساب له في النظام</h4>
+                    <p className="text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                      المعلّم الخارجي يُسجَّل باسمه ومهمّته وهاتفه فقط — لا اسمَ مستخدم
+                      ولا كلمة مرور. وحسابُ النظام يفتح تسميعَ الطلاب وحضورَهم
+                      ومقاييسَهم، وهي أمانةُ شيخ الحلقة.
+                    </p>
+                  </div>
+                ) : (<>
                 <h4 className="font-bold text-sm text-[hsl(var(--foreground))] mb-3">حساب الدخول (اختياري)</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -300,11 +318,12 @@ export default function Teachers() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold block mb-1">كلمة المرور</label>
-                    <input type="password" placeholder="••••••" dir="ltr" value={formData.password}
+                    <input type="password" placeholder="8 أحرف فأكثر، فيها حرف ورقم" dir="ltr" value={formData.password}
                       onChange={e => setFormData({ ...formData, password: e.target.value })}
                       className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                   </div>
                 </div>
+                </>)}
               </div>
               {error && (
                 <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm flex items-center gap-2">
