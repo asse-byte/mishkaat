@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { BookOpen, User, Building, MapPin, Phone, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 import axios, { AxiosError } from 'axios';
 
@@ -7,7 +7,6 @@ import axios, { AxiosError } from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 const RegisterCenter = () => {
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -51,9 +50,6 @@ const RegisterCenter = () => {
 
       await axios.post(`${API_URL}/api/public/register-center`, payload);
       setSuccess(true);
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
       
     } catch (err) {
       if (err instanceof AxiosError) {
@@ -95,10 +91,20 @@ const RegisterCenter = () => {
             <div className="w-16 h-16 bg-emerald-100 text-[hsl(var(--lamp-strong))] rounded-full flex items-center justify-center mx-auto mb-4">
               <CheckCircle2 className="w-8 h-8" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">تم التسجيل بنجاح!</h2>
-            <p className="text-slate-600 mb-6">جاري توجيهك لصفحة تسجيل الدخول...</p>
-            <Link to="/login" className="px-6 py-2 bg-[hsl(var(--niche))] text-white rounded-lg hover:bg-[hsl(var(--niche))] transition-colors inline-block">
-              الانتقال لتسجيل الدخول
+            {/* [إصلاح 2026-09-06] كانت الرسالة «تم التسجيل بنجاح — جاري توجيهك
+                لتسجيل الدخول» ثم تُحوّله بعد ثلاث ثوانٍ. والحساب يصل معطَّلاً
+                بانتظار اعتماد المدير — وهذا مقصود — فيصطدم المستخدم فوراً بـ403
+                ويظنّ أن تسجيله فشل. الرسالة تقول الآن ما سيحدث فعلاً، ولا تُحوّله. */}
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">استُلم طلبك</h2>
+            <p className="text-slate-600 mb-2">
+              سُجّل مركزك، وحسابك <strong>لن يُفعَّل حتى يعتمده مدير النظام</strong>.
+            </p>
+            <p className="text-sm text-slate-500 mb-6">
+              ستصلك رسالة على بريدك عند الاعتماد، وعندها تستطيع الدخول باسم المستخدم
+              وكلمة المرور اللذين أدخلتَهما.
+            </p>
+            <Link to="/" className="px-6 py-2 bg-[hsl(var(--niche))] text-white rounded-lg hover:bg-[hsl(var(--niche))] transition-colors inline-block">
+              العودة للصفحة الرئيسية
             </Link>
           </div>
         ) : (

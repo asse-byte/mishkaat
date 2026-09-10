@@ -1,525 +1,395 @@
-﻿import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { LoadingSpinner } from '@/components/ui/loading';
-import { useAuth } from '@/contexts/AuthContext';
+/**
+ * خطة المراجعة.
+ *
+ * [قرار المالك 2026-09-07] «اجعل خطة المراجعة شيئاً مفهوماً لدى معلّم الحلقة،
+ * وكيف يفهمه ويستفيد به.»
+ *
+ * وما كانت تُفهم ولا يُستفاد بها. كانت الصفحة تعرض جدولاً واحداً ثابتاً مكتوباً
+ * في الكود — «السبت: الأجزاء 1-5، الأحد: 6-10…» — يُعرض لكلّ طالبٍ سواءٌ حفظ
+ * ثلاثين جزءاً أو نصف جزء. ولم تكن تنادي نقاطَ خطط المراجعة أصلاً: المجموعةُ
+ * والموجّهُ في الخادم لم يستعملهما شيءٌ في الواجهة قطّ. وعلامةُ «تمّت» كانت
+ * تُقارن رقمَ الجزء بحقل `start_ayah`، فمراجعةُ الآية الثالثة من أيّ سورة
+ * تُعلّم يومَ السبت منجزاً — إلى الأبد، بلا نافذةٍ زمنية.
+ *
+ * وهي الآن تجيب عن السؤال الذي يسأله الشيخ صباحاً: **على مَن ورده اليوم، ومن
+ * راجع، ومن تأخّر** — ووردُ كلِّ طالبٍ محسوبٌ من محفوظه هو.
+ */
+import { useCallback, useEffect, useState } from 'react';
 import {
-  RefreshCw,
-  Search,
-  Calendar,
-  BookOpen,
-  CheckCircle2,
-  Clock,
-  Target,
-  TrendingUp,
-  Star,
-  AlertCircle,
-  Plus,
-  X,
-  Users,
+  RefreshCw, CheckCircle2, AlertTriangle, BookOpen, Info, Settings2, X,
 } from 'lucide-react';
-import { studentsApi, recitationsApi } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { LoadingSpinner } from '@/components/ui/loading';
 import PageHeader from '@/components/ui/PageHeader';
+import { errorMessage } from '@/lib/errors';
+import api from '@/services/api';
 
-interface ReviewStudent {
-  id: string;
-  name: string;
-  halaqah_name?: string;
-  enrollment_date: string;
-  progress: number;
-  phone?: string;
-  parent_name?: string;
+interface Assignment {
+  from_juz: number;
+  to_juz: number;
+  cycle_days: number;
+  day_in_cycle: number;
+  memorized_juz: number;
+  pages_today: number;
 }
 
-interface RecitationData {
-  id: string;
+interface Row {
   student_id: string;
-  surah_name: string;
-  start_ayah: number;
-  end_ayah: number;
-  evaluation: string;
-  mistakes_count: number;
-  date: string;
-  recitation_type: string;
+  student_name: string;
+  halaqah_name?: string;
+  plan_id?: string | null;
+  juz_per_day: number;
+  assignment: Assignment | null;
+  reviewed_today: boolean;
+  days_since_review: number | null;
+  overdue: boolean;
+  reviews_count: number;
 }
 
-const evaluationLabels: Record<string, { text: string; color: string; bgColor: string }> = {
-  excellent: { text: 'ممتاز', color: 'text-green-600', bgColor: 'bg-green-100' },
-  good: { text: 'جيد', color: 'text-blue-600', bgColor: 'bg-blue-100' },
-  acceptable: { text: 'مقبول', color: 'text-amber-600', bgColor: 'bg-amber-100' },
-  needs_improvement: { text: 'يحتاج تحسين', color: 'text-red-600', bgColor: 'bg-red-100' },
-};
+interface TodayResponse {
+  date: string;
+  students: Row[];
+  summary: { total: number; reviewed_today: number; overdue: number; no_memorization: number };
+  explainer: { how: string; default_rate: number };
+}
 
-// خطة المراجعة: 5 أجزاء يومياً × 6 أيام = 30 جزء = ختمة كاملة في أسبوع
-// 8 دورات سنوياً = مراجعة القرآن 8 مرات في السنة
-const REVIEW_PLAN = {
-  juzPerDay: 5,
-  daysPerCycle: 6,
-  restDaysPerWeek: 1,
-  cyclesPerYear: 8,
-  weeklySchedule: [
-    { day: 'السبت', juzRange: '1 - 5', juzList: [1, 2, 3, 4, 5] },
-    { day: 'الأحد', juzRange: '6 - 10', juzList: [6, 7, 8, 9, 10] },
-    { day: 'الاثنين', juzRange: '11 - 15', juzList: [11, 12, 13, 14, 15] },
-    { day: 'الثلاثاء', juzRange: '16 - 20', juzList: [16, 17, 18, 19, 20] },
-    { day: 'الأربعاء', juzRange: '21 - 25', juzList: [21, 22, 23, 24, 25] },
-    { day: 'الخميس', juzRange: '26 - 30', juzList: [26, 27, 28, 29, 30] },
-  ],
-};
+const EVALUATIONS = [
+  { value: 'excellent', label: 'ممتاز' },
+  { value: 'very_good', label: 'جيد جداً' },
+  { value: 'good', label: 'جيد' },
+  { value: 'needs_improvement', label: 'يحتاج تحسيناً' },
+];
 
 export default function ReviewPlans() {
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
-  const [reviewStudents, setReviewStudents] = useState<ReviewStudent[]>([]);
-  const [studentRecitations, setStudentRecitations] = useState<RecitationData[]>([]);
+  const isTeacher = user?.role === 'teacher';
+  const canSetRate = isTeacher || user?.role === 'center_manager' || user?.role === 'admin';
+
+  const [data, setData] = useState<TodayResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [loadingRecitations, setLoadingRecitations] = useState(false);
-  const [showRecordForm, setShowRecordForm] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+  const [busy, setBusy] = useState('');
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const [recording, setRecording] = useState<Row | null>(null);
+  const [evaluation, setEvaluation] = useState('good');
+  const [notes, setNotes] = useState('');
+  const [rateFor, setRateFor] = useState<Row | null>(null);
+  const [rate, setRate] = useState('1');
 
-  // Record review form
-  const [reviewForm, setReviewForm] = useState({
-    juz_start: '', juz_end: '', evaluation: 'excellent', mistakes: '0', notes: '',
-  });
-
-  useEffect(() => {
-    const loadStudents = async () => {
-      try {
-        setLoading(true);
-        const allStudents = await studentsApi.getAll() as any[];
-        const reviewing = allStudents.filter(s => s.student_type === 'reviewing' || s.memorization_plan === 'plan_review');
-        setReviewStudents(reviewing);
-      } catch (err) {
-        console.error('Error loading review students:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadStudents();
+  const load = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError('');
+      const r = await api.get<TodayResponse>('/review-plans/today');
+      setData(r.data);
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر تحميل ورد اليوم'));
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  useEffect(() => {
-    if (!selectedStudent) return;
-    const loadRecitations = async () => {
-      try {
-        setLoadingRecitations(true);
-        const data = await recitationsApi.getByStudent(selectedStudent) as RecitationData[];
-        setStudentRecitations(data.filter(r => r.recitation_type === 'review'));
-      } catch (err) {
-        console.error('Error loading recitations:', err);
-      } finally {
-        setLoadingRecitations(false);
-      }
-    };
-    loadRecitations();
-  }, [selectedStudent]);
+  useEffect(() => { load(); }, [load]);
 
-  const handleRecordReview = async () => {
-    if (!selectedStudent) return;
-    const student = reviewStudents.find(s => s.id === selectedStudent);
+  const recordReview = async () => {
+    if (!recording?.assignment) return;
+    const a = recording.assignment;
     try {
-      setSubmitting(true);
-      await recitationsApi.create({
-        student_id: selectedStudent,
-        student_name: student?.name,
-        teacher_id: user?.id || '',
-        teacher_name: user?.name || '',
-        surah_name: `الأجزاء ${reviewForm.juz_start}-${reviewForm.juz_end}`,
-        start_ayah: parseInt(reviewForm.juz_start) || 1,
-        end_ayah: parseInt(reviewForm.juz_end) || 5,
-        evaluation: reviewForm.evaluation,
-        mistakes_count: parseInt(reviewForm.mistakes) || 0,
-        notes: reviewForm.notes || undefined,
+      setBusy(recording.student_id);
+      setError('');
+      await api.post('/recitations', {
+        student_id: recording.student_id,
+        // معرّف المحفّظ يأخذه الخادم من توكن المُسجِّل، ولا يُرسَل من هنا
+        teacher_id: '',
+        surah_name: a.from_juz === a.to_juz
+          ? `مراجعة الجزء ${a.from_juz}`
+          : `مراجعة الأجزاء ${a.from_juz}–${a.to_juz}`,
+        start_ayah: 1,
+        end_ayah: 1,
+        // الصفحات صريحة — وكانت الشاشة تحشر رقمَ الجزء في start_ayah/end_ayah،
+        // فتُسجَّل «مراجعة خمسة أجزاء» في محرّك المقاييس بوصفها خمسَ آيات.
+        pages_count: a.pages_today,
         recitation_type: 'review',
-      } as any);
-      setShowRecordForm(false);
-      setReviewForm({ juz_start: '', juz_end: '', evaluation: 'excellent', mistakes: '0', notes: '' });
-      // Reload recitations
-      const data = await recitationsApi.getByStudent(selectedStudent) as RecitationData[];
-      setStudentRecitations(data.filter(r => r.recitation_type === 'review'));
-    } catch (err) {
-      console.error('Error recording review:', err);
+        evaluation,
+        notes: notes || undefined,
+        error_tags: {},
+      });
+      setRecording(null);
+      setNotes('');
+      setNotice('سُجّلت المراجعة.');
+      await load();
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر تسجيل المراجعة'));
     } finally {
-      setSubmitting(false);
+      setBusy('');
     }
   };
 
-  const filteredStudents = reviewStudents.filter(
-    (student) => student.name.includes(searchTerm)
-  );
-
-  const selectedStudentData = selectedStudent
-    ? reviewStudents.find(s => s.id === selectedStudent)
-    : null;
-
-  // Calculate how many review cycles completed based on recitations
-  const completedReviews = studentRecitations.length;
-  const cyclesCompleted = Math.floor(completedReviews / 6); // 6 days per cycle
+  const saveRate = async () => {
+    if (!rateFor) return;
+    const value = Number(rate);
+    if (!Number.isFinite(value) || value <= 0) {
+      setError('المعدّل يجب أن يكون رقماً أكبر من صفر');
+      return;
+    }
+    try {
+      setBusy(rateFor.student_id);
+      setError('');
+      const payload = {
+        center_id: user?.center_id || '',
+        student_id: rateFor.student_id,
+        juz_per_day: value,
+        title: `خطة مراجعة — ${rateFor.student_name}`,
+      };
+      if (rateFor.plan_id) await api.put(`/review-plans/${rateFor.plan_id}`, payload);
+      else await api.post('/review-plans', payload);
+      setRateFor(null);
+      setNotice('حُفظ معدّل المراجعة.');
+      await load();
+    } catch (err: unknown) {
+      setError(errorMessage(err, 'تعذّر حفظ المعدّل'));
+    } finally {
+      setBusy('');
+    }
+  };
 
   if (loading) {
     return <div className="flex items-center justify-center h-64"><LoadingSpinner size="lg" /></div>;
   }
 
+  const rows = data?.students || [];
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
       <PageHeader
-        title="خطط المراجعة والتثبيت"
-        subtitle="إدارة ومتابعة طلاب مراجعة القرآن الكريم"
-      />
+        title="خطة المراجعة"
+        subtitle={`ورد اليوم — ${data?.date || ''}`}
+      >
+        <button onClick={load} className="btn-primary text-sm">
+          <RefreshCw className="w-4 h-4" /> تحديث
+        </button>
+      </PageHeader>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 stagger">
+      {error && (
+        <div className="p-3 rounded-xl bg-red-50 text-red-700 text-sm font-semibold border border-red-200">
+          {error}
+        </div>
+      )}
+      {notice && (
+        <div className="p-3 rounded-xl bg-emerald-50 text-emerald-800 text-sm font-semibold
+                        border border-emerald-200 flex items-center justify-between gap-3">
+          <span className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 shrink-0" /> {notice}
+          </span>
+          <button onClick={() => setNotice('')} className="text-xs shrink-0">إخفاء</button>
+        </div>
+      )}
+
+      {/* شرحٌ في سطرين: ما هذه الصفحة، وكيف يُحسب الورد */}
+      <div className="bg-[hsl(var(--muted))] rounded-[var(--radius)] p-4 flex gap-3">
+        <Info className="w-5 h-5 text-[hsl(var(--primary))] shrink-0 mt-0.5" />
+        <div className="text-sm leading-relaxed">
+          <p className="font-bold mb-1">كيف يُحسب ورد اليوم؟</p>
+          <p className="text-[hsl(var(--muted-foreground))]">
+            {data?.explainer.how}
+            {' '}فمن حفظ خمسة أجزاء بمعدّل جزءٍ يومياً يختم دورته في خمسة أيام،
+            ومن حفظ ثلاثين يختمها في شهر. والمعدّل يرفعه الشيخ أو يخفضه لكل طالبٍ
+            على حدة من زرّ الإعداد بجانب اسمه.
+          </p>
+        </div>
+      </div>
+
+      {/* ملخّص اليوم */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
-          { icon: Users,     val: reviewStudents.length,      label: 'طالب مراجعة',     cls: 'stat-card-teal' },
-          { icon: Target,    val: REVIEW_PLAN.daysPerCycle,   label: 'أيام للدورة',      cls: 'stat-card-amber' },
-          { icon: BookOpen,  val: REVIEW_PLAN.juzPerDay,      label: 'أجزاء يومياً',     cls: 'stat-card-teal' },
-          { icon: Star,      val: REVIEW_PLAN.cyclesPerYear,  label: 'دورات سنوياً',     cls: 'stat-card-green' },
+          { label: 'طلاب الحلقة', value: data?.summary.total ?? 0, tone: '' },
+          { label: 'راجعوا اليوم', value: data?.summary.reviewed_today ?? 0, tone: 'text-emerald-700' },
+          { label: 'متأخّرون', value: data?.summary.overdue ?? 0, tone: 'text-amber-700' },
+          { label: 'لم يبدأوا الحفظ', value: data?.summary.no_memorization ?? 0, tone: 'text-[hsl(var(--muted-foreground))]' },
         ].map(s => (
-          <div key={s.label} className={`${s.cls} p-4`}>
-            <div className="flex items-start justify-between gap-2 mb-2">
-              <span className="eyebrow">{s.label}</span>
-              <s.icon className="w-4 h-4 text-[hsl(var(--ink-3))] shrink-0" strokeWidth={1.75} />
-            </div>
-            <p className="num-display text-2xl text-[hsl(var(--ink))]">{s.val}</p>
+          <div key={s.label}
+            className="bg-white rounded-[var(--radius)] border border-[hsl(var(--border))] p-4">
+            <p className={`text-2xl font-bold font-mono ${s.tone}`}>{s.value}</p>
+            <p className="text-xs font-semibold text-[hsl(var(--muted-foreground))]">{s.label}</p>
           </div>
         ))}
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute right-3 top-3 h-5 w-5 text-[hsl(var(--muted-foreground))]" />
-        <Input
-          placeholder="البحث عن طالب مراجعة..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pr-10"
-        />
-      </div>
-
-      {/* Review Plan Methodology */}
-      <Card className="bg-gradient-to-l from-green-50 to-emerald-50 border-green-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-green-700">
-            <BookOpen className="w-5 h-5" />
-            منهجية المراجعة والتثبيت
-          </CardTitle>
-          <CardDescription className="text-green-600">
-            خطة منظمة لمراجعة القرآن الكريم كاملاً بشكل دوري
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-4 gap-4 mb-6">
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">1</div>
-              <h4 className="font-semibold text-sm">المراجعة اليومية</h4>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">5 أجزاء يومياً بتدبر وإتقان</p>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">2</div>
-              <h4 className="font-semibold text-sm">الختمة الأسبوعية</h4>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">ختمة كاملة كل 6 أيام + يوم راحة</p>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">3</div>
-              <h4 className="font-semibold text-sm">التسميع اليومي</h4>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">تسميع على المحفظ لضمان الإتقان</p>
-            </div>
-            <div className="text-center p-4 bg-white rounded-lg shadow-sm">
-              <div className="w-10 h-10 bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.35)] rounded-full flex items-center justify-center mx-auto mb-2 text-[hsl(var(--ok))] font-bold">4</div>
-              <h4 className="font-semibold text-sm">التقييم الدوري</h4>
-              <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">8 دورات مراجعة سنوياً</p>
-            </div>
-          </div>
-
-          {/* Weekly Schedule Table */}
-          <div className="bg-white rounded-lg p-4">
-            <h4 className="font-semibold mb-3 text-green-700">الجدول الأسبوعي للمراجعة</h4>
-            <div className="grid grid-cols-6 gap-2">
-              {REVIEW_PLAN.weeklySchedule.map((day) => (
-                <div key={day.day} className="text-center p-3 rounded-lg bg-green-50 border border-green-200">
-                  <p className="font-semibold text-green-700 text-sm">{day.day}</p>
-                  <p className="text-lg font-bold text-green-600 mt-1">{day.juzRange}</p>
-                  <p className="text-xs text-[hsl(var(--muted-foreground))]">5 أجزاء</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-center">
-              <p className="text-sm text-amber-700">
-                <strong>يوم الجمعة:</strong> راحة ومراجعة حرة
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {reviewStudents.length === 0 ? (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <RefreshCw className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-50" />
-            <h3 className="text-lg font-semibold mb-2">لا يوجد طلاب مراجعة حالياً</h3>
-            <p className="text-[hsl(var(--muted-foreground))]">
-              لتسجيل طالب مراجعة، اذهب لصفحة الطلاب واختر "طالب مراجعة وتثبيت" عند التسجيل
-            </p>
-          </CardContent>
-        </Card>
+      {rows.length === 0 ? (
+        <div className="bg-white rounded-[var(--radius-lg)] border border-[hsl(var(--border))]
+                        text-center py-16">
+          <BookOpen className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-35" />
+          <p className="text-[hsl(var(--muted-foreground))] font-semibold">
+            لا طلاب في نطاقك
+          </p>
+        </div>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-6">
-          {/* Students List */}
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg">طلاب المراجعة ({filteredStudents.length})</h3>
-            {filteredStudents.map((student) => (
-              <Card
-                key={student.id}
-                className={`cursor-pointer transition-all ${
-                  selectedStudent === student.id
-                    ? 'ring-2 ring-green-500 shadow-lg'
-                    : 'hover:shadow-md'
-                }`}
-                onClick={() => setSelectedStudent(student.id)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-4">
-                    <Avatar className="w-14 h-14">
-                      <AvatarFallback className="text-lg bg-[hsl(var(--ok-wash))] text-[hsl(var(--ok))] font-bold">
-                        {student.name.charAt(0)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-bold">{student.name}</h3>
-                        <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-700">
-                          مراجعة وتثبيت
-                        </span>
-                      </div>
-                      {student.halaqah_name && (
-                        <p className="text-sm text-[hsl(var(--muted-foreground))]">
-                          {student.halaqah_name}
-                        </p>
-                      )}
-                    </div>
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-green-600">100%</div>
-                      <p className="text-xs text-[hsl(var(--muted-foreground))]">حافظ للقرآن</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Selected Student Details */}
-          <div>
-            {selectedStudentData ? (
-              <div className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="w-5 h-5" />
-                      جدول المراجعة - {selectedStudentData.name}
-                    </CardTitle>
-                    <CardDescription>
-                      متابعة الدورات والمراجعات اليومية
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {/* Schedule */}
-                    <div className="space-y-3">
-                      {REVIEW_PLAN.weeklySchedule.map((day, index) => {
-                        // Check if there's a recitation for this day range
-                        const hasRecitation = studentRecitations.some(r => {
-                          const startJuz = r.start_ayah;
-                          return day.juzList.includes(startJuz);
-                        });
-                        
-                        return (
-                          <div
-                            key={day.day}
-                            className={`p-3 rounded-lg border ${
-                              hasRecitation
-                                ? 'bg-green-50 border-green-200'
-                                : 'bg-[hsl(var(--muted))] border-[hsl(var(--border))]'
-                            }`}
-                          >
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-3">
-                                {hasRecitation ? (
-                                  <CheckCircle2 className="w-5 h-5 text-green-500" />
-                                ) : (
-                                  <div className="w-5 h-5 rounded-full border-2 border-gray-300" />
-                                )}
-                                <span className="font-medium">{day.day}</span>
-                              </div>
-                              <div className="flex gap-1">
-                                {day.juzList.map((j) => (
-                                  <span
-                                    key={j}
-                                    className={`w-7 h-7 text-xs rounded flex items-center justify-center font-medium ${
-                                      hasRecitation
-                                        ? 'bg-[hsl(var(--ok))] text-white'
-                                        : 'bg-gray-200 text-gray-600'
-                                    }`}
-                                  >
-                                    {j}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-
-                    {/* Record Review Button */}
-                    <Button
-                      className="w-full mt-4 gap-2"
-                      onClick={() => setShowRecordForm(true)}
-                    >
-                      <Plus className="w-4 h-4" />
-                      تسجيل مراجعة اليوم
-                    </Button>
-                  </CardContent>
-                </Card>
-
-                {/* Recent Reviews */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5" />
-                      سجل المراجعات الأخيرة
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {loadingRecitations ? (
-                      <div className="text-center py-4"><LoadingSpinner size="sm" /></div>
-                    ) : studentRecitations.length === 0 ? (
-                      <p className="text-center text-[hsl(var(--muted-foreground))] py-4">
-                        لا توجد مراجعات مسجلة بعد
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {studentRecitations.slice(0, 10).map((rec) => (
-                          <div key={rec.id} className="flex items-center justify-between p-2 rounded bg-[hsl(var(--muted))]">
-                            <div className="flex items-center gap-2">
-                              <CheckCircle2 className="w-4 h-4 text-green-500" />
-                              <span className="text-sm font-medium">{rec.surah_name}</span>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className={`text-xs px-2 py-1 rounded-full ${evaluationLabels[rec.evaluation]?.bgColor} ${evaluationLabels[rec.evaluation]?.color}`}>
-                                {evaluationLabels[rec.evaluation]?.text}
-                              </span>
-                              <span className="text-xs text-[hsl(var(--muted-foreground))]">
-                                {new Date(rec.date).toLocaleDateString('ar-SA')}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
+        <div className="space-y-3">
+          {rows.map(r => (
+            <div key={r.student_id}
+              className={`bg-white rounded-[var(--radius-lg)] border p-5 shadow-sm ${
+                r.overdue ? 'border-amber-300' : 'border-[hsl(var(--border))]'}`}>
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="font-bold flex items-center gap-2">
+                    {r.student_name}
+                    {r.reviewed_today && (
+                      <span className="text-[11px] font-bold bg-emerald-50 text-emerald-700
+                                       px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3" /> راجع اليوم
+                      </span>
                     )}
-                  </CardContent>
-                </Card>
-              </div>
-            ) : (
-              <Card className="h-full flex items-center justify-center">
-                <CardContent className="text-center py-12">
-                  <RefreshCw className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-50" />
-                  <p className="text-[hsl(var(--muted-foreground))]">
-                    اختر طالباً لعرض جدول المراجعة والتسميع
+                    {r.overdue && (
+                      <span className="text-[11px] font-bold bg-amber-50 text-amber-800
+                                       px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> متأخّر
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-[hsl(var(--muted-foreground))] mt-0.5">
+                    {r.halaqah_name || '—'}
+                    {r.assignment ? ` · حفظ ${r.assignment.memorized_juz} جزءاً` : ''}
+                    {r.days_since_review !== null
+                      ? ` · آخر مراجعة قبل ${r.days_since_review} يوماً`
+                      : ' · لم يُسجَّل له مراجعة بعد'}
                   </p>
-                </CardContent>
-              </Card>
-            )}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {canSetRate && (
+                    <button
+                      onClick={() => { setRateFor(r); setRate(String(r.juz_per_day)); setError(''); }}
+                      title="معدّل المراجعة اليوميّ"
+                      className="p-2 rounded-lg text-[hsl(var(--ink-3))] hover:bg-[hsl(var(--muted))]">
+                      <Settings2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {isTeacher && r.assignment && !r.reviewed_today && (
+                    <button
+                      onClick={() => { setRecording(r); setEvaluation('good'); setNotes(''); setError(''); }}
+                      disabled={busy === r.student_id}
+                      className="gradient-primary text-white font-bold px-4 py-2 rounded-xl
+                                 text-xs disabled:opacity-60">
+                      تسجيل المراجعة
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {r.assignment ? (
+                <div className="mt-3 rounded-[var(--radius)] bg-[hsl(var(--muted))] p-3
+                                flex flex-wrap items-center gap-x-6 gap-y-1">
+                  <span className="text-sm font-bold">
+                    وردُ اليوم:{' '}
+                    {r.assignment.from_juz === r.assignment.to_juz
+                      ? `الجزء ${r.assignment.from_juz}`
+                      : `الأجزاء ${r.assignment.from_juz} – ${r.assignment.to_juz}`}
+                  </span>
+                  <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                    اليوم {r.assignment.day_in_cycle} من {r.assignment.cycle_days} في الدورة
+                  </span>
+                  <span className="text-xs text-[hsl(var(--muted-foreground))]">
+                    ≈ {r.assignment.pages_today} صفحة · بمعدّل {r.juz_per_day} جزء/يوم
+                  </span>
+                </div>
+              ) : (
+                <p className="mt-3 text-xs text-[hsl(var(--muted-foreground))]">
+                  لا ورد له بعد — يبدأ حين يُسجَّل له حفظ.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* تسجيل المراجعة */}
+      {recording && recording.assignment && (
+        <div className="modal-overlay" onClick={() => setRecording(null)}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-md"
+            onClick={e => e.stopPropagation()}>
+            <div className="gradient-primary p-5 rounded-t-3xl flex items-center
+                            justify-between text-white">
+              <h3 className="text-lg font-bold">تسجيل مراجعة {recording.student_name}</h3>
+              <button onClick={() => setRecording(null)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs">{error}</div>}
+              <div className="rounded-[var(--radius)] bg-[hsl(var(--muted))] p-3 text-sm font-bold">
+                {recording.assignment.from_juz === recording.assignment.to_juz
+                  ? `الجزء ${recording.assignment.from_juz}`
+                  : `الأجزاء ${recording.assignment.from_juz} – ${recording.assignment.to_juz}`}
+                <span className="font-normal text-xs text-[hsl(var(--muted-foreground))]">
+                  {' '}· {recording.assignment.pages_today} صفحة
+                </span>
+              </div>
+              <div>
+                <label className="text-xs font-bold block mb-1">التقدير *</label>
+                <select value={evaluation} onChange={e => setEvaluation(e.target.value)}
+                  className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))]
+                             text-sm bg-white">
+                  {EVALUATIONS.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs font-bold block mb-1">ملاحظات</label>
+                <textarea value={notes} onChange={e => setNotes(e.target.value)}
+                  className="w-full p-3 rounded-xl border-2 border-[hsl(var(--border))]
+                             text-sm min-h-[70px]" />
+              </div>
+              <div className="flex gap-2 pt-3 border-t">
+                <button onClick={recordReview} disabled={!!busy}
+                  className="flex-1 gradient-primary text-white font-bold py-3 rounded-xl text-sm">
+                  {busy ? 'جارٍ الحفظ...' : 'حفظ المراجعة'}
+                </button>
+                <button onClick={() => setRecording(null)}
+                  className="px-5 py-3 border rounded-xl text-sm font-semibold">إلغاء</button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Record Review Modal */}
-      {showRecordForm && selectedStudentData && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-lg">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <CardTitle>تسجيل مراجعة - {selectedStudentData.name}</CardTitle>
-                <Button variant="ghost" size="icon" onClick={() => setShowRecordForm(false)}>
-                  <X className="w-5 h-5" />
-                </Button>
+      {/* معدّل المراجعة */}
+      {rateFor && (
+        <div className="modal-overlay" onClick={() => setRateFor(null)}>
+          <div className="bg-white rounded-[var(--radius-lg)] shadow-2xl w-full max-w-md"
+            onClick={e => e.stopPropagation()}>
+            <div className="gradient-primary p-5 rounded-t-3xl flex items-center
+                            justify-between text-white">
+              <h3 className="text-lg font-bold">معدّل مراجعة {rateFor.student_name}</h3>
+              <button onClick={() => setRateFor(null)} className="text-white/80 hover:text-white">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {error && <div className="p-3 bg-red-50 text-red-600 rounded-xl text-xs">{error}</div>}
+              <div>
+                <label className="text-xs font-bold block mb-1">كم جزءاً يُراجع في اليوم؟</label>
+                <input value={rate} onChange={e => setRate(e.target.value)}
+                  inputMode="decimal" dir="ltr"
+                  className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))]
+                             text-sm text-center font-bold" />
+                <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-1.5">
+                  يُقبل الكسر: 0.5 يعني نصف جزء يومياً — للمبتدئ الذي يثقُل عليه الجزء.
+                  {rateFor.assignment && (
+                    <> ومحفوظُه الآن {rateFor.assignment.memorized_juz} جزءاً.</>
+                  )}
+                </p>
               </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>من جزء</Label>
-                  <Input type="number" placeholder="1" min="1" max="30"
-                    value={reviewForm.juz_start}
-                    onChange={(e) => setReviewForm({...reviewForm, juz_start: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <Label>إلى جزء</Label>
-                  <Input type="number" placeholder="5" min="1" max="30"
-                    value={reviewForm.juz_end}
-                    onChange={(e) => setReviewForm({...reviewForm, juz_end: e.target.value})} />
-                </div>
+              <div className="flex gap-2 pt-3 border-t">
+                <button onClick={saveRate} disabled={!!busy}
+                  className="flex-1 gradient-primary text-white font-bold py-3 rounded-xl text-sm">
+                  {busy ? 'جارٍ الحفظ...' : 'حفظ'}
+                </button>
+                <button onClick={() => setRateFor(null)}
+                  className="px-5 py-3 border rounded-xl text-sm font-semibold">إلغاء</button>
               </div>
-
-              {/* Quick Selection */}
-              <div className="space-y-2">
-                <Label className="text-sm">اختيار سريع</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {REVIEW_PLAN.weeklySchedule.map((day) => (
-                    <Button key={day.day} variant="outline" size="sm"
-                      onClick={() => setReviewForm({
-                        ...reviewForm,
-                        juz_start: String(day.juzList[0]),
-                        juz_end: String(day.juzList[day.juzList.length - 1]),
-                      })}
-                      className="text-xs"
-                    >
-                      {day.day} ({day.juzRange})
-                    </Button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>التقييم</Label>
-                <select className="w-full h-11 px-3 rounded-lg border border-[hsl(var(--input))] bg-transparent"
-                  value={reviewForm.evaluation}
-                  onChange={(e) => setReviewForm({...reviewForm, evaluation: e.target.value})}>
-                  <option value="excellent">ممتاز - حفظ متين</option>
-                  <option value="good">جيد - أخطاء قليلة</option>
-                  <option value="acceptable">مقبول - يحتاج مراجعة أكثر</option>
-                  <option value="needs_improvement">يحتاج تحسين - أخطاء كثيرة</option>
-                </select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>عدد الأخطاء</Label>
-                <Input type="number" placeholder="0" value={reviewForm.mistakes}
-                  onChange={(e) => setReviewForm({...reviewForm, mistakes: e.target.value})} />
-              </div>
-
-              <div className="space-y-2">
-                <Label>ملاحظات المحفظ</Label>
-                <textarea className="w-full h-20 px-3 py-2 rounded-lg border border-[hsl(var(--input))] bg-transparent resize-none"
-                  placeholder="ملاحظات حول المراجعة..."
-                  value={reviewForm.notes}
-                  onChange={(e) => setReviewForm({...reviewForm, notes: e.target.value})} />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <Button className="flex-1" onClick={handleRecordReview} disabled={submitting}>
-                  {submitting ? <LoadingSpinner size="sm" /> : <><CheckCircle2 className="w-4 h-4 ml-2" />حفظ المراجعة</>}
-                </Button>
-                <Button variant="outline" onClick={() => setShowRecordForm(false)}>إلغاء</Button>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 }
-

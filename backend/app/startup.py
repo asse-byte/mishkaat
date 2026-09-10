@@ -50,6 +50,11 @@ async def startup_event():
     await db.recitations.create_index("student_id")
     await db.recitations.create_index([("student_id", 1), ("date", -1)])
     await db.recitations.create_index("teacher_id")
+    # مفتاح اليوم: عليه يقوم فحصُ «تسميعٌ واحد لكل طالب في اليوم» وقراءةُ اليوم.
+    # غير فريد عن قصد: للطالب تسميعُ حفظٍ وتسميعُ مراجعةٍ في اليوم نفسه،
+    # والتفريقُ بينهما في الكود لا في الفهرس — وسجلّاتٌ قديمة بلا date_str.
+    await _safe_create_index(db.recitations, [("student_id", 1), ("date_str", 1)])
+    await _safe_create_index(db.recitations, [("center_id", 1), ("date", -1)])
     await db.attendance.create_index("student_id")
     await db.attendance.create_index([("student_id", 1), ("date", -1)])
     await db.attendance.create_index("halaqah_id")
@@ -149,6 +154,17 @@ async def startup_event():
     await db.competitions.create_index("center_id")
     await db.competition_contestants.create_index([("competition_id", 1), ("student_id", 1)])
     await db.bulk_messages.create_index([("center_id", 1), ("sender_id", 1)])
+
+    # الشهادات: المنعُ من التكرار في القاعدة لا في الكود وحده. فحصٌ في الكود
+    # يسبق كتابةً ينجح مرّتين حين يُضغط الزرّ مرّتين في اللحظة نفسها.
+    await _safe_create_index(
+        db.certificates, [("student_id", 1), ("milestone", 1)], unique=True,
+        partialFilterExpression={"kind": "milestone"}, name="uniq_student_milestone")
+    await _safe_create_index(
+        db.certificates, [("competition_id", 1), ("student_id", 1)], unique=True,
+        partialFilterExpression={"kind": "competition"}, name="uniq_competition_student")
+    await _safe_create_index(db.certificates, [("center_id", 1), ("issued_at", -1)])
+    await _safe_create_index(db.certificates, [("serial", 1)], unique=True)
 
     # [AUDIT-2026-05-22 fix: admin bootstrap — never ship default password to production]
     SEED_DEMO_DATA = os.getenv("SEED_DEMO_DATA", "false").lower() in ("true", "1", "yes")
@@ -356,6 +372,18 @@ async def startup_event():
         teacher_result = await db.teachers.insert_many(default_teachers)
         teacher_ids = [str(id) for id in teacher_result.inserted_ids]
         print(f"[SUCCESS] Default teachers created: {teacher_ids}")
+
+        # [إصلاح 2026-09-06] البذرة كانت تُنشئ حساب teacher1 وسجلات المحفّظين
+        # ولا تربط بينها إطلاقاً (user_id = None في كلّها). ومنذ صار نطاق المحفّظ
+        # حلقاتِه — يُستدلّ عليها من users → teachers.user_id → halaqat.teacher_id —
+        # فإن حسابَ محفّظ بلا سجلّ مرتبط لا يرى شيئاً على الإطلاق. الربط هنا.
+        teacher_user = await db.users.find_one({"username": "teacher1"})
+        if teacher_user and teacher_ids:
+            await db.teachers.update_one(
+                {"_id": teacher_result.inserted_ids[0]},
+                {"$set": {"user_id": str(teacher_user["_id"])}},
+            )
+            print("[SUCCESS] teacher1 linked to the first demo teacher record")
         
         # Seed halaqat
         default_halaqat = [

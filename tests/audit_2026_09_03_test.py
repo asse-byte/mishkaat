@@ -158,14 +158,18 @@ async def main():
         check("مدير المركز يرى الرواتب", any(t.get("salary") == 75000 for t in r.json()))
 
         # ---------- 4. الحضور ----------
+        # [تحديث 2026-09-06] كان المُسجِّل هنا مديرَ المركز. صار تسجيل الحضور من
+        # عمل شيخ الحلقة وحده (قرار المالك)، فالفاعل هو المحفّظ — انظر
+        # tests/data_isolation_test.py. ما يفحصه هذا الاختبار (منعُ التكرار
+        # وتصحيحُ إعادة الإرسال) لم يتغيّر.
         recs = {"date": "2026-09-01", "records": [
             {"student_id": student_id, "halaqah_id": halaqah_id, "status": "absent"},
             {"student_id": student2_id, "halaqah_id": halaqah_id, "status": "present"}]}
-        r = await c.post("/api/attendance", headers=H(mgr), json=recs)
+        r = await c.post("/api/attendance", headers=H(teach), json=recs)
         check("تسجيل الحضور", r.status_code == 200, r.text[:150])
 
         recs["records"][0]["status"] = "present"
-        await c.post("/api/attendance", headers=H(mgr), json=recs)
+        await c.post("/api/attendance", headers=H(teach), json=recs)
         n = await server.db.attendance.count_documents({"student_id": student_id, "date_str": "2026-09-01"})
         row = await server.db.attendance.find_one({"student_id": student_id, "date_str": "2026-09-01"})
         check("[خلل] إعادة الإرسال تصحّح ولا تُكرّر", n == 1 and row["status"] == "present", f"n={n}")
@@ -273,7 +277,9 @@ async def main():
 
         # ---------- 12. حذف التسميع (كان زراً وهمياً) ----------
         # الواجهة كانت تنادي PUT /recitations/{id} — نقطة لا وجود لها — وتبتلع الـ404 بصمت
-        r = await c.post("/api/recitations", headers=H(mgr), json={
+        # [تحديث 2026-09-06] المُسجِّل شيخُ الحلقة لا المدير (قرار المالك)؛ والحذف
+        # يبقى للمدير لأنه هو التصحيح — وهو ما يفحصه هذا الاختبار.
+        r = await c.post("/api/recitations", headers=H(teach), json={
             "student_id": student_id, "teacher_id": teacher_id,
             "surah_name": "البقرة", "start_ayah": 1, "end_ayah": 20,
             "evaluation": "excellent", "mistakes_count": 0, "recitation_type": "new"})
@@ -302,7 +308,8 @@ async def main():
         check("[خلل] الحذف المكرر مرفوض", r.status_code == 409, str(r.status_code))
 
         # معلّم لا يحذف تسميعاً سجّله غيره
-        r = await c.post("/api/recitations", headers=H(mgr), json={
+        # [تحديث 2026-09-06] المُسجِّل شيخُ الحلقة لا المدير
+        r = await c.post("/api/recitations", headers=H(teach), json={
             "student_id": student_id, "teacher_id": teacher_id,
             "surah_name": "النساء", "start_ayah": 1, "end_ayah": 5,
             "evaluation": "good", "mistakes_count": 1, "recitation_type": "new"})
@@ -363,7 +370,7 @@ async def main():
         body = {"date": "2026-09-15", "records": [
             {"student_id": student_id, "halaqah_id": halaqah_id, "status": "absent"}]}
         res = await asyncio.gather(
-            *[c.post("/api/attendance", headers=H(mgr), json=body) for _ in range(6)],
+            *[c.post("/api/attendance", headers=H(teach), json=body) for _ in range(6)],
             return_exceptions=True)
         ok = all(getattr(x, "status_code", 0) == 200 for x in res)
         n = await server.db.attendance.count_documents(
@@ -372,7 +379,7 @@ async def main():
               f"n={n} codes={[getattr(x,'status_code',type(x).__name__) for x in res]}")
 
         body["records"][0]["status"] = "present"
-        await c.post("/api/attendance", headers=H(mgr), json=body)
+        await c.post("/api/attendance", headers=H(teach), json=body)
         row = await server.db.attendance.find_one(
             {"student_id": student_id, "date_str": "2026-09-15"})
         check("[خلل] التصحيح بعد السباق ما زال يعمل", row["status"] == "present", str(row.get("status")))

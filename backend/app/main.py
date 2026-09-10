@@ -11,9 +11,11 @@ import uuid
 from app.config import ALLOWED_ORIGINS, APP_VERSION, IS_PRODUCTION, logger
 from app.startup import startup_event
 from app.routers import (
-    attendance, audit_logs, auth, centers, competitions, dashboard, exports,
-    finance, halaqat, health, messages, notifications, performance, recitations,
-    review_plans, schedules, students, teachers,
+    accounts, attendance, audit_logs, auth, center_activity, centers, certificates,
+    competitions,
+    dashboard, exports,
+    finance, halaqat, halaqat_overview, health, messages, notifications,
+    performance, recitations, review_plans, schedules, students, teachers,
 )
 
 # ترتيب الضمّ مقصود: الموجّهات ذات المسارات الثابتة قبل التي تحمل معاملات في
@@ -24,11 +26,15 @@ ROUTERS = (
     notifications.router,
     dashboard.router,
     centers.router,
+    center_activity.router,
     students.router,
+    accounts.router,
     teachers.router,
     halaqat.router,
+    halaqat_overview.router,
     schedules.router,
     competitions.router,
+    certificates.router,
     messages.router,
     recitations.router,
     performance.router,

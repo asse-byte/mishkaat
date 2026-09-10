@@ -18,6 +18,12 @@ export interface Center {
   address: string;
   phone?: string;
   manager_id?: string;
+  manager_name?: string;
+  /** عملة المركز — تُقرأ في شاشة المالية، وكانت غائبة عن النوع */
+  currency?: string;
+  status?: string;
+  /** شعار المركز في مخزن الملفّات؛ يُقرأ من /api/centers/{id}/logo */
+  logo_file_id?: string | null;
   created_at: string;
   is_active: boolean;
 }

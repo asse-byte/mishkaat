@@ -31,13 +31,16 @@ async def get_audit_logs(
         raise HTTPException(status_code=403, detail="غير مصرح لك بالوصول")
 
     query: dict = {}
-    if current_user["role"] != "super_admin":
+    # [إصلاح 2026-09-07] كان مدير النظام — وحسابُه بلا مركز — يقع في فرع
+    # `center_id = "system"` فلا يرى إلا أحداث الدخول وما لا مركز له. وكلُّ ما
+    # هو مركزيّ محجوبٌ عنه: اعتمادُ المراكز، وتحصيلُ الرسوم، وصرفُ الرواتب —
+    # بل **قراراتُ الاعتماد التي اتّخذها هو بنفسه**، لأنها تُسجَّل باسم المركز.
+    # وهو الدور المُشرِف على النظام كلِّه، فسجلُّه غيرُ مقصور.
+    if current_user["role"] not in ("admin", "super_admin"):
         user_cid = current_user.get("center_id")
         if not user_cid:
-            # مدير نظام غير مرتبط بمركز: يرى الأحداث العامة (دخول/خروج/تعديل صلاحيات)
-            query["center_id"] = "system"
-        else:
-            query["center_id"] = user_cid
+            return []
+        query["center_id"] = user_cid
 
     if action:
         query["action"] = action

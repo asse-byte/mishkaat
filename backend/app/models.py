@@ -110,6 +110,9 @@ class StudentUpdate(BaseModel):
 
 class StudentResponse(StudentBase):
     id: str
+    # حسابا الطالب ووليّه — يُصدرهما المدير بعد التسجيل، والربط بالمعرّف
+    user_id: Optional[str] = None
+    parent_user_id: Optional[str] = None
     enrollment_date: datetime
     progress: float = 0
     current_surah: Optional[str] = None
@@ -119,6 +122,12 @@ class TeacherBase(BaseModel):
     name: str
     phone: Optional[str] = None
     center_id: str
+    # [قرار المالك 2026-09-06] في المركز معلّمون ليسوا شيوخ حلقات: معلّم لغة،
+    # ومعلّم تجويد يزور الحلقات، وإداريّ يُدرّس. كانوا يُسجَّلون محفّظين فتُطلب
+    # لهم حلقة، أو لا يُسجَّلون أصلاً. و«الخارجي» ليس نطاقاً أوسع بل أضيق:
+    # لا حلقة له، فلا طلاب في نطاقه — وهذا ما يقوله scope.py أصلاً.
+    teacher_type: Literal["halaqah", "external"] = "halaqah"
+    job_title: Optional[str] = None
     specialization: Optional[str] = None
     marital_status: Optional[Literal["single", "married", "divorced", "widowed"]] = None
     work_schedule: Optional[Literal["full_time", "part_time"]] = None
@@ -132,6 +141,8 @@ class TeacherCreate(TeacherBase):
 class TeacherUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
+    teacher_type: Optional[Literal["halaqah", "external"]] = None
+    job_title: Optional[str] = None
     specialization: Optional[str] = None
     marital_status: Optional[Literal["single", "married", "divorced", "widowed"]] = None
     work_schedule: Optional[Literal["full_time", "part_time"]] = None
@@ -143,24 +154,65 @@ class TeacherTransferRequest(BaseModel):
     from_halaqah_id: str
     to_halaqah_id: str
 
+# تقييم المحفّظ — معايير المالك (2026-09-06).
+#
+# النظام يقيس الطالب بمقاييس ستّة ويترك المحفّظ بلا تقييم يُقرأ. وطلبُ المالك
+# أن يُقاس المحفّظ كما يُقاس الطالب: بدرجات على معايير مسمّاة، ونقاط قوّة
+# ونقاط ضعف مكتوبة — لا رقماً واحداً مبهماً لا يُعرف مِمّ تركّب.
+#
+# كل معيار من 10، والمجموع من 100. والمعايير مفتوحة للقراءة على صاحبها وحده:
+# تقييمُ الرجل شأنُه، لا يُعرض على زملائه.
+TEACHER_CRITERIA: Dict[str, str] = {
+    "performance": "الأداء",
+    "commitment": "الالتزام",
+    "sincerity": "الإخلاص",
+    "seriousness": "الجدّية",
+    "diligence": "الاجتهاد",
+}
+
+
 class TeacherEvaluationBase(BaseModel):
     teacher_id: str
     evaluation_date: str
-    attendance_rate: float
-    tajweed_proficiency: int
-    student_retention: int
-    average_memorization_speed: float
-    discipline: int
+
+    # معايير المالك الخمسة — كلٌّ من 10
+    performance: Optional[int] = None
+    commitment: Optional[int] = None
+    sincerity: Optional[int] = None
+    seriousness: Optional[int] = None
+    diligence: Optional[int] = None
+
+    strengths: List[str] = []
+    weaknesses: List[str] = []
+
+    # المعايير القديمة — تبقى اختيارية لئلّا تسقط تقييماتٌ سابقة من القراءة
+    attendance_rate: Optional[float] = None
+    tajweed_proficiency: Optional[int] = None
+    student_retention: Optional[int] = None
+    average_memorization_speed: Optional[float] = None
+    discipline: Optional[int] = None
+
     notes: Optional[str] = None
+
+    @field_validator("performance", "commitment", "sincerity", "seriousness",
+                     "diligence", mode="after")
+    @classmethod
+    def _ten_scale(cls, v):
+        if v is not None and not (0 <= v <= 10):
+            raise ValueError("الدرجة من 0 إلى 10")
+        return v
+
 
 class TeacherEvaluationCreate(TeacherEvaluationBase):
     pass
+
 
 class TeacherEvaluationResponse(TeacherEvaluationBase):
     id: str
     center_id: str
     tpi: float
     teacher_name: Optional[str] = None
+    evaluated_by: Optional[str] = None
     created_at: datetime
 
 class SalaryCreate(BaseModel):
@@ -182,6 +234,9 @@ class ExpenseCreate(BaseModel):
 # [AUDIT-2026-05-22 fix: typed model replaces previous untyped `dict` (mass-assignment risk)]
 class ReviewPlanCreate(BaseModel):
     center_id: str
+    # معدّل المراجعة اليوميّ لهذا الطالب بالأجزاء. يُحدّده الشيخ حين يرى أن
+    # الافتراض (جزءٌ في اليوم) لا يناسبه — صغيراً كان أو حافظاً متمكّناً.
+    juz_per_day: Optional[float] = None
     teacher_id: Optional[str] = None
     student_id: Optional[str] = None
     halaqah_id: Optional[str] = None
@@ -243,40 +298,164 @@ class AcademicScheduleResponse(AcademicScheduleBase):
     teacher_name: Optional[str] = None
     halaqa_name: Optional[str] = None
 
+# ==================== المسابقات القرآنية ====================
+# [إعادة بناء 2026-09-06 — قرار المالك]
+#
+# الفروع منفصلة تماماً: كل فرع ترتيبُه ونتائجُه وحده، فلا يُقارَن حافظُ جزء عمّ
+# بحافظ القرآن كاملاً. والفرع ليس نصّاً حرّاً بل قائمة مغلقة، وإلا كتبه كلُّ
+# مركزٍ بصيغة مختلفة فتعذّر جمعُ النتائج أو أرشفتُها.
+COMPETITION_BRANCHES = [
+    "القرآن كاملاً",
+    "15 جزءاً",
+    "10 أجزاء",
+    "5 أجزاء",
+    "جزء عمّ",
+]
+
+CompetitionStatus = Literal["draft", "active", "grading", "approved", "archived"]
+
+
+class CompetitionJudge(BaseModel):
+    """عضو لجنة التحكيم: شيخُ حلقةٍ يُقيّم المتسابقين."""
+    teacher_id: str
+    teacher_name: Optional[str] = None
+
+
 class CompetitionBase(BaseModel):
     title: str
     date: str
-    categories: List[str] = ["القرآن كاملاً", "15 جزءاً", "5 أجزاء", "جزء عم"]
+    year: Optional[int] = None
+    branches: List[str] = COMPETITION_BRANCHES
+    judges: List[CompetitionJudge] = []
+    notes: Optional[str] = None
+
 
 class CompetitionCreate(CompetitionBase):
     pass
 
+
+class CompetitionUpdate(BaseModel):
+    title: Optional[str] = None
+    date: Optional[str] = None
+    branches: Optional[List[str]] = None
+    judges: Optional[List[CompetitionJudge]] = None
+    notes: Optional[str] = None
+
+
 class CompetitionResponse(CompetitionBase):
     id: str
     center_id: str
+    status: CompetitionStatus = "active"
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
     created_at: datetime
+    # للتوافق مع الواجهة القديمة التي تقرأ categories
+    categories: List[str] = []
+
 
 class ContestantGrades(BaseModel):
     hifdh_score: float
     tajweed_score: float
     voice_score: float
 
+
+class JudgeScore(BaseModel):
+    """درجةُ محكّمٍ واحد. الدرجة النهائية متوسّط درجات اللجنة."""
+    judge_teacher_id: str
+    judge_name: Optional[str] = None
+    hifdh_score: float
+    tajweed_score: float
+    voice_score: float
+    total: float
+    notes: Optional[str] = None
+    graded_at: datetime
+
+
 class CompetitionContestantBase(BaseModel):
     student_id: str
-    category: str
+    category: str          # اسم الفرع
     notes: Optional[str] = None
+
 
 class CompetitionContestantCreate(CompetitionContestantBase):
     pass
+
 
 class CompetitionContestantResponse(CompetitionContestantBase):
     id: str
     competition_id: str
     center_id: str
     grades: Optional[ContestantGrades] = None
+    judge_scores: List[JudgeScore] = []
     total_score: float = 0.0
+    judges_count: int = 0
+    rank_in_branch: Optional[int] = None
     student_name: Optional[str] = None
+    halaqah_name: Optional[str] = None
     created_at: datetime
+
+# ==================== الشهادات ====================
+#
+# [قرار المالك 2026-09-07] «مدير المركز هو الذي يصدر الشهادة للطالب وليس
+# المعلّم. بعدما تُدخل اللجنة الدرجات يعتمدها المدير ثمّ يُصدر الشهادة. وحتى
+# بعد ختم الطالب للقرآن يظهر إصدار الشهادة للحافظ، وكذلك بعد نصف القرآن
+# و15 جزءاً.»
+#
+# والإصدار **فعلٌ يُسجَّل** لا زرَّ طباعةٍ عابر: له رقمٌ متسلسل، ومَن أصدره،
+# ومتى. فشهادةٌ يُشكَّك فيها تُراجَع في السجلّ، ولا تُطبع مرّتين بلا علم.
+
+MilestoneKind = Literal["juz5", "juz10", "half", "khatm"]
+
+# الحدّ بالصفحات لا بالأجزاء: التسميع يُقاس بالصفحات، والجزء ≈ 20.13 صفحة.
+MILESTONES: Dict[str, Dict[str, object]] = {
+    "juz5":  {"label": "حفظ خمسة أجزاء",      "juz": 5,  "order": 1},
+    "juz10": {"label": "حفظ عشرة أجزاء",      "juz": 10, "order": 2},
+    "half":  {"label": "حفظ نصف القرآن الكريم", "juz": 15, "order": 3},
+    "khatm": {"label": "ختم القرآن الكريم كاملاً", "juz": 30, "order": 4},
+}
+
+CertificateKind = Literal["competition", "milestone"]
+
+
+class MilestoneCertificateCreate(BaseModel):
+    student_id: str
+    milestone: MilestoneKind
+    notes: Optional[str] = None
+
+
+class CertificateResponse(BaseModel):
+    id: str
+    serial: str
+    kind: CertificateKind
+    center_id: str
+    center_name: Optional[str] = None
+    student_id: str
+    student_name: Optional[str] = None
+    halaqah_name: Optional[str] = None
+    title: str
+    subtitle: Optional[str] = None
+    # المسابقات
+    competition_id: Optional[str] = None
+    branch: Optional[str] = None
+    rank: Optional[int] = None
+    score: Optional[float] = None
+    judges_names: List[str] = []
+    # المحطّات
+    milestone: Optional[str] = None
+    pages_memorized: Optional[float] = None
+    notes: Optional[str] = None
+    issued_by: Optional[str] = None
+    issued_by_name: Optional[str] = None
+    issued_at: datetime
+
+
+class MessageAttachment(BaseModel):
+    """وثيقةٌ مرفقة برسالة — تُرفع أوّلاً ثمّ تُذكر أوصافُها هنا."""
+    file_id: str
+    filename: str
+    content_type: Optional[str] = None
+    size: Optional[int] = None
+
 
 class MessageReply(BaseModel):
     teacher_id: str
@@ -288,6 +467,7 @@ class BulkMessageBase(BaseModel):
     recipient_role: str
     subject: str
     content: str
+    attachments: List[MessageAttachment] = []
 
 class BulkMessageCreate(BulkMessageBase):
     pass
@@ -296,6 +476,8 @@ class BulkMessageResponse(BulkMessageBase):
     id: str
     center_id: str
     sender_id: str
+    sender_role: Optional[str] = None
+    edited_at: Optional[datetime] = None
     sender_name: Optional[str] = None
     sent_at: datetime
     replies: List[MessageReply] = []
@@ -369,6 +551,12 @@ class AttendanceBase(BaseModel):
     halaqah_id: str
     status: AttendanceStatus
     notes: Optional[str] = None
+
+class AttendanceUpdate(BaseModel):
+    """تصحيح حالة حضورٍ مرصودة. الطالب واليوم لا يتغيّران — ذاك سجلٌّ آخر."""
+    status: AttendanceStatus
+    notes: Optional[str] = None
+
 
 class AttendanceCreate(BaseModel):
     records: List[AttendanceBase]

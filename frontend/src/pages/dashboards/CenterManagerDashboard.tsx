@@ -9,7 +9,7 @@ import { Link } from 'react-router-dom';
 import api from '@/services/api';
 import type { Recitation, Attendance, Fee } from '@/types';
 import EmptyState from '@/components/ui/EmptyState';
-import { useTranslation } from '@/lib/i18n';
+import { formatAmount } from '@/lib/format';
 
 interface Stats {
   students: number;
@@ -29,7 +29,8 @@ interface HonorRollStudent {
   score: number;
 }
 
-const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+// [توحيد 2026-09-06] كان fr-FR يُخرج مسافة رفيعة لا فاصلة، فيختلف عن بقيّة الشاشات
+const FCFA = (n: number) => formatAmount(Math.round(n));
 
 const EVAL_LABEL: Record<string, string> = {
   excellent: 'ممتاز', good: 'جيد', acceptable: 'مقبول', needs_improvement: 'يحتاج تحسين',
@@ -70,7 +71,6 @@ function Metric({ label, value, icon: Icon, tone, to }: {
 
 export default function CenterManagerDashboard() {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const [stats, setStats]     = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentRecitations, setRecentRecitations] = useState<Recitation[]>([]);
@@ -256,7 +256,7 @@ export default function CenterManagerDashboard() {
             <EmptyState
               icon={FileText}
               title="لا توجد تسميعات مسجَّلة"
-              description={t('empty_no_recitations')}
+              description="لا توجد جلسات تسميع مسجلة اليوم."
             />
             <div className="flex justify-center mt-4">
               <Link to="/recitations" className="btn-outline-teal text-sm">

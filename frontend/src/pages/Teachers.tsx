@@ -4,17 +4,21 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   GraduationCap, Plus, Search, Phone, BookOpen, Edit, Trash2,
   X, CheckCircle2, Users, AlertCircle, Heart, Clock,
-  ArrowLeftRight, ChevronRight, Save, Eye,
+  ArrowLeftRight, ChevronRight, Save, Eye, Star, Briefcase,
 } from 'lucide-react';
+import TeacherEvaluationModal from '@/components/teachers/TeacherEvaluationModal';
 import { teachersApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
+import NumberInput from '@/components/ui/NumberInput';
 
 interface TeacherData {
   id: string;
   name: string;
   phone?: string;
   specialization?: string;
+  teacher_type?: 'halaqah' | 'external';
+  job_title?: string;
   marital_status?: 'single' | 'married' | 'divorced' | 'widowed';
   work_schedule?: 'full_time' | 'part_time';
   salary?: number;
@@ -37,6 +41,8 @@ const specializationOptions = ['حفص عن عاصم', 'ورش عن نافع', '
 
 const emptyForm = {
   name: '', phone: '', specialization: '',
+  teacher_type: 'halaqah' as 'halaqah' | 'external',
+  job_title: '',
   marital_status: '' as any,
   work_schedule: '' as any,
   salary: '',
@@ -57,6 +63,7 @@ export default function Teachers() {
   const [editMode, setEditMode]         = useState(false);
   const [editForm, setEditForm]         = useState<Partial<Omit<TeacherData, 'salary'> & { salary: string }>>({});
   const [showTransfer, setShowTransfer] = useState(false);
+  const [evaluating, setEvaluating] = useState<TeacherData | null>(null);
   const [transferData, setTransferData] = useState({ from_halaqah_id: '', to_halaqah_id: '' });
 
   const loadData = useCallback(async () => {
@@ -79,6 +86,8 @@ export default function Teachers() {
         name: formData.name,
         phone: formData.phone || undefined,
         specialization: formData.specialization || undefined,
+        teacher_type: formData.teacher_type,
+        job_title: formData.job_title || undefined,
         marital_status: formData.marital_status || undefined,
         work_schedule: formData.work_schedule || undefined,
         salary: formData.salary ? Number(formData.salary) : undefined,
@@ -111,6 +120,8 @@ export default function Teachers() {
         name: editForm.name,
         phone: editForm.phone,
         specialization: editForm.specialization,
+        teacher_type: editForm.teacher_type,
+        job_title: editForm.job_title,
         marital_status: editForm.marital_status,
         work_schedule: editForm.work_schedule,
         salary: editForm.salary ? Number(editForm.salary) : undefined,
@@ -152,6 +163,8 @@ export default function Teachers() {
       name: teacher.name,
       phone: teacher.phone || '',
       specialization: teacher.specialization || '',
+      teacher_type: teacher.teacher_type || 'halaqah',
+      job_title: teacher.job_title || '',
       marital_status: teacher.marital_status,
       work_schedule: teacher.work_schedule,
       salary: teacher.salary?.toString() || '',
@@ -218,6 +231,30 @@ export default function Teachers() {
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
                 <div>
+                  {/* [قرار المالك 2026-09-06] في المركز معلّمون ليسوا شيوخ حلقات.
+                      و«خارج الحلقات» نطاقٌ أضيق لا أوسع: لا حلقة له فلا طلاب في نطاقه. */}
+                  <label className="text-sm font-semibold block mb-1">نوع المعلّم</label>
+                  <select value={formData.teacher_type} title="نوع المعلّم"
+                    onChange={e => {
+                      const t = e.target.value as 'halaqah' | 'external';
+                      // مسحُ ما كُتب: تركُه يُرسل بيانات حسابٍ يردّها الخادم
+                      setFormData({ ...formData, teacher_type: t,
+                        ...(t === 'external' ? { username: '', password: '' } : {}) });
+                    }}
+                    className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]">
+                    <option value="halaqah">شيخ حلقة</option>
+                    <option value="external">معلّم خارج الحلقات</option>
+                  </select>
+                </div>
+                {formData.teacher_type === 'external' && (
+                  <div>
+                    <label className="text-sm font-semibold block mb-1">المهمّة</label>
+                    <input placeholder="معلّم لغة عربية، مشرف تجويد…" value={formData.job_title}
+                      onChange={e => setFormData({ ...formData, job_title: e.target.value })}
+                      className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
+                  </div>
+                )}
+                <div>
                   <label className="text-sm font-semibold block mb-1">التخصص</label>
                   <select value={formData.specialization}
                     onChange={e => setFormData({ ...formData, specialization: e.target.value })}
@@ -250,13 +287,27 @@ export default function Teachers() {
                 </div>
                 <div>
                   <label className="text-sm font-semibold block mb-1">الراتب (FCFA)</label>
-                  <input type="number" placeholder="0" dir="ltr" value={formData.salary}
-                    onChange={e => setFormData({ ...formData, salary: e.target.value })}
+                  <NumberInput value={formData.salary}
+                    onChange={v => setFormData({ ...formData, salary: v })}
+                    placeholder="0" min={0} suffix="FCFA"
                     className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                 </div>
               </div>
-              {/* Login account */}
+              {/* حساب الدخول — للمحفّظ لا للمعلّم الخارجي.
+                  [قرار المالك 2026-09-10] الخارجيّ يُدرّس مادّةً لطلاب الحلقة
+                  ولا يُسمّع ولا يرصد حضوراً، وبياناتُ الطلاب أمانةُ الحلقة.
+                  فلا بابَ دخولٍ له، والخادمُ يردّ محاولةَ إنشائه. */}
               <div className="border-t pt-4">
+                {formData.teacher_type === 'external' ? (
+                  <div className="rounded-xl bg-[hsl(var(--muted))] p-4">
+                    <h4 className="font-bold text-sm mb-1">لا حساب له في النظام</h4>
+                    <p className="text-xs leading-relaxed text-[hsl(var(--muted-foreground))]">
+                      المعلّم الخارجي يُسجَّل باسمه ومهمّته وهاتفه فقط — لا اسمَ مستخدم
+                      ولا كلمة مرور. وحسابُ النظام يفتح تسميعَ الطلاب وحضورَهم
+                      ومقاييسَهم، وهي أمانةُ شيخ الحلقة.
+                    </p>
+                  </div>
+                ) : (<>
                 <h4 className="font-bold text-sm text-[hsl(var(--foreground))] mb-3">حساب الدخول (اختياري)</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -267,11 +318,12 @@ export default function Teachers() {
                   </div>
                   <div>
                     <label className="text-sm font-semibold block mb-1">كلمة المرور</label>
-                    <input type="password" placeholder="••••••" dir="ltr" value={formData.password}
+                    <input type="password" placeholder="8 أحرف فأكثر، فيها حرف ورقم" dir="ltr" value={formData.password}
                       onChange={e => setFormData({ ...formData, password: e.target.value })}
                       className="w-full h-11 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))]" />
                   </div>
                 </div>
+                </>)}
               </div>
               {error && (
                 <div className="p-3 rounded-xl bg-red-50 text-red-600 text-sm flex items-center gap-2">
@@ -291,6 +343,15 @@ export default function Teachers() {
             </div>
           </div>
         </div>
+      )}
+
+      {evaluating && (
+        <TeacherEvaluationModal
+          teacherId={evaluating.id}
+          teacherName={evaluating.name}
+          canEvaluate={user?.role === 'center_manager' || user?.role === 'admin'}
+          onClose={() => setEvaluating(null)}
+        />
       )}
 
       {/* Teachers Grid */}
@@ -316,12 +377,23 @@ export default function Teachers() {
                       {teacher.specialization && (
                         <p className="eyebrow">{teacher.specialization}</p>
                       )}
+                      {teacher.teacher_type === 'external' && (
+                        <span className="inline-flex items-center gap-1 mt-1 text-[10px] font-bold
+                                         bg-[hsl(var(--surface-2))] px-2 py-0.5 rounded-full">
+                          <Briefcase className="w-3 h-3" />
+                          {teacher.job_title || 'معلّم خارج الحلقات'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex gap-1">
                     <button onClick={() => { setSelectedTeacher(teacher); setEditMode(false); setShowTransfer(false); }} title="عرض التفاصيل"
                       className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
                       <Eye className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => setEvaluating(teacher)} title="تقييم الأداء"
+                      className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--gold))] hover:bg-[hsl(var(--surface-2))] transition-colors">
+                      <Star className="w-4 h-4" />
                     </button>
                     <button onClick={() => openEdit(teacher)} title="تعديل"
                       className="p-1.5 rounded-[var(--radius-sm)] text-[hsl(var(--ink-3))] hover:text-[hsl(var(--ink))] hover:bg-[hsl(var(--surface-2))] transition-colors">
@@ -429,6 +501,15 @@ export default function Teachers() {
                     </div>
                   ))}
                   <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-sm font-semibold block mb-1">نوع المعلّم</label>
+                      <select value={editForm.teacher_type || 'halaqah'} title="نوع المعلّم"
+                        onChange={e => setEditForm({ ...editForm, teacher_type: e.target.value as 'halaqah' | 'external' })}
+                        className="w-full h-10 px-3 rounded-xl border-2 border-[hsl(var(--border))] bg-white focus:outline-none focus:border-[hsl(var(--primary))] text-sm">
+                        <option value="halaqah">شيخ حلقة</option>
+                        <option value="external">معلّم خارج الحلقات</option>
+                      </select>
+                    </div>
                     <div>
                       <label className="text-sm font-semibold block mb-1">التخصص</label>
                       <select value={editForm.specialization || ''} title="التخصص"

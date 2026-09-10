@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/lib/theme';
 import { cn, getInitials } from '@/lib/utils';
 import {
   BookOpen,
@@ -18,6 +19,7 @@ import {
   RefreshCw,
   Bell,
   Shield,
+  Award,
   User,
   Settings,
   BarChart3,
@@ -54,17 +56,26 @@ const navItems: NavItem[] = [
   { title: 'المراكز',     href: '/centers',       icon: Building2,       roles: ['admin'], group: 'manage' },
   { title: 'المحفظون',    href: '/teachers',      icon: GraduationCap,   roles: ['center_manager'], group: 'manage' },
   { title: 'الطلاب',      href: '/students',      icon: Users,           roles: ['center_manager','teacher'], group: 'daily' },
-  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager','teacher'], group: 'manage' },
+  // [قرار المالك 2026-09-06] صفحة الحلقات إدارةُ حلقات، وشيخُ الحلقة لا
+  // يُنشئ حلقةً ولا يُسنِد شيوخاً — فلا داعي لها عنده. وهو يعرف حلقته من
+  // كل شاشة يعمل فيها.
+  { title: 'الحلقات',     href: '/halaqat',       icon: BookOpen,        roles: ['center_manager'], group: 'manage' },
   { title: 'التسميع',     href: '/recitations',   icon: FileText,        roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'الحضور والغياب',href: '/attendance',  icon: Calendar,        roles: ['center_manager','teacher'], group: 'daily' },
   { title: 'المالية',     href: '/finance',       icon: DollarSign,      roles: ['center_manager'], group: 'manage' },
   { title: 'التقارير',    href: '/reports',       icon: BarChart3,       roles: ['center_manager'], group: 'manage' },
   { title: 'نظام الترتيب',href: '/rankings',      icon: Trophy,          roles: ['center_manager','teacher'], group: 'manage' },
   { title: 'لوحات الصدارة',href: '/leaderboards', icon: Medal,           roles: ['center_manager','teacher','student','parent'], group: 'daily' },
-  { title: 'خطط المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher'], group: 'manage' },
+  { title: 'خطة المراجعة',href: '/review-plans',  icon: RefreshCw,       roles: ['center_manager','teacher','student','parent'], group: 'daily' },
   { title: 'الجدول الدراسي', href: '/academic-schedules', icon: Calendar,      roles: ['center_manager','teacher','student','parent'], group: 'manage' },
+  // [قرار المالك 2026-09-06] المسابقات تظهر لشيخ الحلقة فقط إن كان عضواً في
+  // لجنة تحكيم مسابقة جارية — يُحسم ذلك في وقت التشغيل لا هنا (isJudge).
+  // [قرار المالك 2026-09-10] المسابقات سجلٌّ يراه كلُّ معلّم — والرصدُ للجنة
   { title: 'المسابقات القرآنية', href: '/competitions',   icon: Trophy,        roles: ['center_manager','teacher','student'], group: 'manage' },
-  { title: 'البث الجماعي',  href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher'], group: 'manage' },
+  // [قرار المالك 2026-09-10] الشهادات لا تخصّ المعلّم: يُصدرها المدير، ويراها
+  // الطالب ووليُّه ويطبعانها. فحُذف البند عن شيخ الحلقة.
+  { title: 'الشهادات',     href: '/certificates',  icon: Award,           roles: ['center_manager','student','parent'], group: 'manage' },
+  { title: 'المراسلات',    href: '/bulk-messages',     icon: MessageSquare,   roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'manage' },
   { title: 'سجل النشاط',  href: '/audit-logs',    icon: Shield,          roles: ['admin'], group: 'system' },
   { title: 'الملف الشخصي',href: '/profile',       icon: User,            roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
   { title: 'الإعدادات',   href: '/settings',      icon: Settings,        roles: ['admin','super_admin','center_manager','teacher','student','parent'], group: 'system' },
@@ -95,29 +106,16 @@ function DashboardShell({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'dark') {
-      document.documentElement.classList.add('dark');
-      return true;
-    } else {
-      document.documentElement.classList.remove('dark');
-      return false;
-    }
-  });
+  // المظهر من مصدرٍ واحد يشترك فيه هذا الزرّ وصفحة الإعدادات (lib/theme.ts)
+  const { theme, toggle: toggleDarkMode } = useTheme();
+  const darkMode = theme === 'dark';
 
-  const toggleDarkMode = () => {
-    if (darkMode) {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('theme', 'light');
-      setDarkMode(false);
-    } else {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('theme', 'dark');
-      setDarkMode(true);
-    }
-  };
-
+  /*
+   * [قرار المالك 2026-09-10] بندُ المسابقات يظهر لكل معلّم — سجلٌّ يقرؤه.
+   * وكان يظهر ويختفي بحسب عضويّته في لجنةٍ جارية (قرار 2026-09-06)، فيرى
+   * البندَ يوماً ويفقده يوماً، ولا يبلغ تاريخَ مسابقات مركزه أبداً.
+   * والرصدُ وحده هو المحصور باللجنة، ويحرسه الخادم.
+   */
   const filteredNavItems = navItems.filter(item => item.roles.some(r => hasRole(r)));
   const currentTitle = filteredNavItems.find(item => item.href === location.pathname)?.title || 'لوحة التحكم';
 

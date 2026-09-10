@@ -102,6 +102,10 @@ export default function AcademicSchedules() {
       } else {
         await api.post('/academic-schedules', formData);
       }
+      // [إصلاح 2026-09-06] الصفحة تعرض يوماً واحداً، وتبدأ على السبت. فمن
+      // أضاف حصّةً ليوم الأحد لم يرَ شيئاً وظنّ أن الحفظ فشل. ننتقل إلى يوم
+      // الحصّة التي حُفظت للتوّ.
+      setSelectedDay(formData.day);
       setShowAddForm(false);
       setFormData(emptyForm);
       setEditingId(null);
@@ -313,6 +317,12 @@ export default function AcademicSchedules() {
         <div className="text-center py-20 bg-white rounded-[var(--radius-lg)] border-2 border-dashed border-[hsl(var(--border))]">
           <Calendar className="w-16 h-16 mx-auto mb-4 text-[hsl(var(--muted-foreground))] opacity-35" />
           <p className="text-[hsl(var(--muted-foreground))] font-semibold">لا توجد حصص دراسية مجدولة ليوم {selectedDay}</p>
+          {schedules.length > 0 && (
+            <p className="text-sm text-[hsl(var(--ink-3))] mt-2">
+              لكنّ في الجدول {schedules.length} حصّة في أيام أخرى:{' '}
+              {[...new Set(schedules.map(s => s.day))].join(' · ')}
+            </p>
+          )}
         </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4 stagger">

@@ -2,9 +2,11 @@
 import { useAuth } from '@/contexts/AuthContext';
 import {
   BookOpen, Plus, Search, Clock, Users, GraduationCap,
-  Trash2, X, CheckCircle2, AlertCircle, MapPin, Edit2,
+  Trash2, X, CheckCircle2, AlertCircle, MapPin, Edit2, Activity,
 } from 'lucide-react';
 import { halaqatApi, teachersApi } from '@/services/api';
+import api from '@/services/api';
+import HalaqahDetailModal from '@/components/halaqat/HalaqahDetailModal';
 import PageHeader from '@/components/ui/PageHeader';
 
 interface HalaqahData {
@@ -23,6 +25,14 @@ interface HalaqahData {
 
 interface TeacherData { id: string; name: string; }
 
+/** سطرُ الأداء لكل حلقة — يأتي من /halaqat-overview بجانب بيانات الحلقة نفسها */
+interface HalaqahPerf {
+  id: string;
+  mastery: number | null;
+  momentum: number | null;
+  attendance_rate: number | null;
+}
+
 const EMPTY_FORM = {
   name: '', teacher_id: '', schedule: '', time_start: '',
   time_end: '', location: '', max_students: '20',
@@ -39,6 +49,8 @@ export default function Halaqat() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError]           = useState('');
   const [formData, setFormData]     = useState(EMPTY_FORM);
+  const [perf, setPerf]             = useState<Record<string, HalaqahPerf>>({});
+  const [detailId, setDetailId]     = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -49,6 +61,11 @@ export default function Halaqat() {
       ]);
       setHalaqat(halaqatData as unknown as HalaqahData[]);
       setTeachers(teachersData as unknown as TeacherData[]);
+      // الأداء طلبٌ منفصل: فشلُه لا يُفرغ الصفحة من الحلقات
+      try {
+        const ov = await api.get<{ halaqat: HalaqahPerf[] }>('/halaqat-overview');
+        setPerf(Object.fromEntries(ov.data.halaqat.map(h => [h.id, h])));
+      } catch { /* الأداء اختياري */ }
     } catch { /* silent */ }
     finally { setLoading(false); }
   }, []);
@@ -242,11 +259,38 @@ export default function Halaqat() {
                         style={{ width: `${pct}%` }} />
                     </div>
                   </div>
+
+                  {/* أداء الحلقة — «—» لا صفر حين لا بيانات */}
+                  <div className="grid grid-cols-3 gap-2 pt-1">
+                    {[
+                      { label: 'الإتقان', v: perf[halaqah.id]?.mastery, suffix: '%' },
+                      { label: 'الاندفاع', v: perf[halaqah.id]?.momentum, suffix: '' },
+                      { label: 'الحضور', v: perf[halaqah.id]?.attendance_rate, suffix: '%' },
+                    ].map(m => (
+                      <div key={m.label} className="text-center rounded-[var(--radius-sm)] bg-[hsl(var(--muted))] py-2">
+                        <p className="text-sm font-bold font-mono text-[hsl(var(--primary))]">
+                          {m.v === null || m.v === undefined ? '—' : `${m.v}${m.suffix}`}
+                        </p>
+                        <p className="text-[10px] font-semibold text-[hsl(var(--muted-foreground))]">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  <button onClick={() => setDetailId(halaqah.id)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-xl
+                               border-2 border-[hsl(var(--border))] hover:border-[hsl(var(--primary))]
+                               text-sm font-bold transition-colors">
+                    <Activity className="w-4 h-4" /> تفصيل الأداء
+                  </button>
                 </div>
               </div>
             );
           })}
         </div>
+      )}
+
+      {detailId && (
+        <HalaqahDetailModal halaqahId={detailId} onClose={() => setDetailId(null)} />
       )}
 
       {/* Add/Edit Modal */}

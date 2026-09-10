@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { LoadingSpinner } from '@/components/ui/loading';
+import CenterActivityPanel from '@/components/admin/CenterActivityPanel';
 import {
   Building2, Plus, Search, MapPin, Phone, User,
   CheckCircle2, Edit, Users, GraduationCap,
@@ -269,92 +270,16 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Centers Leaderboard & Performance Classification */}
-      {centers.length > 0 && (() => {
-        const calculateCenterScore = (c: CenterData) => {
-          const studentScore = Math.min(40, c.students_count * 2); 
-          const teacherScore = Math.min(30, c.teachers_count * 6); 
-          const halaqahScore = Math.min(30, c.halaqat_count * 5); 
-          return Math.round(studentScore + teacherScore + halaqahScore);
-        };
+      {/* استخدام المنصّة لكل مركز.
+          [قرار المالك 2026-09-07] «مدير النظام ينبغي أن يعرف مدى مستوى استخدام
+          المنصّة لأيّ مركز، بناءً على نسبة حركة البيانات والمعاملات داخل حساب
+          المركز.»
 
-        const getCommitmentLevel = (score: number) => {
-          if (score >= 80) return { label: 'ممتاز - التزام كامل', color: 'text-emerald-600 bg-emerald-50 border-emerald-100' };
-          if (score >= 50) return { label: 'جيد جداً - نشط', color: 'text-blue-600 bg-blue-50 border-blue-100' };
-          if (score >= 25) return { label: 'مقبول - يحتاج متابعة', color: 'text-amber-600 bg-amber-50 border-amber-100' };
-          return { label: 'ضعيف - غير ملتزم إدارياً', color: 'text-rose-600 bg-rose-50 border-rose-100' };
-        };
-
-        const sortedCenters = [...centers]
-          .map(c => ({ ...c, score: calculateCenterScore(c) }))
-          .sort((a, b) => b.score - a.score);
-
-        return (
-          <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border border-[hsl(var(--border))] shadow-sm p-6 space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <div>
-                <h3 className="text-lg font-bold flex items-center gap-2 text-emerald-800">
-                  <span className="text-xl">🏆</span>
-                  تصنيف وتقييم المراكز الأكثر التزاماً وتميزاً
-                </h3>
-                <p className="text-xs text-[hsl(var(--muted-foreground))] mt-1">تقييم تلقائي بناءً على الالتزام الإداري، الحلقات النشطة، وأعداد الطلاب الملتحقين</p>
-              </div>
-              <span className="badge-gold text-xs px-3 py-1 rounded-full font-bold">تقرير جودة المراكز</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-right border-collapse">
-                <thead>
-                  <tr className="border-b border-[hsl(var(--border))] text-xs text-[hsl(var(--muted-foreground))] font-bold">
-                    <th className="pb-3 text-center w-16">الترتيب</th>
-                    <th className="pb-3">المركز</th>
-                    <th className="pb-3 text-center">أعداد الطلاب</th>
-                    <th className="pb-3 text-center">المحفظين والحلقات</th>
-                    <th className="pb-3 text-center">درجة الالتزام</th>
-                    <th className="pb-3 text-center">مستوى التقييم</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[hsl(var(--border))]/50">
-                  {sortedCenters.map((center, idx) => {
-                    const level = getCommitmentLevel(center.score);
-                    return (
-                      <tr key={center.id} className="hover:bg-[hsl(var(--muted))]/30 transition-colors">
-                        <td className="py-4 text-center font-bold">
-                          {idx === 0 ? <span className="text-xl">🥇</span> : 
-                           idx === 1 ? <span className="text-xl">🥈</span> : 
-                           idx === 2 ? <span className="text-xl">🥉</span> : 
-                           <span className="text-xs text-gray-500 font-mono">#{idx + 1}</span>}
-                        </td>
-                        <td className="py-4">
-                          <span className="font-bold text-[hsl(var(--foreground))] block">{center.name}</span>
-                          <span className="text-[10px] text-[hsl(var(--muted-foreground))]" dir="ltr">{center.address}</span>
-                        </td>
-                        <td className="py-4 text-center font-bold text-[hsl(var(--foreground))]">{center.students_count} طالب</td>
-                        <td className="py-4 text-center text-xs text-[hsl(var(--muted-foreground))]">
-                          {center.teachers_count} محفظين / {center.halaqat_count} حلقات
-                        </td>
-                        <td className="py-4 text-center">
-                          <div className="flex items-center justify-center gap-1.5">
-                            <div className="w-16 bg-gray-100 h-2 rounded-full overflow-hidden">
-                              <div className="bg-[hsl(var(--ok))] h-full rounded-full" style={{ width: `${center.score}%` }} />
-                            </div>
-                            <span className="text-xs font-mono font-bold text-emerald-700">{center.score}%</span>
-                          </div>
-                        </td>
-                        <td className="py-4 text-center">
-                          <span className={`inline-block text-[10px] font-bold px-2.5 py-1 rounded-full border ${level.color}`}>
-                            {level.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        );
-      })()}
+          وكان هنا جدولُ «تصنيف المراكز الأكثر التزاماً» يحسب درجتَه من ثلاثة
+          أعدادٍ ثابتة (طلاب، محفّظون، حلقات) — وهي مقاييسُ حجمٍ لا استخدام.
+          مركزٌ سجّل مئة طالبٍ ثمّ هجر النظام سنةً كان يتصدّر بها مركزاً يعمل
+          فيه عشرون طالباً كلَّ يوم، ويُوصَف بـ«ممتاز — التزام كامل». */}
+      <CenterActivityPanel />
 
       {/* Actions bar */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -370,9 +295,16 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Add form */}
+      {/* نموذج تسجيل مركز جديد.
+          [إصلاح 2026-09-07] كان قسماً يُفتح **في مكانه** من الصفحة — أي بعد
+          لوحة الأمان وجدول تصنيف المراكز، على بُعد مئتَي سطرٍ أسفل الزرّ الذي
+          يفتحه، بلا تمريرٍ إليه. فيضغط المدير «تسجيل مركز جديد» فلا يتغيّر
+          شيءٌ أمام عينه — وهو ما أبلغ عنه المالك بأن الميزة «لا تعمل إطلاقاً».
+          صار نافذةً فوق الصفحة تُرى فور الضغط. */}
       {showAddForm && (
-        <div className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 animate-slide-in-up">
+        <div className="modal-overlay" onClick={() => setShowAddForm(false)}>
+        <div onClick={e => e.stopPropagation()}
+          className="bg-[hsl(var(--card))] rounded-[var(--radius-lg)] border-2 border-[hsl(var(--primary))/15] shadow-xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-5 border-b border-[hsl(var(--border))] pb-3">
             <h3 className="text-lg font-bold text-[hsl(var(--foreground))] flex items-center gap-2">
               <Plus className="w-5 h-5 text-[hsl(var(--primary))]" />
@@ -389,7 +321,8 @@ export default function AdminDashboard() {
               { label: 'رقم الهاتف', key: 'phone', placeholder: '+223 XX XX XX XX', dir: 'ltr' },
               { label: 'اسم المدير', key: 'manager_name', placeholder: 'الاسم الكامل', dir: 'rtl' },
               { label: 'اسم مستخدم المدير', key: 'manager_username', placeholder: 'username', dir: 'ltr' },
-              { label: 'كلمة مرور المدير', key: 'manager_password', placeholder: '••••••', dir: 'ltr', type: 'password' },
+              { label: 'كلمة مرور المدير *', key: 'manager_password', placeholder: '8 أحرف فأكثر، فيها حرف ورقم', dir: 'ltr', type: 'password',
+                hint: 'يرفضها الخادم إن قلّت عن ثمانية أحرف أو خلت من رقمٍ أو حرف' },
             ].map(f => (
               <div key={f.key}>
                 <label className="block text-sm font-semibold text-[hsl(var(--foreground))] mb-1.5">{f.label}</label>
@@ -402,6 +335,9 @@ export default function AdminDashboard() {
                   className="w-full h-11 px-4 rounded-xl border-2 border-[hsl(var(--border))] bg-[hsl(var(--background))] text-[hsl(var(--foreground))]
                              focus:outline-none focus:border-[hsl(var(--primary))] transition-all"
                 />
+                {'hint' in f && (
+                  <p className="text-[11px] text-[hsl(var(--muted-foreground))] mt-1">{(f as { hint: string }).hint}</p>
+                )}
               </div>
             ))}
           </div>
@@ -420,6 +356,7 @@ export default function AdminDashboard() {
               إلغاء
             </button>
           </div>
+        </div>
         </div>
       )}
 

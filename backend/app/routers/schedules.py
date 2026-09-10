@@ -10,6 +10,7 @@ from typing import List
 from app.common import safe_object_id, serialize_doc
 from app.db import db
 from app.models import AcademicScheduleCreate, AcademicScheduleResponse
+from app.scope import assert_halaqah_in_scope, visible_halaqah_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -29,6 +30,9 @@ async def create_academic_schedule(schedule: AcademicScheduleCreate, current_use
         
     if not center_id:
         raise HTTPException(status_code=400, detail="يجب تحديد المركز")
+
+    # [إصلاح 2026-09-06] كان أيّ شيخ يُضيف حصّة إلى جدول أيّ حلقة في المركز.
+    await assert_halaqah_in_scope(schedule.halaqa_id, current_user)
 
     schedule_dict = schedule.model_dump()
     schedule_dict["center_id"] = center_id
@@ -64,7 +68,16 @@ async def get_academic_schedules(current_user: dict = Depends(get_current_user))
         if not center_id:
             return []
         query["center_id"] = center_id
-        
+
+    # [إصلاح 2026-09-06] كان الجدول يُعرض للمركز كلّه، فيرى شيخُ الحلقة حصصَ
+    # حلقات غيره وأسماءَ شيوخها، ويرى الطالبُ جدولَ حلقات ليس فيها. الجدول
+    # يخصّ الحلقة، فيُحصر بحلقات النطاق.
+    hids = await visible_halaqah_ids(current_user)
+    if hids is not None:
+        if not hids:
+            return []
+        query["halaqa_id"] = {"$in": hids}
+
     schedules = await db.academic_schedules.find(query).to_list(1000)
     result = []
     
@@ -104,6 +117,11 @@ async def update_academic_schedule(schedule_id: str, schedule: AcademicScheduleC
         
     if current_user["role"] not in ["admin", "super_admin"] and existing.get("center_id") != current_user.get("center_id"):
         raise HTTPException(status_code=403, detail="غير مصرح لك بتعديل موعد دراسي لمركز آخر")
+
+    # [إصلاح 2026-09-06] المركز لا يكفي: الحصّة تخصّ حلقة، والشيخ لا يمسّ جدول
+    # حلقة غيره.
+    if existing.get("halaqa_id"):
+        await assert_halaqah_in_scope(existing["halaqa_id"], current_user)
         
     # [AUDIT-2026-09-03 fix: لا يُسمح بنقل موعد إلى مركز آخر عبر التعديل — المركز يبقى كما هو]
     update_dict = schedule.model_dump(exclude={"center_id"})
@@ -140,6 +158,11 @@ async def delete_academic_schedule(schedule_id: str, current_user: dict = Depend
         
     if current_user["role"] not in ["admin", "super_admin"] and existing.get("center_id") != current_user.get("center_id"):
         raise HTTPException(status_code=403, detail="غير مصرح لك بحذف موعد دراسي لمركز آخر")
+
+    # [إصلاح 2026-09-06] المركز لا يكفي: الحصّة تخصّ حلقة، والشيخ لا يمسّ جدول
+    # حلقة غيره.
+    if existing.get("halaqa_id"):
+        await assert_halaqah_in_scope(existing["halaqa_id"], current_user)
         
     await db.academic_schedules.delete_one({"_id": schedule_obj_id})
     return {"message": "تم حذف الموعد الدراسي بنجاح"}

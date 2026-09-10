@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   Users, Plus, Search, Phone, Calendar, BookOpen, Edit, Trash2,
   X, CheckCircle2, TrendingUp, Clock, RefreshCw,
-  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart, Gauge
+  AlertCircle, MapPin, Eye, Save, User, ChevronDown, ChevronUp, LineChart, Gauge, KeyRound
 } from 'lucide-react';
+import StudentAccountsModal from '@/components/students/StudentAccountsModal';
 import { Link } from 'react-router-dom';
 import { studentsApi, halaqatApi } from '@/services/api';
 import api from '@/services/api';
@@ -66,6 +67,10 @@ export default function Students() {
   const [editMode, setEditMode]         = useState(false);
   const [editForm, setEditForm]         = useState<Partial<StudentData>>({});
   const [expandedId, setExpandedId]     = useState<string | null>(null);
+  // إنشاء الطالب وتعديلُه وحذفُه من عمل الإدارة، لا من عمل شيخ الحلقة
+  const canManageRoster = user?.role === 'center_manager' || user?.role === 'admin';
+  /** إصدار حسابَي الطالب ووليّه — بعد التسجيل، وبيد المدير وحده */
+  const [accountsFor, setAccountsFor] = useState<{ id: string; name: string } | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -184,10 +189,15 @@ export default function Students() {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <button onClick={() => setShowAddForm(true)}
-          className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all">
-          <Plus className="w-5 h-5" /> تسجيل طالب جديد
-        </button>
+        {/* [إصلاح 2026-09-06] الخادم يحصر إنشاء الطالب في المدير منذ البداية،
+            والواجهة كانت تعرض الزرّ للشيخ أيضاً — فيملأ النموذج كلَّه ثم يُردّ
+            بـ403. تسجيلُ الطالب من عمل الإدارة (قرار المالك). */}
+        {canManageRoster && (
+          <button onClick={() => setShowAddForm(true)}
+            className="gradient-primary text-white font-bold px-6 py-3 rounded-xl flex items-center gap-2 shadow-md hover:opacity-90 transition-all">
+            <Plus className="w-5 h-5" /> تسجيل طالب جديد
+          </button>
+        )}
         <div className="relative flex-1">
           <Search className="absolute right-4 top-3.5 h-5 w-5 text-[hsl(var(--muted-foreground))]" />
           <input
@@ -313,7 +323,19 @@ export default function Students() {
       {filtered.length === 0 ? (
         <div className="text-center py-16 rounded-[var(--radius-lg)] bg-white border-2 border-dashed border-[hsl(var(--border))]">
           <Users className="w-14 h-14 mx-auto mb-3 text-[hsl(var(--muted-foreground))] opacity-40" />
-          <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
+          {/* [إضافة 2026-09-06] المحفّظ صار يرى طلاب حلقاته وحدها. ومن لم تُسنَد
+              إليه حلقة بعد يرى شاشةً فارغة لا تقول له لماذا — فيظنّ النظام
+              معطوباً. الفراغُ هنا له سببان مختلفان، ولكلٍّ رسالتُه. */}
+          {user?.role === 'teacher' && halaqat.length === 0 ? (
+            <>
+              <p className="text-[hsl(var(--foreground))] font-semibold">لم تُسنَد إليك حلقة بعد</p>
+              <p className="text-sm text-[hsl(var(--muted-foreground))] mt-1">
+                تظهر لك أسماء طلابك حالما يُسنِد مديرُ المركز حلقةً إليك.
+              </p>
+            </>
+          ) : (
+            <p className="text-[hsl(var(--muted-foreground))] font-medium">لا يوجد طلاب مطابقون</p>
+          )}
         </div>
       ) : (
         <div className="space-y-3 stagger">
@@ -367,10 +389,12 @@ export default function Students() {
                     className="p-2 flex items-center justify-center rounded-xl bg-blue-50 text-blue-600 hover:opacity-80 transition-all">
                     <LineChart className="w-4 h-4" />
                   </Link>
-                  <button onClick={() => handleDelete(student.id)} title="حذف الطالب"
-                    className="p-2 rounded-xl bg-red-50 text-red-500 hover:opacity-80 transition-all">
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {canManageRoster && (
+                    <button onClick={() => handleDelete(student.id)} title="حذف الطالب"
+                      className="p-2 rounded-xl bg-red-50 text-red-500 hover:opacity-80 transition-all">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                   <button onClick={() => setExpandedId(expandedId === student.id ? null : student.id)} title="توسيع/طي"
                     className="p-2 rounded-xl bg-[hsl(var(--muted))] text-[hsl(var(--muted-foreground))] hover:opacity-80 transition-all">
                     {expandedId === student.id ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
@@ -435,14 +459,22 @@ export default function Students() {
                 <button onClick={() => setSelectedStudent(null)} className="text-[hsl(var(--ink-3))] hover:text-white" aria-label="إغلاق النافذة"><X className="w-5 h-5" aria-hidden="true" /></button>
               </div>
               <div className="flex gap-2 mt-4">
+                {canManageRoster && (<>
                 <button onClick={() => setEditMode(!editMode)} title="تبديل وضع التعديل"
                   className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
                   <Edit className="w-4 h-4" /> {editMode ? 'إلغاء' : 'تعديل'}
+                </button>
+                <button
+                  onClick={() => setAccountsFor({ id: selectedStudent.id, name: selectedStudent.name })}
+                  title="حسابات الطالب ووليّ أمره"
+                  className="flex-1 flex items-center justify-center gap-1 py-2 rounded-[var(--radius-sm)] border border-[hsl(var(--line))] hover:border-[hsl(var(--lamp))] text-[hsl(var(--ink-2))] text-sm font-semibold transition-colors">
+                  <KeyRound className="w-4 h-4" /> الحسابات
                 </button>
                 <button onClick={() => handleDelete(selectedStudent.id)} title="حذف الطالب"
                   className="px-4 py-2 rounded-xl bg-[hsl(var(--danger))]/30 hover:bg-[hsl(var(--danger))]/50 text-white text-sm font-bold">
                   <Trash2 className="w-4 h-4" />
                 </button>
+                </>)}
               </div>
             </div>
 
@@ -519,6 +551,14 @@ export default function Students() {
             </div>
           </div>
         </div>
+      )}
+
+      {accountsFor && (
+        <StudentAccountsModal
+          studentId={accountsFor.id}
+          studentName={accountsFor.name}
+          onClose={() => setAccountsFor(null)}
+        />
       )}
     </div>
   );

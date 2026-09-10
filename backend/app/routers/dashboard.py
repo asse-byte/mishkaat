@@ -11,6 +11,7 @@ from app.common import NOT_DELETED, check_student_access, scoped_student_ids, se
 from app.db import db
 from app.pii import decrypt_student_doc
 from app.scoring import compute_student_scores
+from app.scope import student_query, visible_halaqah_ids, visible_student_ids
 from app.security import get_current_user
 
 router = APIRouter()
@@ -36,8 +37,22 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     if role != "super_admin" and center_id:
         query_filter["center_id"] = center_id
 
-    total_students = await db.students.count_documents({**query_filter, "is_active": True})
-    total_teachers = await db.teachers.count_documents({**query_filter, "is_active": True})
+    # [إصلاح 2026-09-06] العدّاد كان على المركز كلّه، فتقول لوحةُ شيخ الحلقة إن
+    # عنده أربعين طالباً وحلقتُه فيها ستّة. الرقم الذي لا يخصّه لا يفيده، ويُخبره
+    # بحجم ما لا يراه.
+    scoped_students_q = await student_query(current_user, {"is_active": True})
+    total_students = (
+        0 if scoped_students_q is None
+        else await db.students.count_documents(scoped_students_q)
+    )
+    scoped_halaqah_ids = await visible_halaqah_ids(current_user)
+    if scoped_halaqah_ids is None:
+        total_teachers = await db.teachers.count_documents({**query_filter, "is_active": True})
+        total_halaqat_scoped = None
+    else:
+        # المحفّظ يَعُدّ نفسه واحداً، وحلقاته وحدها
+        total_teachers = 1 if role == "teacher" else 0
+        total_halaqat_scoped = len(scoped_halaqah_ids)
 
     # Non-super admins only count their own center
     if role == "super_admin":
@@ -45,12 +60,18 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
     else:
         total_centers = 1 if center_id else 0
 
-    total_halaqat = await db.halaqat.count_documents({**query_filter, "is_active": True})
+    total_halaqat = (
+        await db.halaqat.count_documents({**query_filter, "is_active": True})
+        if total_halaqat_scoped is None else total_halaqat_scoped
+    )
 
     # نطاق السجلات المرتبطة بالطلاب (حضور/رسوم)
     student_scope: dict = {}
     if role != "super_admin" and center_id:
-        ids = await scoped_student_ids(center_id)
+        # سجلّات الحضور والرسوم تُحصر بمعرّفات طلاب النطاق نفسه لا بالمركز
+        ids = await visible_student_ids(current_user)
+        if ids is None:
+            ids = await scoped_student_ids(center_id)
         if not ids:
             return {
                 "total_students": total_students,
@@ -85,12 +106,13 @@ async def get_dashboard_stats(current_user: dict = Depends(get_current_user)):
 @router.get("/api/dashboard/honor-roll")
 async def get_honor_roll(current_user: dict = Depends(get_current_user)):
     """حساب التقييم الذكي وسجل الشرف (المعادلة الذكية)"""
-    role = current_user["role"]
-    center_id = current_user.get("center_id")
 
-    query_filter = {"is_active": True}
-    if role != "super_admin" and center_id:
-        query_filter["center_id"] = center_id
+    # [إصلاح 2026-09-06] كان الترتيب على طلاب المركز كلّه، فيرى شيخُ الحلقة
+    # أسماءَ طلابٍ ليسوا من حلقته ودرجاتِهم. سجلّ الشرف يُحفّز داخل الحلقة،
+    # ومقارنةُ طالبٍ بمن لا يُدرّسه شيخُه ليست من شأنه.
+    query_filter = await student_query(current_user, {"is_active": True})
+    if query_filter is None:
+        return []
 
     students = await db.students.find(query_filter).to_list(2000)
     scored = await compute_student_scores(students, days=30)
@@ -99,12 +121,10 @@ async def get_honor_roll(current_user: dict = Depends(get_current_user)):
 @router.get("/api/analytics/rankings")
 async def get_analytics_rankings(current_user: dict = Depends(get_current_user)):
     """الحصول على الترتيب لجميع الطلاب (أفضل الطلاب والطلاب الضعفاء)"""
-    role = current_user["role"]
-    center_id = current_user.get("center_id")
 
-    query_filter = {"is_active": True}
-    if role != "super_admin" and center_id:
-        query_filter["center_id"] = center_id
+    query_filter = await student_query(current_user, {"is_active": True})
+    if query_filter is None:
+        return []
 
     students = await db.students.find(query_filter).to_list(2000)
     enrollment_by_id = {

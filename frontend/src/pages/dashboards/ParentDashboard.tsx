@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import api from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
 import EmptyState from '@/components/ui/EmptyState';
-import { useTranslation } from '@/lib/i18n';
+import { formatAmount } from '@/lib/format';
 
 interface ChildInfo {
   id: string;
@@ -35,7 +35,7 @@ interface RecentRec {
   student_name?: string;
 }
 
-const FCFA = (n: number) => new Intl.NumberFormat('fr-FR').format(Math.round(n)) + ' FCFA';
+const FCFA = (n: number) => formatAmount(Math.round(n));
 
 const evalMap: Record<string, string> = {
   excellent: 'ممتاز', good: 'جيد', acceptable: 'مقبول', needs_improvement: 'يحتاج تحسين',
@@ -43,7 +43,6 @@ const evalMap: Record<string, string> = {
 
 export default function ParentDashboard() {
   const { user } = useAuth();
-  const { t } = useTranslation();
   const [children, setChildren]       = useState<ChildInfo[]>([]);
   const [fees, setFees]               = useState<FeeInfo[]>([]);
   const [recentRecs, setRecentRecs]   = useState<RecentRec[]>([]);
@@ -121,7 +120,7 @@ export default function ParentDashboard() {
       {/* Hero */}
       <WelcomeHero
         name={user?.name || null}
-        roleTitle={t('role_parent')}
+        roleTitle="ولي أمر"
         subtext={`تابع تقدم ${children.length > 1 ? 'أبنائك' : 'ابنك'} في حفظ القرآن الكريم اليوم.`}
       />
 
@@ -209,7 +208,7 @@ export default function ParentDashboard() {
                 <EmptyState
                   icon={BookOpen}
                   title="لا توجد تسميعات مسجَّلة"
-                  description={t('empty_no_recitations')}
+                  description="لا توجد جلسات تسميع مسجلة اليوم."
                 />
               </div>
             ) : recentRecs.map((r, i) => (

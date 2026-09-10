@@ -1,6 +1,5 @@
 import React from 'react';
 import { Calendar, UserCheck } from 'lucide-react';
-import { useTranslation } from '@/lib/i18n';
 
 interface WelcomeHeroProps {
   name: string | null;
@@ -13,12 +12,10 @@ interface WelcomeHeroProps {
 }
 
 export default function WelcomeHero({ name, roleTitle, subtext, stats }: WelcomeHeroProps) {
-  const { t, locale, isRTL } = useTranslation();
 
-  const formattedDate = new Date().toLocaleDateString(
-    locale === 'ar' ? 'ar-SA' : locale === 'fr' ? 'fr-FR' : 'en-US',
-    { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }
-  );
+  const formattedDate = new Date().toLocaleDateString('ar-SA', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
 
   return (
     <div className="relative overflow-hidden bg-[hsl(var(--sidebar))] text-white rounded-[var(--radius-lg)] p-6 md:p-8 shadow-lg border border-white/5 transition-all mb-6">
@@ -34,11 +31,11 @@ export default function WelcomeHero({ name, roleTitle, subtext, stats }: Welcome
           </div>
 
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
-            {t('welcome_greeting')} <span className="text-[hsl(var(--accent-foreground))] dark:text-emerald-400 font-bold">{name || '...'}</span>
+            مرحباً بك، <span className="text-[hsl(var(--accent-foreground))] dark:text-emerald-400 font-bold">{name || '...'}</span>
           </h1>
 
           <p className="text-[hsl(var(--ink-3))] text-sm max-w-xl font-medium leading-relaxed">
-            {subtext || t('welcome_subtext')}
+            {subtext || 'نسأل الله لك التوفيق والقبول في مسيرتك القرآنية اليوم.'}
           </p>
 
           <div className="flex items-center gap-2 text-white/60 text-xs font-semibold pt-1">

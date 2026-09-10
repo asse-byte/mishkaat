@@ -14,9 +14,9 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-export function formatNumber(num: number): string {
-  return new Intl.NumberFormat('ar-SA').format(num);
-}
+/** @deprecated استعمل formatNumber من lib/format — هذه تُخرج أرقاماً هندية
+ *  وفاصلةً عربية، فيختلف الرقم عن بقيّة الشاشات. باقية لئلا ينكسر مستدعٍ قديم. */
+export { formatNumber } from './format';
 
 export function getInitials(name: string): string {
   return name

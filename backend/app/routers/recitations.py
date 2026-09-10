@@ -19,6 +19,7 @@ from app.gamification import award_xp, evaluate_badges
 from app.metrics import compute_all, pages_of
 from app.models import RecitationCreate
 from app.routers.performance import invalidate_model
+from app.scope import teacher_only
 from app.security import get_current_user
 
 router = APIRouter()
@@ -138,20 +139,60 @@ async def _award_session_rewards(recitation_dict: dict, recitation_id: str, stud
 @router.post("/api/recitations")
 async def create_recitation(recitation: RecitationCreate, current_user: dict = Depends(get_current_user)):
     """تسجيل تسميع جديد"""
-    if current_user["role"] not in ["admin", "center_manager", "teacher"]:
-        raise HTTPException(status_code=403, detail="غير مصرح")
+    # [قرار المالك 2026-09-06] التسميع شهادةٌ على ما سمعه الشيخ بأذنه. مديرُ
+    # المركز يقرأ السجلّ كلَّه ويُصحّحه بالتعديل والحذف، ولا يُنشئ سجلّاً يشهد
+    # فيه على مجلسٍ لم يحضره.
+    teacher_only(current_user, "تسجيل التسميع")
 
     # [AUDIT-2026-05-22 fix: enforce student belongs to caller's center before logging recitation]
+    # ومنذ 2026-09-06 تفرض هذه البوّابة أن يكون الطالب من حلقة هذا الشيخ نفسه.
     student = await check_student_access(recitation.student_id, current_user)
 
-    # [AUDIT-2026-05-22 fix: a teacher may only record recitations under their own teacher identity]
-    if current_user["role"] == "teacher":
-        teacher_row = await db.teachers.find_one({"user_id": str(current_user["_id"]), "is_active": True})
-        if not teacher_row or recitation.teacher_id != str(teacher_row["_id"]):
-            raise HTTPException(status_code=403, detail="لا يمكن تسجيل تسميع باسم معلم آخر")
+    # [إصلاح 2026-09-06] كان الشرط: أن يُطابق teacher_id المُرسَل سجلَّ المحفّظ.
+    # والواجهة ترسل معرّف **الحساب** (user.id) لا معرّف **سجلّ المحفّظ**، وهما
+    # مختلفان دائماً — فكان كل تسميع يُسجّله شيخٌ يُردّ بـ403 «لا يمكن تسجيل
+    # تسميع باسم معلم آخر». أي أن تسجيل التسميع لم يعمل لشيخٍ قطّ.
+    #
+    # والعلاج ليس تصحيح ما تُرسله الواجهة: هوية المُسجِّل تُؤخذ من توكنه لا
+    # ممّا يُرسله، فلا يبقى للعميل أن يُخطئ فيها ولا أن يتلاعب بها.
+    teacher_row = await db.teachers.find_one(
+        {"user_id": str(current_user["_id"]), "is_active": True})
+    if not teacher_row:
+        raise HTTPException(
+            status_code=403,
+            detail="حسابك غير مرتبط بسجلّ محفّظ — راجع مدير المركز")
+
+    # [قرار المالك 2026-09-07] «ليس من الجيد أن يسمح النظام للمستخدم بإجراء
+    # بعض العمليات مرّتين، التي تقع في اليوم مرّة واحدة — مثل إجراء تسميعٍ
+    # يوميّ مرّتين لطالبٍ واحد. ممكن المعلّم يعدّل التسميع القديم.»
+    #
+    # والازدواج هنا ليس إزعاجاً في القائمة: كلُّ تسميعٍ يدخل حساب المقاييس
+    # ويمنح نقاطاً ويحرّك التنبؤ — فالمكرّر يرفع صورةَ الطالب على غير حقيقتها.
+    now = utcnow()
+    day = now.strftime("%Y-%m-%d")
+    dup = await db.recitations.find_one({
+        **NOT_DELETED,
+        "student_id": recitation.student_id,
+        "recitation_type": recitation.recitation_type,
+        "date_str": day,
+    })
+    if dup:
+        kind = "المراجعة" if recitation.recitation_type == "review" else "الحفظ"
+        raise HTTPException(
+            status_code=409,
+            detail=(f"سُجّل تسميع {kind} لهذا الطالب اليوم بالفعل "
+                    f"({dup.get('surah_name', '')}) — عدّل السجلّ القائم بدل إضافة ثانٍ"))
 
     recitation_dict = recitation.model_dump()
-    recitation_dict["date"] = utcnow()
+    recitation_dict["teacher_id"] = str(teacher_row["_id"])
+    recitation_dict["teacher_name"] = teacher_row.get("name") or recitation_dict.get("teacher_name")
+    recitation_dict["date"] = now
+    # مفتاحُ اليوم يُكتب صراحةً: `date` طابعٌ زمنيّ بالميلي ثانية، ولا يُبنى
+    # عليه فحصُ «مرّة في اليوم» ولا فهرسٌ يومي. (الحضور يفعل هذا منذ زمن.)
+    recitation_dict["date_str"] = day
+    # ومعرّف المركز يُكتب أيضاً: كان التسميع الجدولَ الوحيد بلا center_id،
+    # فقياسُ نشاط المركز عليه يمرّ بجدول الطلاب في كل مرّة.
+    recitation_dict["center_id"] = student.get("center_id")
     result = await db.recitations.insert_one(recitation_dict)
     recitation_id = str(result.inserted_id)
 
@@ -199,6 +240,64 @@ async def get_student_recitations(student_id: str, current_user: dict = Depends(
             doc["date"] = doc["date"].isoformat()
         result.append(doc)
     return result
+
+@router.put("/api/recitations/{recitation_id}")
+async def update_recitation(recitation_id: str, patch: RecitationCreate,
+                            current_user: dict = Depends(get_current_user)):
+    """
+    تصحيح تسميعٍ مسجَّل.
+
+    [قرار المالك 2026-09-07] العملُ الإداري يُصحَّح بعد وقوعه. وكان التسميع
+    يُحذف ولا يُعدَّل: من أخطأ في السورة أو الدرجة يحذف السجلّ ويكتبه من جديد
+    — فيفقد وقتَه الأصلي، ويسقط ما بُني عليه من نقاط.
+
+    ومن يُصحّح: الشيخُ صاحبُ التسميع، والإدارةُ فوقه. ولا يُصحّح شيخٌ عملَ زميله.
+    """
+    if current_user["role"] not in ["admin", "super_admin", "center_manager", "teacher"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    rec = await db.recitations.find_one({"_id": safe_object_id(recitation_id)})
+    if not rec:
+        raise HTTPException(status_code=404, detail="التسميع غير موجود")
+    if rec.get("is_deleted"):
+        raise HTTPException(status_code=409, detail="هذا التسميع محذوف")
+
+    await check_student_access(rec.get("student_id"), current_user)
+
+    if current_user["role"] == "teacher":
+        teacher_row = await db.teachers.find_one(
+            {"user_id": str(current_user["_id"]), "is_active": True})
+        if not teacher_row or rec.get("teacher_id") != str(teacher_row["_id"]):
+            raise HTTPException(
+                status_code=403, detail="لا تُعدّل تسميعاً سجّله معلّم آخر")
+
+    changes = patch.model_dump(exclude_unset=True)
+    # ما لا يُغيَّر بالتصحيح: صاحبُ السجلّ، ووقتُه، ومن سجّله. تغييرُ الطالب
+    # يعني سجلّاً آخر لا تصحيحاً، وتغييرُ التاريخ يُخفي متى جرى المجلس.
+    for locked in ("student_id", "teacher_id", "teacher_name", "date", "date_str",
+                   "center_id"):
+        changes.pop(locked, None)
+    if not changes:
+        return serialize_doc(rec)
+
+    changes["updated_at"] = utcnow()
+    changes["updated_by"] = str(current_user["_id"])
+    await db.recitations.update_one({"_id": rec["_id"]}, {"$set": changes})
+
+    # المقاييس والتنبؤ يُحسبان عند القراءة، لكن نموذج المركز مُخبَّأ لساعة
+    invalidate_model(rec.get("center_id") or current_user.get("center_id"))
+
+    await write_audit_log(
+        actor_id=str(current_user["_id"]),
+        center_id=rec.get("center_id") or current_user.get("center_id", "system"),
+        action="UPDATE_RECITATION",
+        payload={"recitation_id": recitation_id,
+                 "student_id": rec.get("student_id"),
+                 "fields": sorted(changes.keys())})
+
+    updated = await db.recitations.find_one({"_id": rec["_id"]})
+    return serialize_doc(updated)
+
 
 @router.delete("/api/recitations/{recitation_id}")
 async def delete_recitation(

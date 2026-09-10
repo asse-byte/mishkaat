@@ -14,6 +14,7 @@ from app.audit import write_audit_log
 from app.common import redact_teacher, safe_object_id, serialize_doc
 from app.db import db
 from app.models import TeacherCreate, TeacherEvaluationCreate, TeacherEvaluationResponse, TeacherTransferRequest, TeacherUpdate
+from app.scope import teacher_record
 from app.security import get_current_user, get_password_hash, validate_password_complexity
 
 router = APIRouter()
@@ -40,6 +41,17 @@ async def get_teachers(
     if role in ["super_admin", "admin"]:
         if center_id:
             query["center_id"] = center_id
+    elif role in ("student", "parent"):
+        # [إصلاح 2026-09-06] كان الطالب ووليّ الأمر يريان قائمة محفّظي المركز
+        # كلَّهم. اسمُ شيخ حلقته يصله من الحلقة نفسها، ولا حاجة له بالقائمة.
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    elif role == "teacher":
+        # المحفّظ يرى نفسه فقط: زملاؤه ليسوا من شأنه، وبياناتُهم بيانات موظّفين.
+        me = await teacher_record(current_user)
+        if not me:
+            return []
+        query["_id"] = me["_id"]
+        query["center_id"] = current_user.get("center_id")
     else:
         if not current_user.get("center_id"):
             return []
@@ -71,6 +83,8 @@ async def get_teachers(
         mine = halaqat_by_teacher.get(doc["id"], [])
         doc["halaqat"] = [h["name"] for h in mine]
         doc["students_count"] = sum(students_per_halaqah.get(str(h["_id"]), 0) for h in mine)
+        # المحفّظون المسجَّلون قبل حقل النوع لا يحملونه — والافتراض شيخُ حلقة
+        doc["teacher_type"] = doc.get("teacher_type") or "halaqah"
         doc["hire_date"] = doc.get("hire_date", utcnow())
         if isinstance(doc["hire_date"], datetime):
             doc["hire_date"] = doc["hire_date"].isoformat()
@@ -98,11 +112,28 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
         "marital_status": teacher.marital_status,
         "work_schedule": teacher.work_schedule,
         "salary": teacher.salary,
+        "teacher_type": teacher.teacher_type,
+        "job_title": teacher.job_title,
         "is_active": True,
         "hire_date": utcnow(),
     }
     hire_date = teacher_dict["hire_date"]
     
+    # [قرار المالك 2026-09-10] «المعلّم الذي ليس شيخ حلقة — يأتي من خارج
+    # ويُدرّس مادّةً معيّنة لطلاب الحلقة — لا يكون لديه حساب في النظام، يعني
+    # لا يمكن إنشاء الحساب له.»
+    #
+    # والسببُ بيّن: الحسابُ في هذا النظام يفتح بيانات الطلاب — تسميعَهم
+    # وحضورَهم ومقاييسَهم — وهي أمانةُ الحلقة لا أمانةُ من يزورها لدرسٍ في
+    # مادّة. ومن لا يُسمّع ولا يرصد حضوراً لا يحتاج بابَ دخولٍ أصلاً.
+    #
+    # ويُردّ صراحةً لا يُهمَل بصمت: مديرٌ كتب اسم مستخدمٍ وكلمة مرور ثمّ لم
+    # يجدهما يعملان يظنّ الخللَ في النظام لا في طلبه.
+    if teacher.teacher_type == "external" and (teacher.username or teacher.password):
+        raise HTTPException(
+            status_code=400,
+            detail="المعلّم الخارجي لا حساب له في النظام — يُسجَّل باسمه ومهمّته فقط")
+
     # Create user account if credentials provided
     user_id = None
     if teacher.username and teacher.password:
@@ -137,6 +168,8 @@ async def create_teacher(teacher: TeacherCreate, current_user: dict = Depends(ge
         "marital_status": teacher_dict.get("marital_status"),
         "work_schedule": teacher_dict.get("work_schedule"),
         "salary": teacher_dict.get("salary"),
+        "teacher_type": teacher_dict.get("teacher_type", "halaqah"),
+        "job_title": teacher_dict.get("job_title"),
         "is_active": teacher_dict["is_active"],
         "hire_date": hire_date.isoformat(),
         "user_id": teacher_dict.get("user_id"),
@@ -167,9 +200,24 @@ async def update_teacher(teacher_id: str, teacher: TeacherUpdate, current_user: 
         {"_id": teacher_obj_id},
         {"$set": update_data}
     )
-    
+
+    # تحويلُ محفّظٍ إلى «معلّم خارجي» يُغلق حسابَه القائم: القاعدةُ أن الخارجي
+    # لا حساب له، وتركُ الحساب عاملاً يُبقي البابَ الذي مُنع منه مفتوحاً. ورفعُ
+    # user_version يُخرجه من كل جهازٍ في الحال لا عند انتهاء رمزه.
+    closed_account = False
+    if (update_data.get("teacher_type") == "external"
+            and existing.get("teacher_type") != "external"
+            and existing.get("user_id")):
+        await db.users.update_one(
+            {"_id": safe_object_id(existing["user_id"])},
+            {"$set": {"is_active": False}, "$inc": {"user_version": 1}})
+        closed_account = True
+
     updated = await db.teachers.find_one({"_id": teacher_obj_id})
-    return serialize_doc(updated)
+    doc = serialize_doc(updated)
+    if closed_account:
+        doc["notice"] = "أُغلق حساب هذا المعلّم — المعلّم الخارجي لا حساب له في النظام"
+    return doc
 
 @router.post("/api/teachers/{teacher_id}/transfer")
 async def transfer_teacher(teacher_id: str, data: TeacherTransferRequest, current_user: dict = Depends(get_current_user)):
@@ -275,19 +323,37 @@ async def create_teacher_evaluation(
     if not center_id:
         center_id = teacher.get("center_id") or "default"
         
-    att_part = evaluation.attendance_rate * 0.2
-    taj_part = evaluation.tajweed_proficiency * 10 * 0.3
-    ret_part = evaluation.student_retention * 10 * 0.2
-    speed_part = min(100.0, evaluation.average_memorization_speed * 15.0) * 0.15
-    disc_part = evaluation.discipline * 10 * 0.15
-    
-    tpi = round(att_part + taj_part + ret_part + speed_part + disc_part, 2)
-    
+    # المجموع من 100: معايير المالك الخمسة كلٌّ من 10 (×2). فإن جاء تقييمٌ
+    # بالمعايير القديمة وحدها حُسب بصيغته القديمة، لئلّا تفقد التقييماتُ
+    # السابقة درجتَها بمجرّد تغيّر النموذج.
+    from app.models import TEACHER_CRITERIA
+    new_scores = [getattr(evaluation, k) for k in TEACHER_CRITERIA]
+    given = [v for v in new_scores if v is not None]
+    if given:
+        if len(given) < len(TEACHER_CRITERIA):
+            missing = [TEACHER_CRITERIA[k] for k in TEACHER_CRITERIA
+                       if getattr(evaluation, k) is None]
+            raise HTTPException(
+                status_code=400,
+                detail="أكمل درجات المعايير: " + "، ".join(missing))
+        tpi = round(sum(given) * 2.0, 2)
+    elif evaluation.attendance_rate is not None:
+        tpi = round(
+            evaluation.attendance_rate * 0.2
+            + (evaluation.tajweed_proficiency or 0) * 10 * 0.3
+            + (evaluation.student_retention or 0) * 10 * 0.2
+            + min(100.0, (evaluation.average_memorization_speed or 0) * 15.0) * 0.15
+            + (evaluation.discipline or 0) * 10 * 0.15,
+            2)
+    else:
+        raise HTTPException(status_code=400, detail="لا توجد درجات في هذا التقييم")
+
     eval_dict = evaluation.model_dump()
     eval_dict["center_id"] = center_id
     eval_dict["tpi"] = tpi
+    eval_dict["evaluated_by"] = current_user.get("username")
     eval_dict["created_at"] = utcnow()
-    
+
     result = await db.teacher_evaluations.insert_one(eval_dict)
     
     return {
@@ -312,6 +378,16 @@ async def get_teacher_evaluations(
     center_id = current_user.get("center_id")
     if role not in ["admin", "super_admin"] and teacher.get("center_id") != center_id:
         raise HTTPException(status_code=403, detail="غير مصرح لك بعرض تقييمات محفظ في مركز آخر")
+
+    # تقييمُ الرجل شأنُه: المحفّظ يقرأ تقييمَ نفسه ولا يقرأ تقييمَ زميله.
+    # وكان فحصُ المركز وحده يفتح تقييمات المحفّظين كلِّهم لكل محفّظ في المركز.
+    if role == "teacher":
+        from app.scope import teacher_record
+        me = await teacher_record(current_user)
+        if not me or str(me["_id"]) != str(teacher_obj_id):
+            raise HTTPException(status_code=403, detail="لا تُقرأ تقييمات محفّظٍ آخر")
+    elif role not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
         
     query = {"teacher_id": teacher_id}
     if role != "super_admin":
@@ -325,3 +401,26 @@ async def get_teacher_evaluations(
         result.append(item)
         
     return result
+
+
+@router.delete("/api/teachers/{teacher_id}/evaluations/{evaluation_id}")
+async def delete_teacher_evaluation(teacher_id: str, evaluation_id: str,
+                                    current_user: dict = Depends(get_current_user)):
+    """
+    حذف تقييمٍ سُجّل خطأً — للإدارة.
+
+    تقييمٌ خاطئ في سجلّ رجلٍ ليس رقماً في جدول: يُقرأ عند النظر في راتبه
+    وترقيته. فوجب أن يُرفع لا أن يُترك مع تقييمٍ ثانٍ يُصحّحه.
+    """
+    if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+
+    ev = await db.teacher_evaluations.find_one({"_id": safe_object_id(evaluation_id)})
+    if not ev or ev.get("teacher_id") != teacher_id:
+        raise HTTPException(status_code=404, detail="التقييم غير موجود")
+    if (current_user["role"] not in ["admin", "super_admin"]
+            and ev.get("center_id") != current_user.get("center_id")):
+        raise HTTPException(status_code=403, detail="هذا التقييم يخصّ مركزاً آخر")
+
+    await db.teacher_evaluations.delete_one({"_id": ev["_id"]})
+    return {"message": "حُذف التقييم"}
