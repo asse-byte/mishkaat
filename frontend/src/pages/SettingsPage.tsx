@@ -21,8 +21,20 @@ interface CenterInfo { id: string; name: string; logo_file_id?: string | null }
 export default function SettingsPage() {
   const { user } = useAuth();
   const { theme, set } = useTheme();
-  const canBrand = user?.role === 'center_manager' || user?.role === 'admin'
-    || user?.role === 'super_admin';
+  /**
+   * الشعار لمدير المركز وحده.
+   *
+   * [قرار المالك 2026-09-10] «هذا ظهر عند مدير النظام، وأريد حذفه عنده لأنه
+   * فقط يوجد عند مدير مركز التحفيظ.»
+   *
+   * وكان ظهورُه عنده خطأً لا سوءَ ترتيبٍ فحسب: حسابُ مدير النظام بلا مركز،
+   * فالقسمُ يلتقط له **أوّل مركزٍ في القائمة** — أي مركزاً عشوائياً بحسب
+   * ترتيب الجواب — فيرفع شعاراً لمركزٍ لا يخصّه. وهي عينُ العلّة التي صُحّحت
+   * في شاشة المالية وترويسة التقارير: الاتّكال على `data[0]` لمن لا مركز له.
+   *
+   * والهويّةُ شأنُ صاحبها: المركز يرفع شعارَه بنفسه.
+   */
+  const canBrand = user?.role === 'center_manager' && !!user?.center_id;
 
   const [center, setCenter] = useState<CenterInfo | null>(null);
   const [busy, setBusy] = useState(false);
@@ -36,10 +48,8 @@ export default function SettingsPage() {
     if (!canBrand) return;
     try {
       const r = await api.get<CenterInfo[]>('/centers');
-      const mine = user?.center_id
-        ? r.data.find(c => c.id === user.center_id) || null
-        : r.data[0] || null;
-      setCenter(mine);
+      // مركزُه هو بمعرّفه — ولا بديلَ عنه. من لا مركز له لا يصل هنا أصلاً.
+      setCenter(r.data.find(c => c.id === user?.center_id) || null);
     } catch {
       /* المركز اختياريّ هنا — بقيّة الصفحة تعمل بدونه */
     }
@@ -199,12 +209,22 @@ export default function SettingsPage() {
       )}
 
       {/* ما لا يُضبط من هنا — يُقال صراحةً بدل مفاتيح لا تعمل */}
+      {/* الإرشادُ يدلّ على صفحاتٍ يملكها القارئ. وسطرٌ يقول لمدير النظام
+          «راجع إدارة النظام» — وهو هي — أو يدلّه على صفحة الطلاب وليست في
+          قائمته، إرشادٌ يُضلّ لا يَهدي. */}
       <section className="bg-white rounded-[var(--radius)] p-6 shadow-sm border border-[hsl(var(--border))]">
         <h2 className="text-lg font-bold mb-3">أمورٌ تُضبط من مكانٍ آخر</h2>
         <ul className="text-sm text-[hsl(var(--muted-foreground))] space-y-2 leading-relaxed">
           <li>• كلمة المرور واسمك وهاتفك: من <strong>الملف الشخصي</strong>.</li>
-          <li>• حسابات الطلاب وأولياء الأمور: من ملفّ الطالب في صفحة <strong>الطلاب</strong>.</li>
-          <li>• بيانات المركز واسمه وعنوانه: من صفحة <strong>المراكز</strong> لدى إدارة النظام.</li>
+          {user?.role === 'center_manager' && (
+            <>
+              <li>• حسابات الطلاب وأولياء الأمور: من ملفّ الطالب في صفحة <strong>الطلاب</strong>.</li>
+              <li>• اسم المركز وعنوانه: من إدارة النظام.</li>
+            </>
+          )}
+          {(user?.role === 'admin' || user?.role === 'super_admin') && (
+            <li>• المراكز وبياناتها واعتمادُها: من صفحة <strong>المراكز</strong>.</li>
+          )}
         </ul>
       </section>
     </div>
