@@ -1,0 +1,365 @@
+<!-- ============================ CHAPTER 11 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 11</span>Business Workflows</h1>
+
+<h2>11.1 Centre onboarding and approval</h2>
+
+<div class="diagram">   ┌─ Path A: administrator creates ──────────────────────────────────────┐
+   │  POST /api/centers  →  centre + manager account, active immediately  │
+   │  password complexity enforced; credentials handed over out of band   │
+   └──────────────────────────────────────────────────────────────────────┘
+
+   ┌─ Path B: public self-registration ───────────────────────────────────┐
+   │  POST /api/public/register-center       [rate limit: 3 / 60 min / IP]│
+   │        │                                                             │
+   │        ▼                                                             │
+   │  centre.is_active = false,  approval_status = "pending"              │
+   │  manager account created INACTIVE — login refused (LOGIN_DENIED_     │
+   │  PENDING is written to the audit log)                                │
+   │        │                                                             │
+   │        ▼   GET /api/centers/pending          (administrator)         │
+   │   ┌────────────────────┬──────────────────────┐                      │
+   │   ▼                    ▼                                             │
+   │ POST …/approve      POST …/reject                                    │
+   │ centre + manager    application refused                              │
+   │ activated           │                                                │
+   │        └────────────┴──► permanent audit entry (never purged)        │
+   └──────────────────────────────────────────────────────────────────────┘</div>
+<figcaption>Figure 11.1 — Centre onboarding. Path B previously self-activated, which allowed anyone on the
+internet to create an operating tenant.</figcaption>
+
+<h2>11.2 Enrolment and account issuance</h2>
+
+<p>Enrolment and account issuance are deliberately separate steps. The student record is created first; accounts are
+issued afterwards, by the manager, and bound to the record by identifier.</p>
+
+<ol>
+  <li><strong>Enrol.</strong> <span class="mono">POST /api/students</span> with guardian details, memorisation plan
+  and circle. Date of birth, guardian name and address are encrypted before writing. The circle's occupancy count is
+  updated.</li>
+  <li><strong>Issue accounts.</strong> <span class="mono">POST /api/students/{id}/accounts</span> creates an account
+  for the student, the guardian, or both. Each password is generated from an alphabet without confusable characters,
+  returned <strong>exactly once</strong> so the manager can hand it over, and stored only as a hash. The account
+  identifiers are written to <span class="mono">students.user_id</span> and
+  <span class="mono">students.parent_user_id</span>, so the binding survives a change of phone number. The issuance
+  is audited.</li>
+  <li><strong>Replace, never recover.</strong> <span class="mono">POST …/accounts/reset</span> issues a new password
+  for one holder. There is no retrieval path — and the reset bumps <span class="mono">user_version</span>, closing
+  that holder's open sessions on every device.</li>
+</ol>
+
+<h2>11.3 The daily recitation cycle</h2>
+
+<div class="diagram">teacher opens the recitation screen
+      │
+      ├─ students listed = scope(teacher) = his circles only
+      ▼
+enters sūrah · āyah range · type (new | review) · pages? · error tags · evaluation
+      │
+      ▼  POST /api/recitations
+ ┌────────────────────────────────────────────────────────────────────┐
+ │ 1. teacher_only()                    manager/admin → 403           │
+ │ 2. check_student_access()            not his circle → 403          │
+ │ 3. teacher record resolved FROM THE TOKEN (not from the body)      │
+ │ 4. duplicate check on (student, type, date_str)  → 409 if present  │
+ │ 5. insert with date, date_str and center_id                        │
+ │ 6. side effects, none of which may fail the write:                 │
+ │      • XP: 10 × pages, keyed by the recitation id (idempotent)     │
+ │      • badge re-evaluation against the fresh snapshot              │
+ │      • invalidate the centre's cached forecast model               │
+ └────────────────────────────────────────────────────────────────────┘</div>
+<figcaption>Figure 11.2 — Recording a recitation.</figcaption>
+
+<p>Step 6 is wrapped so that a failure in the motivation layer is logged and ignored: <strong>the session is the
+real record and the points are a layer above it.</strong> Binding their fate together would mean a teacher loses
+their work because of a defect in gamification.</p>
+
+<p>Corrections are first-class. The recording teacher may edit or soft-delete their own session; centre
+administration may correct any session in the centre. A soft-deleted session leaves every metric, score and
+forecast, but remains in the database for audit.</p>
+
+<h2>11.4 Attendance and absence notification</h2>
+
+<div class="diagram">teacher submits the roll for a circle and a date
+      │
+      ▼  POST /api/attendance   (records[], date)
+ per record:  student exists · student belongs to this circle · circle belongs
+              to this centre  →  otherwise 403
+      │
+      ▼  upsert on key (student_id, date_str)
+      │      ├─ inserted → "created"
+      │      └─ matched  → "updated"      ← what a teacher correcting a mark expects
+      │   (a DuplicateKeyError from a simultaneous double-click is caught and
+      │    retried as an update, so the correction is not lost to a 500)
+      ▼
+ status = absent ?
+      ├─ no  → XP: 5 points, source key "student:date"  (idempotent across re-submission)
+      └─ yes → guardian resolved by parent_phone → notification PERSISTED
+               ("absentee_alert" with the student, the date and the circle)
+               and only then streamed</div>
+<figcaption>Figure 11.3 — Roll-call and absence alerting.</figcaption>
+
+<p>Two defects shaped this design. First, the roll was inserted rather than upserted, so re-submitting it — a
+double-click, or a teacher correcting an absence to a presence — created two contradictory rows for the same student
+on the same day, and the absence stayed in the attendance rate forever. Second, the alert was streamed only, so it
+reached a guardian who happened to have the application open at the moment the roll was taken. Persisting first and
+streaming from the database fixed both the reachability problem and a multi-worker problem: with four workers, an
+in-process fan-out reached only the quarter of users connected to the worker that wrote the event.</p>
+
+<h2>11.5 The competition lifecycle</h2>
+
+<div class="diagram">   draft ──► active ──────► grading ──────► approved ──────► archived
+              │                │                │                │
+   manager    │ registration   │ first mark     │ manager        │ manager
+   creates,   │ open to the    │ recorded by a  │ approves:      │ archives;
+   appoints   │ manager and    │ judge moves    │ result becomes │ record is
+   the panel  │ panel judges   │ the state      │ IMMUTABLE      │ kept, never
+              │                │ automatically  │                │ deleted
+              ▼                ▼                ▼
+     one registration    each judge records   no marking, no registration,
+     per student;        ONLY their own       no edit, no delete — a result
+     branch must be      marks; the final     that is announced and then
+     in the closed list  score is the panel   changes destroys the meaning
+                         mean                 of the competition itself</div>
+<figcaption>Figure 11.4 — Competition state machine.</figcaption>
+
+<table>
+  <caption>Table 11.1 — Competition marking scheme</caption>
+  <thead><tr><th style="width:30%">Criterion</th><th style="width:14%" class="c">Maximum</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Memorisation (<span class="ar">الحفظ</span>)</td><td class="c num">70</td><td rowspan="3">Each judge's total is the sum of the three. The contestant's score is the arithmetic mean of the judges' totals, and the number of judges who have marked is reported alongside it. Re-marking replaces only that judge's entry.</td></tr>
+    <tr><td>Tajwīd (<span class="ar">التجويد</span>)</td><td class="c num">20</td></tr>
+    <tr><td>Voice (<span class="ar">الصوت</span>)</td><td class="c num">10</td></tr>
+  </tbody>
+</table>
+
+<p>Three rules are absolute here. <strong>Branches are ranked separately</strong>, each from position one, so a
+memoriser of Juz' ʿAmma is never placed at the bottom of a list headed by memorisers of the whole Qur'an; and the
+branch list is closed, because free text would make results impossible to aggregate or archive across centres.
+<strong>Every mark is attributed</strong>: previously a single score sat on the contestant, so the last judge to open
+the screen silently erased his colleague's marking and no one could tell who had given what. <strong>Administration
+does not mark</strong> — the manager appoints the panel and approves the outcome; recording a mark is testimony from
+someone who listened.</p>
+
+<p>Finally, judging is a task with a term, not a standing permission: the competitions menu item appears for a
+teacher only while a competition they judge is in progress, and disappears after approval. The hiding is in the
+interface; the prohibition is on the server.</p>
+
+<h2>11.6 Certificate issuance</h2>
+
+<table>
+  <caption>Table 11.2 — Milestones</caption>
+  <thead><tr><th style="width:14%">Code</th><th style="width:30%">Milestone</th><th style="width:12%" class="c">Parts</th><th class="c">Pages required</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">juz5</td><td>Five parts memorised</td><td class="c num">5</td><td class="c num">≈ 100.7</td></tr>
+    <tr><td class="mono">juz10</td><td>Ten parts memorised</td><td class="c num">10</td><td class="c num">≈ 201.3</td></tr>
+    <tr><td class="mono">half</td><td>Half the Qur'an</td><td class="c num">15</td><td class="c num">≈ 302.0</td></tr>
+    <tr><td class="mono">khatm</td><td>The whole Qur'an</td><td class="c num">30</td><td class="c num">604</td></tr>
+  </tbody>
+</table>
+
+<p>Issuance is restricted to the centre manager, and three conditions apply:</p>
+<ol>
+  <li><strong>It is a recorded act, not a print button.</strong> Each certificate carries a serial
+  (<span class="mono">MK-YYYY-NNNNN</span>, allocated from an atomic counter per centre per year), the issuer's
+  identity and the issue time. A certificate that is later questioned can be traced; and it cannot be printed twice
+  without anyone knowing.</li>
+  <li><strong>It is never issued twice.</strong> Partial unique indexes enforce one milestone certificate per student
+  per milestone and one competition certificate per contestant. A code check before a write succeeds twice when the
+  button is pressed twice simultaneously.</li>
+  <li><strong>It is never issued early.</strong> A milestone certificate is refused with 409 until the pages actually
+  recited reach the threshold (with a half-page tolerance), and the refusal states how far the student has reached. A
+  competition certificate is refused until the results are approved — a certificate bearing a score that can still
+  change is a document that cannot be trusted.</li>
+</ol>
+<p>Revocation exists, for a wrong name or a wrong milestone, and is audited exactly as issuance is. Students and
+guardians see and print their own certificates; only the manager issues them.</p>
+
+<h2>11.7 Financial operations and the void policy</h2>
+
+<div class="diagram">   create ──► amend ──► collect/pay ──┐
+      │         │                     │
+      │         │                     ▼
+      │         │              [409 if already paid]
+      │         ▼
+      │     every administrative act is fallible, so every one is correctable
+      ▼
+   VOID (never delete)
+      ├─ voided        = true
+      ├─ void_reason   = written reason (required)
+      ├─ voided_at     = timestamp
+      ├─ voided_by     = actor
+      └─ EXCLUDED from every aggregate: {voided: {$ne: true}}
+         — marking without excluding would be a cancellation on the screen
+           and money still present in the figures
+      │
+      ▼
+   permanent audit entry (no purge_at — kept forever)</div>
+<figcaption>Figure 11.5 — The lifecycle of a financial record.</figcaption>
+
+<p>The void filter is written <span class="mono">{voided: {$ne: true}}</span> rather than
+<span class="mono">{voided: false}</span> because historical rows do not carry the field at all, and an equality test
+would silently drop every one of them from every total.</p>
+
+<h2>11.8 Messaging</h2>
+
+<p>The chain of §3.5 is enforced on the server and published by
+<span class="mono">GET /api/messages/audiences</span>; the client never contains its own copy of the rule. Attachments
+are uploaded first — returning a descriptor — and then referenced when the message is sent, which is simpler than
+mixing a payload with a file in one request and allows the sender to change their mind before sending. A sent message
+can be corrected (the edit is visible as such) or withdrawn.</p>
+
+<p>The design was driven by two concrete failures: a system administrator could not send a single message, because
+the handler required a centre and the administrator account has none, while the interface displayed the full set of
+broadcast controls; and a centre manager had no route to system administration at all.</p>
+
+<h2>11.9 Idempotency guards</h2>
+
+<table>
+  <caption>Table 11.3 — Operations that happen once and are refused twice</caption>
+  <thead><tr><th style="width:20%">Operation</th><th style="width:28%">Uniqueness key</th><th style="width:15%">Enforced by</th><th>What a duplicate would cost</th></tr></thead>
+  <tbody>
+    <tr><td>Recitation</td><td>student + type + <span class="mono">date_str</span></td><td>409 guard</td><td>Every metric, the XP balance and the forecast would be inflated — the student's picture would be wrong, not merely the list.</td></tr>
+    <tr><td>Attendance</td><td>student + <span class="mono">date_str</span></td><td><strong>Unique index</strong> + upsert</td><td>Two contradictory rows for one day, with the absence permanently embedded in the attendance rate.</td></tr>
+    <tr><td>Salary</td><td>teacher + month + centre (non-voided)</td><td>409 guard</td><td>Money leaving twice, with a second expense line and a second audit entry.</td></tr>
+    <tr><td>Monthly fee</td><td>student + type + due month</td><td>409 guard</td><td>A family billed twice.</td></tr>
+    <tr><td>Fee collection</td><td>fee already paid</td><td>409 guard</td><td>A double receipt.</td></tr>
+    <tr><td>Milestone certificate</td><td>student + milestone</td><td><strong>Unique partial index</strong></td><td>Two certificates with different serials for the same achievement.</td></tr>
+    <tr><td>Competition certificate</td><td>competition + student</td><td><strong>Unique partial index</strong></td><td>As above.</td></tr>
+    <tr><td>XP award</td><td>student + reason + source</td><td><strong>Unique index</strong></td><td>An unbounded, inflatable balance.</td></tr>
+    <tr><td>Badge</td><td>student + badge code</td><td><strong>Unique index</strong></td><td>Repeated XP for the same achievement.</td></tr>
+    <tr><td>Competition registration</td><td>competition + student</td><td>400 guard</td><td>One student ranked twice in a branch.</td></tr>
+  </tbody>
+</table>
+
+<p>Every 409 names the existing record and directs the user to edit it rather than add another — a refusal that does
+not say what to do instead simply produces a workaround.</p>
+
+</section>
+
+<!-- ============================ CHAPTER 12 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 12</span>User Interface and Interaction Design</h1>
+
+<h2>12.1 Design language</h2>
+
+<table>
+  <caption>Table 12.1 — Interface principles</caption>
+  <thead><tr><th style="width:22%">Principle</th><th>Application</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Arabic, right-to-left</strong></td><td>The sole interface language. Layout, iconography, number formatting and print styles are RTL-first; the PWA manifest declares <span class="mono">"dir": "rtl"</span> and <span class="mono">"lang": "ar"</span>. A partial translation layer was deliberately removed (§2.3.2).</td></tr>
+    <tr><td><strong>A calm palette</strong></td><td>Green and gold — the conventional register for this domain — carried through a token layer rather than hard-coded values, with a matching dark theme.</td></tr>
+    <tr><td><strong>Large, few controls</strong></td><td>The primary users include older teachers who are not computer users. Screens have one dominant action; targets are large; forms are short.</td></tr>
+    <tr><td><strong>Explained emptiness</strong></td><td>An empty list states its cause: “no circle has been assigned to you yet” rather than a blank page. Empty states are a component (<span class="mono">EmptyState</span>), not an afterthought.</td></tr>
+    <tr><td><strong>Single source of truth for theme</strong></td><td>Theme state previously lived in two places — the top-bar toggle wrote to the document root and local storage, while the settings page kept its own state and displayed “dark mode (coming soon)”, disabled, for a feature that had worked for months. The settings screen showed “light” selected while the application was dark. It is now one read, one write and one event.</td></tr>
+  </tbody>
+</table>
+
+<h2>12.2 Route map and client-side guards</h2>
+
+<p>Client guards mirror the server's permissions exactly. This is presentation, not security — the server remains the
+authority — but a route that renders and then fails every call shows the user a broken screen instead of a clear
+message. Before guards existed, any user could type <span class="mono">/finance</span> or
+<span class="mono">/audit-logs</span> and receive a page whose every request returned 403; the “forbidden” page
+existed in the code base and nothing ever invoked it.</p>
+
+<table>
+  <caption>Table 12.2 — Routes and their guards</caption>
+  <thead><tr><th style="width:26%">Route</th><th style="width:30%">Permitted roles</th><th>Screen</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">/ · /sponsorships · /register · /login</td><td>public</td><td>Landing page with a live “best centres” listing, a sponsorship prototype, centre self-registration, login.</td></tr>
+    <tr><td class="mono">/dashboard</td><td>all</td><td>Dispatches to one of six role dashboards.</td></tr>
+    <tr><td class="mono">/centers</td><td>admin, super_admin, center_manager</td><td>Centre management and the approval queue.</td></tr>
+    <tr><td class="mono">/students · /halaqat</td><td>staff</td><td>Enrolment and circle management (scoped).</td></tr>
+    <tr><td class="mono">/teachers</td><td>admin, super_admin, center_manager</td><td>Teachers, transfers and evaluations.</td></tr>
+    <tr><td class="mono">/recitations</td><td>all (scoped)</td><td>Session logging with the error tagger; read-only for students and guardians.</td></tr>
+    <tr><td class="mono">/attendance</td><td>admin, center_manager, teacher</td><td>Roll-call and corrections.</td></tr>
+    <tr><td class="mono">/finance · /reports</td><td>admin, center_manager</td><td>Fees, salaries, expenses, summaries and printable reports.</td></tr>
+    <tr><td class="mono">/rankings · /leaderboards</td><td>all (scoped)</td><td>Composite ranking; the four independent boards.</td></tr>
+    <tr><td class="mono">/analytics/:id · /performance/:id</td><td>all (scoped)</td><td>Student analytics; the metrics, forecast, journey, badges and challenges.</td></tr>
+    <tr><td class="mono">/review-plans · /academic-schedules</td><td>all (scoped)</td><td>Daily review portion and timetable. The timetable guard was widened to every role after it emerged that the sidebar offered students a page the guard then refused — while the server permitted it all along.</td></tr>
+    <tr><td class="mono">/competitions</td><td>all (scoped)</td><td>Competitions, panels, marking and results.</td></tr>
+    <tr><td class="mono">/certificates</td><td>admin, super_admin, center_manager, student, parent</td><td>Issue, view and print. <strong>Not the teacher's concern</strong> — removed from both the route guard and the sidebar.</td></tr>
+    <tr><td class="mono">/bulk-messages · /notifications</td><td>all</td><td>Messaging within the chain; stored notifications.</td></tr>
+    <tr><td class="mono">/audit-logs</td><td>admin, super_admin</td><td>Audit listing and chain verification.</td></tr>
+    <tr><td class="mono">/profile · /settings</td><td>all</td><td>Profile, password change, theme.</td></tr>
+    <tr><td class="mono">/403 · /404 · *</td><td>all</td><td>Explicit error pages rather than a blank screen.</td></tr>
+  </tbody>
+</table>
+
+<p>The sidebar groups navigation into three sections — <em>daily work</em> (<span class="ar">العمل اليومي</span>),
+<em>administration</em> (<span class="ar">الإدارة</span>) and <em>system</em> (<span class="ar">النظام</span>) — and
+each item declares the roles that see it. Two items are conditional at runtime rather than by role alone:
+competitions appear for a teacher according to their panel membership, and the notification badge reflects unread
+count.</p>
+
+<h2>12.3 Role dashboards</h2>
+
+<table>
+  <caption>Table 12.3 — What each dashboard leads with</caption>
+  <thead><tr><th style="width:22%">Dashboard</th><th>Content</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Super administrator</strong></td><td>Platform-wide totals, centre listing with activation controls, and the centre activity index.</td></tr>
+    <tr><td><strong>Administrator</strong></td><td>Pending centre applications, system status, audit highlights, per-centre activity.</td></tr>
+    <tr><td><strong>Centre manager</strong></td><td>Student, teacher and circle counts, attendance rate, outstanding fees, honour roll, circle performance overview.</td></tr>
+    <tr><td><strong>Teacher</strong></td><td>His circles, today's roll, today's recitation list, students behind on review, and his circles' standing in the aggregate ranking.</td></tr>
+    <tr><td><strong>Student</strong></td><td>Own metrics, journey map, badges, challenge progress, position on the four boards within the circle, certificates.</td></tr>
+    <tr><td><strong>Guardian</strong></td><td>Each child's progress and attendance, absence notifications, fee status, certificates.</td></tr>
+  </tbody>
+</table>
+
+<h2>12.4 Component inventory</h2>
+
+<table>
+  <caption>Table 12.4 — Notable components</caption>
+  <thead><tr><th style="width:26%">Component</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">ErrorTagger</td><td>The four-class error tagger used during a circle. Its labels, descriptions and weights come from the API, never hard-coded — so a recalibration reaches the interface without a release.</td></tr>
+    <tr><td class="mono">StudentReportSheet</td><td>A printable single-student history for the guardian.</td></tr>
+    <tr><td class="mono">CertificateSheet</td><td>+ <span class="mono">Ornaments</span>: the printable certificate, with fixed colour values rather than theme tokens (§12.6).</td></tr>
+    <tr><td class="mono">HalaqatRanking</td><td>+ <span class="mono">HalaqahDetailModal</span>: the aggregate circle ranking and the manager's per-circle detail view.</td></tr>
+    <tr><td class="mono">StudentAccountsModal</td><td>Account issuance, showing a generated password exactly once.</td></tr>
+    <tr><td class="mono">TeacherEvaluationModal</td><td>The five-criterion evaluation with written strengths and weaknesses.</td></tr>
+    <tr><td class="mono">CenterActivityPanel</td><td>The supervisory activity index with its per-signal breakdown.</td></tr>
+    <tr><td class="mono">PermissionBadge</td><td>Shows the viewer what their role permits on the current screen, so that a missing button is explained rather than mysterious.</td></tr>
+    <tr><td class="mono">NumberInput</td><td>Numeric entry with correct Arabic digit grouping — a recurring source of confusion before it existed.</td></tr>
+  </tbody>
+</table>
+
+<h2>12.5 Progressive Web App delivery</h2>
+
+<table>
+  <caption>Table 12.5 — Installation by platform</caption>
+  <thead><tr><th style="width:22%">Platform</th><th style="width:36%">Method</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Android (Chrome)</td><td>Menu ⋮ → “Install app”</td><td>“<span class="ar">المشكاة</span>” under the icon, standalone window.</td></tr>
+    <tr><td>iOS / iPadOS (Safari)</td><td>Share → “Add to Home Screen”</td><td>As above.</td></tr>
+    <tr><td>Desktop (Chrome / Edge)</td><td>Install icon in the address bar</td><td>A separate application window.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>HTTPS is mandatory</strong>: browsers offer installation only over a secure connection (or
+<span class="mono">localhost</span>). The manifest declares standalone display, an RTL Arabic locale, a dark theme
+colour and shortcuts to the most frequent tasks. All icons are generated from a single vector source by a build
+script.</p>
+
+<div class="note">
+  <span class="lbl">Two operational rules for the PWA</span>
+  <strong>(1)</strong> The displayed name comes from <span class="mono">short_name</span> in the manifest on Android
+  and desktop, and from <span class="mono">apple-mobile-web-app-title</span> in the HTML on iOS. Changing one
+  without the other gives a different name on different devices. iOS shows roughly twelve characters and then
+  truncates, which is why the iOS title is the short form alone.<br>
+  <strong>(2)</strong> The service worker caches the application shell under a versioned cache name. <strong>Changing
+  any icon requires bumping that version</strong>, or installed devices keep showing the old icon indefinitely. The
+  shell is cached asset by asset rather than atomically, so one missing file cannot block the entire update.
+</div>
+
+<h2>12.6 Printing and document output</h2>
+
+<p>Certificates, student report sheets and centre reports are produced through the browser's print pipeline from
+print-styled components, with a landscape helper for wide tables. One rule governs all of them: <strong>printed
+output uses fixed colour values, never design-system tokens.</strong> Tokens invert under the dark theme, so a user
+printing in the evening would receive pale text on white paper. CSV exports are written as UTF-8 with a byte-order
+mark, because Excel otherwise opens them in the wrong encoding and renders Arabic names as symbols.</p>
+
+</section>

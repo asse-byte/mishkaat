@@ -1,0 +1,445 @@
+<!-- ============================ CHAPTER 1 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 1</span>Introduction</h1>
+
+<h2>1.1 Project identification</h2>
+
+<p>The system documented here is named <strong>Mishkaat</strong> — Arabic <span class="ar">المشكاة</span>, the niche
+in a wall that holds a lamp. The name is taken from the Qur'anic image of light held in a recess so that it
+illuminates the room around it; the intent of the naming is that the software should hold and make visible what a
+memorisation circle is already doing, rather than change the pedagogy itself.</p>
+
+<table>
+  <caption>Table 1.1 — Project identification</caption>
+  <tbody>
+    <tr><th style="width:36%">Attribute</th><th>Value</th></tr>
+    <tr><td>System name</td><td>Mishkaat (<span class="ar">المشكاة</span>)</td></tr>
+    <tr><td>Domain</td><td>Educational management information system for Qur'an memorisation centres</td></tr>
+    <tr><td>Application version</td><td>2.1.0 (<span class="mono">APP_VERSION</span> in <span class="mono">backend/app/config.py</span>)</td></tr>
+    <tr><td>Architecture class</td><td>Multi-tenant, three-tier web application delivered as a Progressive Web App</td></tr>
+    <tr><td>Deployment geography</td><td>Republic of Mali; monetary values default to the West African CFA franc (FCFA)</td></tr>
+    <tr><td>Interface language</td><td>Arabic, right-to-left, single-language by deliberate decision (see §2.3)</td></tr>
+    <tr><td>Licence</td><td>Proprietary and confidential; all rights reserved to Abdoul Malick Cisse, 2026</td></tr>
+    <tr><td>Source repository</td><td><span class="mono">asse-byte/mishkaat</span>; default branch <span class="mono">main</span></td></tr>
+  </tbody>
+</table>
+
+<h2>1.2 Background and motivation</h2>
+
+<p>A Qur'an memorisation centre (<span class="ar">دار تحفيظ</span> or <span class="ar">مركز تحفيظ</span>) is an
+educational institution organised around <em>halaqāt</em> (<span class="ar">حلقات</span>, singular
+<span class="ar">حلقة</span>) — study circles in which a small group of students sits with one teacher, the
+<em>muhaffiẓ</em> (<span class="ar">محفّظ</span>, literally “the one who causes memorisation”). The core daily event
+is <em>tasmīʿ</em> (<span class="ar">تسميع</span>): a student recites a passage from memory and the teacher listens,
+corrects, and forms a judgement of the quality of the recitation.</p>
+
+<p>This model has three characteristics that make it difficult to administer at scale:</p>
+
+<ol>
+  <li><strong>The primary record is oral and ephemeral.</strong> The teacher's judgement of a recitation — where the
+  student hesitated, what kind of error occurred, whether the passage is secure — exists in the teacher's memory and,
+  at best, in a shorthand mark in a paper notebook. It is not comparable across students, across teachers, or across
+  time.</li>
+  <li><strong>Responsibility is distributed but accountability is centralised.</strong> The teacher owns the circle;
+  the centre manager answers for the centre's academic results and its finances; the parent pays fees and expects to
+  know whether the child is progressing. These three parties rarely see the same information.</li>
+  <li><strong>The unit of progress is contested.</strong> “How much has the student memorised?” is usually answered
+  in <em>ajzāʾ</em> (<span class="ar">أجزاء</span>, the thirty parts of the Qur'an), but two students who have both
+  “finished five parts” may differ enormously in the security of that memorisation. Quantity is recorded; quality is
+  not.</li>
+</ol>
+
+<p>The consequence is a documented set of operational failures: enrolment registers that drift out of date, fees
+that are collected twice or not at all, teachers' salaries paid twice in the same month because nothing records that
+they were already paid, absence that parents learn about weeks later, and — most importantly for the academic
+mission — no defensible answer to the question <em>“when will this child finish, and is he progressing or only
+attending?”</em></p>
+
+<h2>1.3 Problem statement</h2>
+
+<p>The problems Mishkaat is designed to solve are enumerated below. Each is stated as an observed failure of the
+status quo, paired with the design response that the system makes. The pairing is important: each mechanism in the
+system exists to answer a specific named failure, and Chapter&nbsp;4 traces each back to a numbered requirement.</p>
+
+<table>
+  <caption>Table 1.2 — Problem–response matrix</caption>
+  <thead>
+    <tr><th style="width:5%">#</th><th style="width:26%">Observed problem</th><th style="width:37%">Consequence in practice</th><th>Response in Mishkaat</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="c">P1</td>
+      <td><strong>Recitation quality is unrecorded and incomparable</strong></td>
+      <td>A teacher's note “made mistakes” cannot be compared between two students, nor for one student over a term.
+      Free-text error notes are written differently by every teacher.</td>
+      <td>A closed, four-class weighted error taxonomy (§9.2). The teacher tags each error by type on a phone during
+      the circle; the severity weight lives in one place in the code and is never stored alongside the error.</td>
+    </tr>
+    <tr>
+      <td class="c">P2</td>
+      <td><strong>Progress is measured only by quantity</strong></td>
+      <td>Two students with identical page counts receive the same projected completion date, even when one misses
+      half the sessions and errs on every page.</td>
+      <td>A three-feature regression model (momentum, weighted error density, attendance rate) trained on the
+      centre's own history, so that recitation quality affects the projected date (§9.4).</td>
+    </tr>
+    <tr>
+      <td class="c">P3</td>
+      <td><strong>A single ranking demotivates exactly those who need encouragement</strong></td>
+      <td>A student who appears last on one composite leaderboard every week learns to ignore it entirely.</td>
+      <td>Four independent leaderboards — momentum, precision, consistency, review depth — so that the slow student
+      who never misses a session leads the consistency board (§9.5).</td>
+    </tr>
+    <tr>
+      <td class="c">P4</td>
+      <td><strong>Everyone in a centre could see everyone's data</strong></td>
+      <td>In the pre-<span class="ar">حلقة</span>-scoped version of this system, a circle teacher could read every
+      student in the centre — names, guardians' phone numbers, recitations, attendance, performance metrics,
+      projected completion dates and fee records — and could log a recitation for a student who was not his.
+      Seventeen distinct leaks from one root cause.</td>
+      <td>A four-level scope model (system / centre / circle / self) defined in a single module,
+      <span class="mono">app/scope.py</span>, that every endpoint queries; plus one mandatory ownership gate,
+      <span class="mono">check_student_access</span>, for any endpoint taking a <span class="mono">student_id</span>
+      (§10.3).</td>
+    </tr>
+    <tr>
+      <td class="c">P5</td>
+      <td><strong>Administrative acts could be performed twice</strong></td>
+      <td>Double-clicking “save” produced two recitations for the same day, two salary payments for the same month,
+      two fee records for the same month. The duplicate salary is real money leaving twice; the duplicate recitation
+      corrupts every derived metric and forecast.</td>
+      <td>Three uniqueness guards enforced with HTTP 409 and, where possible, with unique database indexes rather
+      than code-level checks (§11.9).</td>
+    </tr>
+    <tr>
+      <td class="c">P6</td>
+      <td><strong>Every administrative act is fallible, but nothing could be corrected</strong></td>
+      <td>A fee entered against the wrong student, a salary with a wrong amount, an attendance mark on the wrong
+      child — with no correction path, staff work around the system and the records stop reflecting reality.</td>
+      <td>Edit and cancel paths for every administrative record, with a strict distinction: money is
+      <em>voided</em>, never erased — marked <span class="mono">voided</span> with a written reason and an actor,
+      and excluded from every total (§11.7).</td>
+    </tr>
+    <tr>
+      <td class="c">P7</td>
+      <td><strong>Absence notification is a broadcast into the void</strong></td>
+      <td>An absence alert delivered only over a live connection reaches a parent who happens to be looking at the
+      application at 06:30 on a weekday, i.e. almost never.</td>
+      <td>Every notification is persisted to the database first and streamed second, so the database is the single
+      source of the stream and a notification survives both worker restarts and offline parents (§11.4).</td>
+    </tr>
+    <tr>
+      <td class="c">P8</td>
+      <td><strong>Financial and permission history was not defensible</strong></td>
+      <td>Where a dispute arises over a payment or a permission change, an ordinary log can be edited by anyone with
+      database access.</td>
+      <td>A SHA-256 hash-chained audit log with atomic sequence numbers, explicit gap marking, and a permanent-record
+      class of actions that is never purged (§10.7).</td>
+    </tr>
+    <tr>
+      <td class="c">P9</td>
+      <td><strong>Supervisory bodies cannot tell an active centre from a large one</strong></td>
+      <td>A centre that enrolled a hundred students and then abandoned the system outranks a centre with twenty
+      students working daily, because the ranking counts head-count.</td>
+      <td>A centre activity index that measures transactions per student over a time window rather than absolute
+      size (§9.6).</td>
+    </tr>
+    <tr>
+      <td class="c">P10</td>
+      <td><strong>Review (<span class="ar">المراجعة</span>) was unmanaged</strong></td>
+      <td>A single hard-coded weekly review table was displayed to every student regardless of how much each had
+      memorised, and its “done” marker compared a Juz' number to an āyah number — so reviewing verse 3 of any sūrah
+      marked Saturday complete, permanently.</td>
+      <td>A daily review portion derived per student from what that student has actually memorised, at a rate the
+      teacher sets, computed from the date rather than from stored state (§9.6).</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>1.4 Aim and objectives</h2>
+
+<p><strong>Aim.</strong> To deliver a single, auditable, multi-tenant system through which a Qur'an memorisation
+centre can run its academic, administrative and financial operations, and through which the academic quality of
+memorisation — not merely its quantity — becomes measurable, comparable and explainable to the people who need it:
+the teacher, the manager, the student and the parent.</p>
+
+<table>
+  <caption>Table 1.3 — Objectives</caption>
+  <thead><tr><th style="width:8%">ID</th><th>Objective</th><th style="width:20%">Realised in</th></tr></thead>
+  <tbody>
+    <tr><td class="c mono">O1</td><td>Provide complete record management for centres, teachers, students, circles, schedules, attendance, recitation, fees, salaries and expenses.</td><td>Ch. 4, 7, 8</td></tr>
+    <tr><td class="c mono">O2</td><td>Enforce data isolation between tenants (centres) and between circles inside a tenant, with authorisation decided in one place and provable by test.</td><td>Ch. 3, 10, 13</td></tr>
+    <tr><td class="c mono">O3</td><td>Convert recitation records into interpretable academic metrics that separate quality from quantity.</td><td>§9.2, §9.3</td></tr>
+    <tr><td class="c mono">O4</td><td>Forecast Juz' and full-Qur'an completion dates from a model trained on the centre's own history, and disclose the method, sample size and fit with every prediction.</td><td>§9.4</td></tr>
+    <tr><td class="c mono">O5</td><td>Motivate students through multiple independent achievement axes rather than a single ranking, backed by an append-only ledger.</td><td>§9.5</td></tr>
+    <tr><td class="c mono">O6</td><td>Protect the personal data of minors at rest and in transit, and make financial and permission history tamper-evident.</td><td>Ch. 10</td></tr>
+    <tr><td class="c mono">O7</td><td>Make every administrative act correctable without allowing financial history to be erased.</td><td>§11.7</td></tr>
+    <tr><td class="c mono">O8</td><td>Deliver an Arabic, right-to-left, installable interface usable on a low-cost phone by a teacher who is not a computer user.</td><td>Ch. 12</td></tr>
+    <tr><td class="c mono">O9</td><td>Ship a reproducible, hardened deployment with backups, health checks and an onboarding procedure.</td><td>Ch. 14</td></tr>
+  </tbody>
+</table>
+
+<h2>1.5 The proposed solution</h2>
+
+<p>Mishkaat is a three-tier web application. A React single-page application, installable as a Progressive Web App,
+communicates over HTTPS with a FastAPI back end; the back end alone speaks to a MongoDB cluster that is never
+exposed to the network. The application layer is decomposed by <em>domain</em> — one router per business area — over
+a set of cross-cutting modules that hold the decisions no single domain should own: authentication, authorisation
+scope, personal-data encryption, audit chaining, performance metrics, forecasting and motivation.</p>
+
+<div class="diagram">┌──────────────────────────────────────────────────────────────────────────────┐
+│  PRESENTATION            React 19 + TypeScript + Vite + Tailwind (PWA, RTL)  │
+│                          27 page modules · 6 role dashboards · service worker│
+└────────────────────────────────────┬─────────────────────────────────────────┘
+                                     │  HTTPS / JSON  (Bearer access token,
+                                     │                 httpOnly refresh cookie)
+┌────────────────────────────────────▼─────────────────────────────────────────┐
+│  APPLICATION             FastAPI (ASGI) — 22 routers, 136 endpoints          │
+│  ─ domain routers        auth · centers · students · teachers · halaqat ·    │
+│                          attendance · recitations · finance · competitions · │
+│                          certificates · messages · performance · …           │
+│  ─ cross-cutting         security · scope · common · pii · audit · files ·   │
+│                          metrics · forecast · gamification · scoring · sse   │
+└────────────────────────────────────┬─────────────────────────────────────────┘
+                                     │  Motor (async MongoDB driver)
+┌────────────────────────────────────▼─────────────────────────────────────────┐
+│  DATA                    MongoDB 7 — 28 collections + GridFS bucket          │
+│                          71 index definitions · TTL retention · counters     │
+└──────────────────────────────────────────────────────────────────────────────┘</div>
+<figcaption>Figure 1.1 — Solution overview at the tier level. Chapter 5 expands each tier.</figcaption>
+
+<p>Two design commitments distinguish this system from a conventional school-administration product and recur
+throughout this report:</p>
+
+<div class="note key">
+  <span class="lbl">Commitment 1 — derived values are never stored</span>
+  Every performance metric, every leaderboard position and every forecast is computed at read time from the
+  recitation and attendance records that produced it. A stored derived value drifts away from its source rows at the
+  first correction or void, at which point a student's leaderboard position can no longer be explained by pointing
+  at his sessions — and explicability is the property on which the whole motivation layer depends.
+</div>
+
+<div class="note key">
+  <span class="lbl">Commitment 2 — authorisation is decided in one place</span>
+  The boundaries of what each role may see are defined once, in <span class="mono">app/scope.py</span>, and every
+  endpoint asks that module rather than re-deriving the rule. The alternative — patching each endpoint — was tried
+  and failed: the leak returned with the next endpoint added. Correspondingly, an empty scope returns
+  <span class="mono">None</span>, never <span class="mono">{}</span>, because an empty MongoDB filter means
+  “everything”, which is the exact inversion of the intent and the kind of bug that looks correct while it leaks.
+</div>
+
+<h2>1.6 Contributions of the work</h2>
+
+<ol>
+  <li><strong>A weighted, closed error taxonomy for recitation.</strong> Four error classes with numeric severity
+  weights, storing the class code and never the weight, so that recalibrating the weights retroactively corrects all
+  historical data (§9.2).</li>
+  <li><strong>Quality-sensitive completion forecasting.</strong> A model in which the projected date responds to how
+  well a student recites, not only how much — with domain sign constraints applied to the fitted coefficients so
+  that the system can never tell a parent that their child's errors are accelerating his completion (§9.4).</li>
+  <li><strong>Multi-criteria motivation.</strong> Four separate leaderboards derived from the same session records as
+  the metrics, with an append-only, idempotent experience-point ledger (§9.5).</li>
+  <li><strong>A single-source authorisation model with a proving test suite.</strong> Four scope levels resolved
+  through one documented chain, guarded by 314 assertions that test for <em>leakage of other people's data</em>
+  rather than for request success (Ch. 3, 13).</li>
+  <li><strong>A tamper-evident administrative record.</strong> Atomic sequencing, hash chaining, explicit gap marking
+  and a never-purged class for money and permission events (§10.7).</li>
+  <li><strong>An engagement measure for supervisory bodies</strong> that is normalised by centre size, distinguishing
+  a working centre from a large one (§9.6).</li>
+</ol>
+
+<h2>1.7 Organisation of this report</h2>
+
+<p>Chapter&nbsp;2 delimits what the system does and does not do, and records the assumptions and constraints under
+which it was built. Chapter&nbsp;3 defines the six user classes and the scope model that binds them.
+Chapter&nbsp;4 states the functional and non-functional requirements and the business rules. Chapter&nbsp;5
+describes the architecture and Chapter&nbsp;6 the technology stack with the reasoning behind each choice.
+Chapter&nbsp;7 is the complete database design: collection inventory, entity-relationship model, per-collection data
+dictionary, index strategy and retention policy. Chapter&nbsp;8 catalogues the API. Chapter&nbsp;9 gives the
+mathematics of the analytical engine. Chapter&nbsp;10 documents the security architecture. Chapter&nbsp;11
+specifies the business workflows as state machines and procedures. Chapter&nbsp;12 covers the user interface.
+Chapter&nbsp;13 describes verification. Chapter&nbsp;14 covers deployment and operations. Chapters&nbsp;15–17
+present project metrics, an honest evaluation with limitations and future work, and the conclusion. Four
+appendices provide the configuration reference, the audit action catalogue, the full endpoint index and a glossary
+of the Arabic domain terms used throughout.</p>
+
+</section>
+
+<!-- ============================ CHAPTER 2 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 2</span>Scope, Assumptions and Delimitations</h1>
+
+<p>A scope statement is only useful if it says what is excluded as clearly as what is included, and gives the reason
+for each exclusion. This chapter does both. Everything listed in §2.1 is implemented and present in the code base;
+everything in §2.2 and §2.3 is absent by decision, not by oversight.</p>
+
+<h2>2.1 Functional scope (in scope)</h2>
+
+<table>
+  <caption>Table 2.1 — Functional domains delivered</caption>
+  <thead><tr><th style="width:5%">#</th><th style="width:23%">Domain</th><th>What the system does</th></tr></thead>
+  <tbody>
+    <tr><td class="c">D1</td><td><strong>Multi-tenancy &amp; centre management</strong></td>
+      <td>Registration of centres by a system administrator, self-registration by a prospective centre followed by an
+      approval or rejection decision, centre profile and logo, activation and suspension by the supervisory
+      super-administrator, per-centre currency, public “best centres” listing, and a system-wide centre activity
+      index.</td></tr>
+    <tr><td class="c">D2</td><td><strong>Identity &amp; access</strong></td>
+      <td>Six roles; login, logout, refresh-token rotation, self-service password change, code-based password reset,
+      administrator-initiated reset, profile self-update; issuance of student and guardian accounts by the centre
+      manager after enrolment.</td></tr>
+    <tr><td class="c">D3</td><td><strong>People</strong></td>
+      <td>Teacher records with employment attributes, salary, specialisation and type (circle teacher or external
+      subject teacher); student records with guardian details, memorisation plan and student type; transfer of a
+      teacher between circles with reassignment of the affected students.</td></tr>
+    <tr><td class="c">D4</td><td><strong>Study circles (<span class="ar">حلقات</span>)</strong></td>
+      <td>Circle creation with teacher, schedule, time, location and capacity; circle membership through the student
+      record; a manager-facing overview of every circle's aggregate performance, a per-circle detail view, and a
+      circle ranking readable by teachers in aggregate form.</td></tr>
+    <tr><td class="c">D5</td><td><strong>Academic scheduling</strong></td>
+      <td>A weekly timetable of subject, day, time slot, circle, teacher and room, readable by every role within its
+      own scope.</td></tr>
+    <tr><td class="c">D6</td><td><strong>Recitation (<span class="ar">التسميع</span>)</strong></td>
+      <td>Daily logging of a recitation with sūrah, āyah range, page count, type (new memorisation or review),
+      qualitative evaluation, legacy error counters and the new four-class error tagging; correction and soft
+      deletion by the recording teacher; a once-per-student-per-type-per-day uniqueness guard.</td></tr>
+    <tr><td class="c">D7</td><td><strong>Attendance</strong></td>
+      <td>Circle roll-call for a date with four statuses, a unique constraint per student per day, correction and
+      deletion by the teacher, automatic persisted notification to the guardian on absence, and per-centre and
+      per-student attendance views.</td></tr>
+    <tr><td class="c">D8</td><td><strong>Finance</strong></td>
+      <td>Student fees (monthly, annual, registration) with due dates, payment recording and overdue tracking;
+      teacher salaries by month with a duplicate-payment guard; centre expenses; a finance summary; correction of
+      each record type; and void-with-reason semantics for money.</td></tr>
+    <tr><td class="c">D9</td><td><strong>Performance analytics</strong></td>
+      <td>Five per-student metrics, a weighted error taxonomy, a thirty-part journey map, four leaderboards, badges,
+      challenges, an experience-point ledger, and completion forecasting with disclosed method and fit.</td></tr>
+    <tr><td class="c">D10</td><td><strong>Review planning</strong></td>
+      <td>Per-student daily review portion derived from what the student has memorised at a teacher-set rate, plus a
+      “who has reviewed today and who is behind” view, and free-text review plans attached to a student or circle.</td></tr>
+    <tr><td class="c">D11</td><td><strong>Competitions</strong></td>
+      <td>Centre competitions with a closed list of five branches, an appointed judging panel of circle teachers,
+      per-judge scoring averaged into a final score, per-branch ranking, and a four-state lifecycle ending in an
+      immutable approved result and an archive.</td></tr>
+    <tr><td class="c">D12</td><td><strong>Certificates</strong></td>
+      <td>Milestone certificates at five, ten, fifteen and thirty parts measured against pages actually recited, and
+      competition certificates issued only after results are approved; serial numbering per centre per year;
+      single-issue enforcement by unique index; revocation with audit.</td></tr>
+    <tr><td class="c">D13</td><td><strong>Communication</strong></td>
+      <td>A closed messaging chain with server-declared audiences, broadcast messages with document attachments,
+      replies, correction and withdrawal of a sent message, persisted notifications, and a live event stream opened
+      with a single-use, sixty-second ticket.</td></tr>
+    <tr><td class="c">D14</td><td><strong>Governance</strong></td>
+      <td>A hash-chained audit log with an integrity verification endpoint, CSV export of students and attendance,
+      and an administrator view of per-centre platform activity.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.2 Out of scope</h2>
+
+<table>
+  <caption>Table 2.2 — Explicitly excluded from this version</caption>
+  <thead><tr><th style="width:30%">Excluded</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Online payment processing</strong></td><td>Fees and salaries are <em>recorded</em>, not
+      transacted. No payment gateway, mobile-money integration or reconciliation with a bank is present. Introducing
+      money movement changes the regulatory and security posture of the whole system and is a separate project.</td></tr>
+    <tr><td><strong>Native mobile applications</strong></td><td>An earlier Expo/React Native prototype was abandoned
+      in favour of a web application installable as a PWA (§12.5). One code base, no store review cycle, and
+      installation over HTTPS on Android, iOS and desktop.</td></tr>
+    <tr><td><strong>Audio capture or automatic recitation assessment</strong></td><td>No recording, no speech
+      recognition, no automated tajwīd scoring. The teacher's judgement is the input; the system structures it.</td></tr>
+    <tr><td><strong>A Qur'anic text corpus</strong></td><td>The system stores sūrah name and number and an āyah
+      range as entered. It does not ship the Qur'anic text, nor a verse-level database of the 114 sūrahs, 30 ajzāʾ,
+      60 aḥzāb and 240 arbāʿ. Page counts are derived from āyah counts by a declared approximation
+      (6,236 āyāt ÷ 604 pages) when not entered explicitly.</td></tr>
+    <tr><td><strong>Email and SMS delivery</strong></td><td>Notifications are in-application only, persisted and
+      streamed. Password-reset codes are retrieved by an administrator through an authenticated endpoint rather than
+      mailed; there is no SMTP or SMS provider integration.</td></tr>
+    <tr><td><strong>Sponsorship and donation processing</strong></td><td>The public <span class="mono">/sponsorships</span>
+      page is a presentation prototype backed by hard-coded sample opportunities. It is not connected to any
+      back-end endpoint, collection or payment path, and is documented here as a prototype, not a feature.</td></tr>
+    <tr><td><strong>Timetable optimisation</strong></td><td>The academic schedule is recorded as entered. There is no
+      conflict solver, no room-allocation optimiser and no automatic generation.</td></tr>
+    <tr><td><strong>Server-rendered PDF generation</strong></td><td>Certificates and student report sheets are
+      produced by the browser's print pipeline from print-styled components, not by a server-side PDF service. CSV is
+      the only server-generated export format.</td></tr>
+    <tr><td><strong>Offline data entry</strong></td><td>The service worker caches the application shell so the app
+      starts without a network, but there is no offline write queue: recording a recitation requires connectivity.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.3 Deliberate exclusions and their rationale</h2>
+
+<p>Three exclusions deserve separate treatment because they were considered, specified elsewhere, and consciously
+not carried into this system.</p>
+
+<h3>2.3.1 Teacher-generated student login codes</h3>
+<p>The research source for the analytical layer (§9.1) specifies student authentication by a short code that the
+teacher generates, as a solution for students without email addresses. Mishkaat instead issues each student a
+username and password through the centre manager, with a role and a permission scope attached. The code-based flow
+is not an improvement over an account that already exists, and altering the authentication path carries a security
+cost that is not justified by a need the system does not have.</p>
+
+<h3>2.3.2 A full English interface</h3>
+<p>An internationalisation layer existed and was used by five screens while the remaining text was Arabic in the
+source. A partial translation layer is worse than none: it produces an interface that is half-translated at runtime
+and gives a false impression of language support. The layer and its language picker were removed, and the interface
+is single-language Arabic. Completing a full translation is a broad mechanical task, independent of the analytical
+work, and deserves its own pass.</p>
+
+<h3>2.3.3 Timezone-aware timestamps</h3>
+<p>All stored timestamps are naive UTC. Python's <span class="mono">datetime.utcnow()</span> is deprecated, so the
+system routes every timestamp through <span class="mono">app/clock.py</span>, which returns the identical value with
+the deprecation removed. Migrating to timezone-aware datetimes is a <em>data</em> migration — every stored row and
+every comparison in the code base would have to change, or every comparison raises
+<span class="mono">TypeError: can't compare offset-naive and offset-aware datetimes</span> — and is recorded as
+future work (§16.3), not smuggled in as a function substitution.</p>
+
+<h2>2.4 Assumptions</h2>
+
+<table>
+  <caption>Table 2.3 — Assumptions</caption>
+  <thead><tr><th style="width:8%">ID</th><th>Assumption</th><th style="width:33%">Impact if false</th></tr></thead>
+  <tbody>
+    <tr><td class="c mono">A1</td><td>Each student belongs to exactly one centre and at most one circle at a time.</td><td>The scope chain, the circle leaderboards and the attendance uniqueness constraint would all need revision.</td></tr>
+    <tr><td class="c mono">A2</td><td>A teacher account is bound to exactly one active teacher record within one centre.</td><td>A teacher with no linked record has an empty scope and sees nothing — the intended fail-closed behaviour, but it must be explained in the interface.</td></tr>
+    <tr><td class="c mono">A3</td><td>A student recites at most once per day for new memorisation and once for review.</td><td>The 409 duplicate guard would block legitimate entries; the teacher must edit the existing record instead.</td></tr>
+    <tr><td class="c mono">A4</td><td>The mushaf of reference has 604 pages and 6,236 āyāt (Madinah print).</td><td>Page derivation from āyah ranges would skew; the constants are environment-tunable for this reason.</td></tr>
+    <tr><td class="c mono">A5</td><td>Teachers have a smartphone with a browser and intermittent connectivity during the circle.</td><td>Data entry would move to an end-of-day batch, weakening the accuracy of per-session error tagging.</td></tr>
+    <tr><td class="c mono">A6</td><td>The deployment terminates TLS at a reverse proxy under the operator's control.</td><td><span class="mono">TRUST_PROXY</span> must remain false, and the rate limiter then keys on the socket peer.</td></tr>
+    <tr><td class="c mono">A7</td><td>A centre's staff are willing to record daily; the analytical layer has no value without regular input.</td><td>Metrics return <span class="mono">None</span> (“insufficient data”) rather than misleading zeros, by design.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.5 Constraints</h2>
+
+<table>
+  <caption>Table 2.4 — Constraints</caption>
+  <thead><tr><th style="width:8%">ID</th><th>Constraint</th><th style="width:38%">Consequence for the design</th></tr></thead>
+  <tbody>
+    <tr><td class="c mono">C1</td><td>Interface must be Arabic and right-to-left.</td><td>Layout, number formatting, print styles and the PWA manifest (<span class="mono">"dir": "rtl"</span>, <span class="mono">"lang": "ar"</span>) are all RTL-first.</td></tr>
+    <tr><td class="c mono">C2</td><td>Users include older teachers who are not computer users.</td><td>Large targets, minimal forms, a single primary action per screen, explicit empty-state messages that say <em>why</em> a list is empty.</td></tr>
+    <tr><td class="c mono">C3</td><td>Low-bandwidth, low-cost devices.</td><td>GZip middleware, a cached application shell, no heavy chart libraries on first paint, and aggregate endpoints that avoid per-row round trips.</td></tr>
+    <tr><td class="c mono">C4</td><td>Personal data of minors.</td><td>Field-level encryption at rest, no third-party analytics, an onboarding security checklist, and refusal to boot in production without encryption keys.</td></tr>
+    <tr><td class="c mono">C5</td><td>Deployment on a single modest VPS is the expected case.</td><td>Four Uvicorn workers behind Nginx, MongoDB on the same host on an internal network, GridFS for files rather than object storage.</td></tr>
+    <tr><td class="c mono">C6</td><td>Containers have ephemeral disks.</td><td>Uploaded files go to GridFS inside the database, so they survive redeployment and are captured by the same backup.</td></tr>
+    <tr><td class="c mono">C7</td><td>Multi-worker deployment.</td><td>No in-process state for rate limiting, notification fan-out or counters; all shared state lives in MongoDB.</td></tr>
+  </tbody>
+</table>
+
+<h2>2.6 Operating environment</h2>
+
+<table>
+  <caption>Table 2.5 — Minimum and recommended environment</caption>
+  <thead><tr><th style="width:22%">Component</th><th style="width:24%">Minimum</th><th style="width:24%">Recommended</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Python</td><td>3.9</td><td>3.11+</td><td>Async/await throughout; the ASGI stack requires a modern interpreter for performance.</td></tr>
+    <tr><td>Node.js</td><td>18</td><td>20 LTS</td><td>Build-time only; not required at runtime if the built <span class="mono">dist/</span> is served by Nginx.</td></tr>
+    <tr><td>MongoDB</td><td>6.0</td><td>7.0</td><td>TTL indexes, partial filter expressions and atomic <span class="mono">findAndModify</span> counters are all used.</td></tr>
+    <tr><td>Reverse proxy</td><td>—</td><td>Nginx 1.27</td><td>TLS termination, security headers, body-size limit, edge rate limiting.</td></tr>
+    <tr><td>Client browser</td><td>Any modern evergreen browser</td><td>Chrome / Edge / Safari current</td><td>HTTPS is mandatory for PWA installation and for the secure refresh cookie.</td></tr>
+  </tbody>
+</table>
+
+</section>

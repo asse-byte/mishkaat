@@ -1,0 +1,396 @@
+<!-- ============================ CHAPTER 9 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 9</span>The Analytical Engine</h1>
+
+<p>This chapter specifies the part of Mishkaat that distinguishes it from a records system: the layer that converts
+recitation and attendance rows into measures of academic quality, a completion forecast, and a motivation
+structure. Every formula, constant and design constraint is stated, together with the reason it takes the form it
+does.</p>
+
+<h2>9.1 Provenance and scientific basis</h2>
+
+<p>The analytical layer derives from the requirements specification of an academic project, <em>Halaqtna</em>
+(CPIT-498, King Abdulaziz University), and was carried into Mishkaat with its requirement identifiers preserved so
+that the mapping can be audited rather than reconstructed. The error taxonomy rests on the observation — recorded in
+the literature on Qur'an memorisation assessment, including the classification of Hassan and Zailaini — that an
+error recorded as free text <strong>cannot be compared</strong> either between students or across time.</p>
+
+<table>
+  <caption>Table 9.1 — Requirement-to-implementation mapping</caption>
+  <thead><tr><th style="width:9%">Req.</th><th style="width:44%">Statement</th><th>Implementation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR6</td><td>Tag each error with one of four types, each carrying a severity weight</td><td><span class="mono">app/errors_taxonomy.py</span></td></tr>
+    <tr><td class="mono">FR7</td><td>A mastery index per student</td><td><span class="mono">metrics.mastery</span></td></tr>
+    <tr><td class="mono">FR8</td><td>Momentum as smoothed weekly pages</td><td><span class="mono">metrics.momentum</span></td></tr>
+    <tr><td class="mono">FR9</td><td>Precision, consistency and review depth</td><td><span class="mono">metrics.precision / consistency / review_depth</span></td></tr>
+    <tr><td class="mono">FR10</td><td>Forecast Juz' completion from momentum, error density and attendance</td><td><span class="mono">app/forecast.py</span></td></tr>
+    <tr><td class="mono">FR11</td><td>A leaderboard ordered by four separate criteria</td><td><span class="mono">GET /api/performance/leaderboards</span></td></tr>
+    <tr><td class="mono">FR12</td><td>Badges awarded automatically on threshold attainment</td><td><span class="mono">gamification.evaluate_badges</span></td></tr>
+    <tr><td class="mono">FR13</td><td>Experience points in a ledger that is not edited</td><td><span class="mono">xp_ledger</span> + <span class="mono">award_xp</span></td></tr>
+    <tr><td class="mono">FR15</td><td>Export one student's history as a sheet for the guardian</td><td><span class="mono">StudentReportSheet.tsx</span></td></tr>
+    <tr><td class="mono">FR16</td><td>The student sees only their own data and aggregate positions</td><td><span class="mono">check_student_access</span></td></tr>
+    <tr><td class="mono">FR18</td><td>An audit log that is not edited</td><td>Pre-existing in Mishkaat, with hash chaining (§10.7)</td></tr>
+  </tbody>
+</table>
+
+<div class="note warn">
+  <span class="lbl">A statement about the status of these numbers</span>
+  The source classifies every constant in this chapter as <strong>provisional</strong>: the ordering of severity
+  comes from teacher interviews and from the published classification, but the numeric values are a design choice to
+  be calibrated against real data. They are therefore held in configuration and are environment-tunable (§9.8), not
+  buried inside a function — which is where an earlier generation of error weights (4.0 / 1.5 / 2.0) in fact lived,
+  inside a single prediction endpoint. No accuracy claim is made anywhere in this system, and §9.4 explains what is
+  returned instead of one.
+</div>
+
+<h2>9.2 The weighted error taxonomy</h2>
+
+<p>Four error classes, ordered from most to least severe. The recitation stores <strong>only the class code</strong>
+and a count; the weight lives in one module and is never written to a record.</p>
+
+<table>
+  <caption>Table 9.2 — Error classes</caption>
+  <thead><tr><th style="width:11%">Code</th><th style="width:17%">Class</th><th style="width:8%" class="c">Weight</th><th>Definition</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">MEM_GAP</td><td>Memorisation gap<br><span class="ar small">انقطاع الحفظ</span></td><td class="c num">0.85</td><td>The student stopped and could not continue without prompting.</td></tr>
+    <tr><td class="mono">LNK_ERR</td><td>Linking error<br><span class="ar small">خطأ في الربط</span></td><td class="c num">0.50</td><td>The student moved to the wrong verse or the wrong position.</td></tr>
+    <tr><td class="mono">TAJ_ERR</td><td>Tajwīd error<br><span class="ar small">خطأ تجويد</span></td><td class="c num">0.25</td><td>A fault in articulation point, elongation or stopping.</td></tr>
+    <tr><td class="mono">SLF_CRT</td><td>Self-correction<br><span class="ar small">تصحيح ذاتي</span></td><td class="c num">0.05</td><td>The student erred and corrected themselves without prompting.</td></tr>
+  </tbody>
+</table>
+
+<p><strong>Why exactly four.</strong> The teacher tags errors on a phone during the circle. A long list is not used;
+four classes group the linguistic distinctions into practical severity bands.</p>
+
+<p><strong>Why the weight is not stored.</strong> Storing the weight with the error would make later recalibration
+incapable of repairing historical data, and the same error would carry different weights in different rows depending
+on when it was recorded. This is the removal of a transitive dependency, and it is the reason the taxonomy is served
+to the client by an endpoint (<span class="mono">GET /api/performance/error-types</span>) rather than duplicated in
+the front end.</p>
+
+<h3>9.2.1 Reading historical records</h3>
+<p>Sessions recorded before the taxonomy carry three free counters. Ignoring them would reset every metric to zero
+and discard the centre's whole history — worse than a declared approximation. They are therefore mapped:</p>
+
+<table>
+  <caption>Table 9.3 — Legacy counter mapping</caption>
+  <thead><tr><th style="width:28%">Legacy counter</th><th style="width:16%">Mapped class</th><th>Reasoning</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">mistakes_count</td><td class="mono">MEM_GAP</td><td>An error that required the teacher to intervene.</td></tr>
+    <tr><td class="mono">tajweed_errors_count</td><td class="mono">TAJ_ERR</td><td>Direct correspondence.</td></tr>
+    <tr><td class="mono">hesitations_count</td><td class="mono">SLF_CRT</td><td>Hesitation without a settled error.</td></tr>
+  </tbody>
+</table>
+
+<p>The ratio among the old weights was 4.0 : 2.0 : 1.5 and among the new is 0.85 : 0.25 : 0.05 — the ordering is
+preserved and the separation widened. <em>No claim is made that the two scales are equivalent.</em> Where a session
+carries <span class="mono">error_tags</span>, the taxonomy takes precedence absolutely and the legacy counters are
+ignored, so a session written by both paths is never counted twice.</p>
+
+<p>One distinction carries real weight: <strong>an empty tag map means “the teacher considered all four classes and
+found none”</strong> — perfect precision — <strong>while an absent field means the record predates tagging</strong>
+and yields no precision value at all. Conflating the two would place every student with a pre-taxonomy history at
+the bottom of the precision board on a judgement that was never made.</p>
+
+<h2>9.3 The five performance metrics</h2>
+
+<p>All metrics are <strong>per page</strong>. Mishkaat records an āyah range; where a teacher enters an explicit
+page count it is used, otherwise pages are derived as 6,236 āyāt ÷ 604 pages ≈ 10.32 āyāt per page. The derivation
+is a declared approximation, not a measurement.</p>
+
+<h3>9.3.1 Mastery</h3>
+<div class="formula">
+  Mastery = 100 × ( 1 − min( 1, <em>D</em> / d<sub>max</sub> ) ),&nbsp;&nbsp;
+  <em>D</em> = Σ<sub>sessions</sub> Σ<sub>classes</sub> (count × weight) ⁄ Σ<sub>sessions</sub> pages
+  <span class="where">d<sub>max</sub> = 3.0 weighted errors per page — the density at which mastery reaches zero.
+  <em>D</em> is computed over the <strong>totals</strong>, not as a mean of per-session means: a half-page session
+  with one error must not weigh as much as a ten-page session with one error.</span>
+</div>
+
+<h3>9.3.2 Momentum</h3>
+<div class="formula">
+  M<sub>w</sub> = α · P<sub>w</sub> + (1 − α) · M<sub>w+1</sub>,&nbsp;&nbsp; α = 0.4
+  <span class="where">P<sub>w</sub> is the number of <em>new-memorisation</em> pages in the week <em>w</em> weeks
+  ago; the recursion runs from the oldest week forward to the present, so the most recent week carries the greatest
+  weight. Review sessions are excluded. <strong>Empty weeks enter the computation as genuine zeros, not as gaps to
+  be skipped</strong> — skipping them would reward interruption.</span>
+</div>
+<p>Smoothing is deliberate: a raw thirty-day total — which is what the system previously computed — jumps after a
+holiday week and then collapses, and any forecast built on it oscillates with it.</p>
+
+<h3>9.3.3 Precision</h3>
+<div class="formula">
+  Precision = 100 × ( 1 − <em>severe</em> / <em>total</em> )
+  <span class="where">computed over <strong>tagged sessions only</strong>. <em>severe</em> counts errors whose
+  weight ≥ 0.5 (that is, <span class="mono">MEM_GAP</span> and <span class="mono">LNK_ERR</span>); <em>total</em>
+  counts all tagged errors. Returns 100 when there are tagged sessions with no errors, and
+  <span class="mono">None</span> when nothing has been tagged.</span>
+</div>
+<p>Legacy counters are excluded here on principle: their mapping assumes every generic “mistake” is a memorisation
+gap. That assumption is acceptable for density, where magnitude matters and ordering is preserved, and unacceptable
+here, where the ratio between severity bands <em>is</em> the measurement.</p>
+
+<h3>9.3.4 Consistency</h3>
+<div class="formula">
+  Consistency = 100 × attended ⁄ min(8, sessions recorded)
+  <span class="where">over the most recent eight scheduled sessions. Present, late and excused all count as
+  attendance; only an unexcused absence does not.</span>
+</div>
+
+<h3>9.3.5 Review depth</h3>
+<div class="formula">
+  Review depth = min( 200, 100 × review pages ⁄ new pages )&nbsp;&nbsp;over the last 28 days
+  <span class="where">Capped at 200%: a student who reviews twice what they memorise has reached the maximum this
+  indicator measures. Without the cap, a student who stopped memorising entirely and kept reviewing would top the
+  board on an unbounded ratio.</span>
+</div>
+
+<table>
+  <caption>Table 9.4 — Metric summary</caption>
+  <thead><tr><th style="width:17%">Metric</th><th style="width:11%">Range</th><th style="width:20%">Source data</th><th>What it answers</th></tr></thead>
+  <tbody>
+    <tr><td>Mastery</td><td class="c">0–100</td><td>Recitations</td><td>How secure is what this student recites?</td></tr>
+    <tr><td>Momentum</td><td class="c">pages/week</td><td>New-memorisation recitations</td><td>How fast are they moving <em>now</em>?</td></tr>
+    <tr><td>Precision</td><td class="c">0–100</td><td>Tagged recitations</td><td>When they err, how serious is it?</td></tr>
+    <tr><td>Consistency</td><td class="c">0–100</td><td>Attendance</td><td>Do they turn up?</td></tr>
+    <tr><td>Review depth</td><td class="c">0–200</td><td>Recitations by type</td><td>Do they consolidate what they memorise?</td></tr>
+  </tbody>
+</table>
+
+<div class="note key">
+  <span class="lbl">None is not zero</span>
+  Every metric returns <span class="mono">None</span> when there is insufficient data. A new student with no
+  sessions is not a student whose mastery is zero, and entering them on a leaderboard at zero both wrongs them and
+  distorts the ranking. The interface renders a dash.
+</div>
+
+<h3>9.3.6 The legacy composite score</h3>
+<p>An older composite score survives, used by the honour roll and the rankings screen:</p>
+<div class="formula">
+  Score = clamp<sub>[0,100]</sub>( 0.4·H + 0.3·R + 0.2·A − 0.1·E )
+  <span class="where">H and R are the mean qualitative evaluation of new and review sessions on the scale
+  excellent = 100, good = 80, acceptable = 60, needs improvement = 40 (defaulting to 80 where absent); A is mean
+  attendance on present = 100, late = 80, excused = 60, absent = 0 (defaulting to 100); E is the count of recorded
+  mistakes.</span>
+</div>
+<p>It is documented here because it is live, and because its history is instructive: the same formula was written
+out twice, in the honour roll and in the ranking, and the two copies had <em>already drifted</em> — one used a
+thirty-day window while the other used ninety under a variable named <span class="mono">thirty_days_ago</span>. It
+is now one function, so any future change applies to both screens. Its performance history is equally instructive:
+it previously issued two queries per student — two thousand round trips on every home-page load in a centre of a
+thousand students — and now issues two queries in total.</p>
+
+<h2>9.4 Completion forecasting</h2>
+
+<h3>9.4.1 What is different</h3>
+<p>The previous forecast regressed accumulated āyāt against elapsed days: <em>quantity alone</em>. Two students with
+identical counts received identical dates even when one missed half the sessions and erred on every page. The
+contribution of the present model is that <strong>recitation quality, not only quantity, affects the projected
+date</strong>.</p>
+
+<h3>9.4.2 Features and model</h3>
+<table>
+  <caption>Table 9.5 — Model features</caption>
+  <thead><tr><th style="width:22%">Feature</th><th style="width:14%">Unit</th><th style="width:11%" class="c">Required sign</th><th>Rationale</th></tr></thead>
+  <tbody>
+    <tr><td>Momentum</td><td>pages/week</td><td class="c">+1</td><td>Memorising more does not slow completion.</td></tr>
+    <tr><td>Weighted error density</td><td>errors/page</td><td class="c">−1</td><td>Erring more does not accelerate completion.</td></tr>
+    <tr><td>Attendance rate</td><td>0–1</td><td class="c">+1</td><td>Attending more does not slow completion.</td></tr>
+  </tbody>
+</table>
+
+<p>The target is the number of new-memorisation pages produced in a week. The model is ordinary least squares with
+an intercept, solved from the normal equations <span class="mono">(XᵀX)β = Xᵀy</span> by Gaussian elimination with
+partial pivoting — implemented in plain Python, because the server is already Python and no numerical dependency is
+warranted for a 4×4 system.</p>
+
+<h3>9.4.3 Training-row construction</h3>
+<p>The model is trained on the <strong>whole centre's</strong> history, not one student's: three features cannot be
+fitted from one student's record without overfitting. Each (student, week) pair is one row. Crucially:</p>
+
+<pre><code>for each student with ≥ 3 sessions:
+    for each week w after the student's first session:
+        features ← computed from sessions STRICTLY BEFORE the start of week w
+                   (momentum, error density, attendance rate)
+        target   ← new-memorisation pages recorded DURING week w
+        emit row only if ≥ 2 prior sessions exist</code></pre>
+
+<p>Computing the features over the whole period instead would leak the target into its own inputs and make R² an
+illusion. A minimum of <strong>12 training rows</strong> is required before a model is fitted at all.</p>
+
+<h3>9.4.4 Sign constraint</h3>
+<p>A regression on a small centre's data can return a <em>positive</em> coefficient for error density: students who
+read more pages accumulate more errors, so the model captures correlation rather than causation. Left alone, the
+system would tell a guardian that their child's errors are bringing their completion date forward — which destroys
+the credibility of the prediction however good R² is. Any coefficient contradicting its known direction is
+therefore <strong>set to zero, not inverted</strong>: the system refuses a claim that contradicts the domain, and it
+does not assert the opposite without evidence.</p>
+
+<h3>9.4.5 Prediction, guards and honesty</h3>
+<div class="formula">
+  weekly pages = β₀ + β₁·momentum + β₂·error density + β₃·attendance rate
+  <span class="where">accepted only if 0.05 ≤ prediction ≤ max(4 × max(momentum, 1), 20). Outside that band — or
+  when no model could be fitted — the estimate falls back to the student's own momentum, and the response says so.</span>
+</div>
+
+<p>Every forecast returns the method used (<span class="mono">trained_model</span> or
+<span class="mono">momentum_fallback</span>), the number of training rows, the coefficient of determination and the
+model version (<span class="mono">mishkaat-lr-3feat-1.0</span>). <strong>No confidence figure is returned, because
+none has been measured.</strong> The source specification classifies its “80% of forecasts within ±2 weeks” target
+as a design goal to be evaluated later, and this system does not present a design goal as a result.</p>
+
+<p>Projection to dates is then arithmetic: with 604 pages over 30 parts (≈ 20.13 pages per Juz'), the remaining
+pages of the current Juz' and of the whole Qur'an are divided by the daily rate. A projection further away than
+sixty years returns no date at all rather than a figure that would merely mislead. The model is cached per centre
+for one hour and invalidated when a new recitation is recorded; the cache is per worker process and explicitly
+advisory.</p>
+
+<h2>9.5 The motivation layer</h2>
+
+<h3>9.5.1 Four leaderboards, not one</h3>
+<p>The design premise, which came from the teachers themselves, is that <strong>a single ranking demotivates
+precisely those who most need encouragement</strong>: a student who appears at the bottom every week learns to
+ignore it. Mishkaat therefore publishes four independent boards:</p>
+
+<table>
+  <caption>Table 9.6 — The four leaderboards</caption>
+  <thead><tr><th style="width:19%">Board</th><th style="width:14%">Unit</th><th>Who leads it</th></tr></thead>
+  <tbody>
+    <tr><td>Momentum <span class="ar">الزخم</span></td><td>pages/week</td><td>Whoever memorises most.</td></tr>
+    <tr><td>Precision <span class="ar">الدقّة</span></td><td>%</td><td>Whoever makes the lightest errors.</td></tr>
+    <tr><td>Consistency <span class="ar">الانتظام</span></td><td>%</td><td>Whoever never misses a session.</td></tr>
+    <tr><td>Review depth <span class="ar">عمق المراجعة</span></td><td>%</td><td>Whoever consolidates what they have memorised.</td></tr>
+  </tbody>
+</table>
+
+<p>The slow student who never misses leads consistency; the student who memorises little and reviews much leads
+review depth. All four derive from the <em>same session records</em> as the metrics — not from a parallel points
+system — so a student's position on any board can always be explained by pointing at their recitations and
+attendance. For a student or guardian the board is scoped to their own circle (§3.6, E1), which supplies peers to
+compare against without opening anyone's file.</p>
+
+<h3>9.5.2 Badges</h3>
+<table>
+  <caption>Table 9.7 — Badge catalogue</caption>
+  <thead><tr><th style="width:16%">Code</th><th style="width:20%">Name</th><th style="width:26%">Condition</th><th class="c" style="width:8%">XP</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FIRST_STEP</td><td>First step <span class="ar">أوّل الطريق</span></td><td>First recorded session</td><td class="c num">20</td></tr>
+    <tr><td class="mono">JUZ_1</td><td>First part <span class="ar">الجزء الأوّل</span></td><td>20 pages memorised</td><td class="c num">100</td></tr>
+    <tr><td class="mono">JUZ_5</td><td>Five parts <span class="ar">خمسة أجزاء</span></td><td>100 pages memorised</td><td class="c num">300</td></tr>
+    <tr><td class="mono">HALF_QURAN</td><td>Half the Qur'an <span class="ar">نصف القرآن</span></td><td>302 pages memorised</td><td class="c num">800</td></tr>
+    <tr><td class="mono">KHATMA</td><td>Completion <span class="ar">الختمة</span></td><td>604 pages memorised</td><td class="c num">2000</td></tr>
+    <tr><td class="mono">PRECISE</td><td>Precise reciter <span class="ar">متقن التلاوة</span></td><td>Precision ≥ 90%</td><td class="c num">150</td></tr>
+    <tr><td class="mono">MASTERY_90</td><td>High mastery <span class="ar">إتقان عالٍ</span></td><td>Mastery ≥ 90%</td><td class="c num">150</td></tr>
+    <tr><td class="mono">NEVER_ABSENT</td><td>Never absent <span class="ar">لا يتغيّب</span></td><td>Consistency = 100% over the last eight sessions</td><td class="c num">200</td></tr>
+    <tr><td class="mono">REVIEWER</td><td>Consolidator <span class="ar">مُثبِّت الحفظ</span></td><td>Review depth ≥ 100%</td><td class="c num">200</td></tr>
+    <tr><td class="mono">STEADY</td><td>Steady <span class="ar">ثابت الخطى</span></td><td>Momentum ≥ 2 pages/week</td><td class="c num">120</td></tr>
+  </tbody>
+</table>
+
+<p>A badge is awarded once and is <strong>never withdrawn</strong>. A student who reached 90% precision and later
+fell back keeps the badge: it certifies an achievement that occurred, not a current state. Current state is what the
+metrics and the boards show. Un-earned badges are still shown to the student, as goals.</p>
+
+<h3>9.5.3 Challenges</h3>
+<table>
+  <caption>Table 9.8 — Periodic challenges</caption>
+  <thead><tr><th style="width:22%">Code</th><th style="width:11%">Period</th><th style="width:26%">Target</th><th class="c" style="width:8%">XP</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">WEEK_PAGES_3</td><td>Week</td><td>3 pages memorised</td><td class="c num">60</td></tr>
+    <tr><td class="mono">WEEK_NO_ABSENT</td><td>Week</td><td>2 attended sessions</td><td class="c num">50</td></tr>
+    <tr><td class="mono">MONTH_PAGES_12</td><td>Month</td><td>12 pages memorised</td><td class="c num">250</td></tr>
+    <tr><td class="mono">MONTH_REVIEW</td><td>Month</td><td>10 pages reviewed</td><td class="c num">200</td></tr>
+  </tbody>
+</table>
+<p>Progress is computed on read from the same session records. There is no stored <span class="mono">progress</span>
+column, and therefore nothing that can drift out of step with the sessions.</p>
+
+<h3>9.5.4 The experience-point ledger</h3>
+<p>Points accrue at 10 per page recited and 5 per attended session, plus badge awards. Every award is a row in
+<span class="mono">xp_ledger</span>; rows are never updated or deleted. The unique index on
+<span class="mono">(student_id, reason, source_id)</span> is what makes awarding idempotent: re-submitting an
+attendance roll or reprocessing a session grants nothing twice, and the resulting duplicate-key error is
+<em>success</em>, not failure. Attendance uses <span class="mono">student:date</span> as its source key precisely so
+that correcting the roll does not pay twice. XP rates were chosen so that attendance alone cannot top a ranking.</p>
+
+<h2>9.6 Derived instruments</h2>
+
+<h3>9.6.1 The journey map</h3>
+<p>For a student, “you have memorised 143 pages” does not say where they stand in the mushaf. The journey endpoint
+returns all thirty parts, each with a completion percentage and a state — <span class="mono">done</span>,
+<span class="mono">active</span> or <span class="mono">todo</span> — together with pages reviewed in the last thirty
+days, so that settled memorisation is visibly distinguished from memorisation being actively maintained.</p>
+
+<h3>9.6.2 The daily review portion</h3>
+<p>Each student's review portion is derived from their own memorised volume:</p>
+<div class="formula">
+  cycle days = ⌈ memorised parts ⁄ rate ⌉,&nbsp;&nbsp;
+  day index = (today − epoch) mod cycle days,&nbsp;&nbsp;
+  portion = parts [ day index · rate + 1 … ]
+  <span class="where">rate defaults to one part per day — the customary rule that a ḥāfiẓ completes a full
+  revision cycle within a month — and is adjustable per student by the teacher. A student with fewer than half a
+  part memorised receives no portion: none is invented.</span>
+</div>
+<p>Two properties follow from deriving the portion from the <em>date</em> rather than from stored state: nothing can
+be “forgotten to update”, and every person who opens the screen on the same day sees the same portion. The fixed
+epoch (Saturday 3 January 2026, the start of a study week) keeps the cycle stable across reloads. Paired with it is
+the question the teacher actually asks — <em>who has reviewed today and who is behind</em>.</p>
+
+<h3>9.6.3 The centre activity index</h3>
+<p>Supervisory ranking by head-count rewards a centre that enrolled a hundred students and then abandoned the system
+over a centre where twenty students work daily. Count measures size; movement measures use. The index therefore
+measures transactions in a window, normalised by centre size:</p>
+<div class="formula">
+  score = Σ<sub>k</sub> w<sub>k</sub> · min( 1, n<sub>k</sub> ⁄ ( e<sub>k</sub> · students · days ) ) · 100
+  <span class="where">with weights w = { recitations 0.45, attendance 0.30, finance 0.15, enrolment 0.10 } and
+  per-student-per-day expectations e = { 0.7, 0.9, 0.05, 0.02 }. Recitation is weighted highest because it is the
+  centre's actual work; finance signals a live administration rather than teaching.</span>
+</div>
+<p>Scores map to four bands — intensive (≥ 75), regular (≥ 45), intermittent (≥ 15), weak (&gt; 0) — plus “no
+activity”. The response carries counts, the per-signal breakdown, the last activity timestamp and days since;
+<strong>it carries no student names and no student data</strong>. Supervision learns that a centre is working
+without reading anyone's file.</p>
+
+<h2>9.7 Invariant design decisions</h2>
+
+<table>
+  <caption>Table 9.9 — Decisions not to be reversed without a stated reason</caption>
+  <thead><tr><th style="width:5%">#</th><th style="width:28%">Decision</th><th>Why</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td><strong>No derived value is stored.</strong></td><td>A stored metric diverges from its source rows at the first correction or void, and the leaderboard then ceases to be explainable by reference to sessions — the property the entire motivation layer rests on.</td></tr>
+    <tr><td class="c">2</td><td><strong>Weights live in one place</strong> and are never stored with an error.</td><td>The weights are provisional and will be recalibrated; stored weights would make recalibration unable to repair history.</td></tr>
+    <tr><td class="c">3</td><td><strong><span class="mono">None</span> means “no data”, not zero.</strong></td><td>A new student's mastery is not zero, and listing them at zero both wrongs them and distorts the board.</td></tr>
+    <tr><td class="c">4</td><td><strong>Precision is never computed from legacy counters.</strong></td><td>They carry no class, and their mapping assumes every error is a memorisation gap — sound for density, unsound for a severity ratio. The empty map is tagged (perfect); an absent field is not.</td></tr>
+    <tr><td class="c">5</td><td><strong>Sign constraints on model coefficients.</strong></td><td>A system that tells a guardian that their child's errors accelerate completion loses all credibility, whatever its R².</td></tr>
+    <tr><td class="c">6</td><td><strong>A badge is granted once and never withdrawn.</strong></td><td>It records an event, not a state.</td></tr>
+    <tr><td class="c">7</td><td><strong>The unique key on the XP ledger is load-bearing.</strong></td><td>Without it any repeat inflates a balance without limit.</td></tr>
+    <tr><td class="c">8</td><td><strong>Printed output uses fixed colour values, never design-system tokens.</strong></td><td>Tokens invert in dark mode, so printing at night would produce pale text on white paper.</td></tr>
+  </tbody>
+</table>
+
+<h2>9.8 Calibration parameters</h2>
+
+<table>
+  <caption>Table 9.10 — Environment-tunable analytical constants</caption>
+  <thead><tr><th style="width:32%">Variable</th><th style="width:13%" class="c">Default</th><th>Controls</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">MASTERY_DMAX</td><td class="c">3.0</td><td>The weighted error density at which mastery reaches zero.</td></tr>
+    <tr><td class="mono">MOMENTUM_ALPHA</td><td class="c">0.4</td><td>Momentum smoothing; higher gives more weight to the most recent week.</td></tr>
+    <tr><td class="mono">HIGH_SEVERITY_THRESHOLD</td><td class="c">0.5</td><td>The weight at or above which an error counts as severe in precision.</td></tr>
+    <tr><td class="mono">CONSISTENCY_WINDOW_SESSIONS</td><td class="c">8</td><td>Sessions in the consistency window.</td></tr>
+    <tr><td class="mono">REVIEW_DEPTH_WINDOW_DAYS</td><td class="c">28</td><td>Review-depth window.</td></tr>
+    <tr><td class="mono">XP_PER_PAGE / XP_PER_SESSION</td><td class="c">10 / 5</td><td>Point rates.</td></tr>
+    <tr><td class="mono">VERSES_PER_PAGE</td><td class="c">6236 ⁄ 604</td><td>Āyah-to-page derivation.</td></tr>
+    <tr><td class="mono">TOTAL_QURAN_PAGES / _VERSES</td><td class="c">604 / 6236</td><td>Mushaf of reference.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">Operational note</span>
+  After enabling this layer on a centre with existing history, run
+  <span class="mono">POST /api/performance/recompute</span> once. Badges are evaluated when a session is written and
+  when a student's page is opened; a student whose page is never opened would otherwise never receive what they had
+  already earned.
+</div>
+
+</section>

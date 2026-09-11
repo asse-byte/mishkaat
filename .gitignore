@@ -106,3 +106,6 @@ secret_key*
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# التقرير: مُولَّد من docs/report/parts — لا يُودَع
+docs/report/mishkaat-report.html

@@ -1,0 +1,267 @@
+<!-- ============================ CHAPTER 4 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 4</span>Requirements Specification</h1>
+
+<h2>4.1 Requirement identification scheme</h2>
+
+<p>Requirements are numbered <span class="mono">FR-<em>xx</em></span> (functional), <span class="mono">NFR-<em>xx</em></span>
+(non-functional) and <span class="mono">BR-<em>xx</em></span> (business rules). Functional requirements are grouped
+by domain. Each carries a priority — <span class="tag">M</span> mandatory, <span class="tag warn">S</span> should
+have, <span class="tag neutral">C</span> could have — and a pointer to where it is realised. Requirements whose
+identifiers begin <span class="mono">FR6</span>–<span class="mono">FR18</span> in Chapter&nbsp;9 refer to the
+external research specification described in §9.1 and are numbered in that source's scheme; they are distinguished
+there by context.</p>
+
+<h2>4.2 Functional requirements</h2>
+
+<h3>4.2.1 Identity, authentication and accounts</h3>
+<table>
+  <caption>Table 4.1 — Functional requirements: identity and access</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-01</td><td class="c"><span class="tag">M</span></td><td>The system shall authenticate users by username and password and issue a short-lived access token and a long-lived refresh token.</td><td class="mono">POST /api/auth/login</td></tr>
+    <tr><td class="mono">FR-02</td><td class="c"><span class="tag">M</span></td><td>The refresh token shall be delivered in an <span class="mono">httpOnly</span> cookie scoped to <span class="mono">/api/auth</span>, unreadable by page scripts, and rotated on every use with the previous token revoked.</td><td class="mono">POST /api/auth/refresh</td></tr>
+    <tr><td class="mono">FR-03</td><td class="c"><span class="tag">M</span></td><td>Logout shall revoke the presented tokens server-side and clear the refresh cookie, so that a token presented afterwards is rejected.</td><td class="mono">POST /api/auth/logout</td></tr>
+    <tr><td class="mono">FR-04</td><td class="c"><span class="tag">M</span></td><td>A password change shall invalidate every previously issued token for that user, on every device.</td><td><span class="mono">user_version</span> bump</td></tr>
+    <tr><td class="mono">FR-05</td><td class="c"><span class="tag">M</span></td><td>The system shall support password reset by a time-limited code and by direct administrator reset, both audited.</td><td class="mono">/api/auth/forgot-password, /reset-password, /admin-reset-password</td></tr>
+    <tr><td class="mono">FR-06</td><td class="c"><span class="tag">M</span></td><td>A disabled account shall be rejected both at login and when presenting a previously valid token.</td><td class="mono">app/security.py</td></tr>
+    <tr><td class="mono">FR-07</td><td class="c"><span class="tag">M</span></td><td>The centre manager shall be able to issue an account for a student and for that student's guardian after enrolment, with the password displayed exactly once and stored only as a hash.</td><td class="mono">POST /api/students/{id}/accounts</td></tr>
+    <tr><td class="mono">FR-08</td><td class="c"><span class="tag">M</span></td><td>Issued accounts shall be bound to the student record by identifier (<span class="mono">user_id</span>, <span class="mono">parent_user_id</span>), not by phone or name matching.</td><td class="mono">app/routers/accounts.py</td></tr>
+    <tr><td class="mono">FR-09</td><td class="c"><span class="tag warn">S</span></td><td>A user shall be able to update their own display name, email and phone.</td><td class="mono">PUT /api/auth/profile</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.2 Centres and multi-tenancy</h3>
+<table>
+  <caption>Table 4.2 — Functional requirements: centres</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-10</td><td class="c"><span class="tag">M</span></td><td>An administrator shall create a centre together with its manager account.</td><td class="mono">POST /api/centers</td></tr>
+    <tr><td class="mono">FR-11</td><td class="c"><span class="tag">M</span></td><td>A prospective centre shall be able to self-register publicly; the centre and its manager account shall be created inactive with <span class="mono">approval_status = "pending"</span> and the manager shall not be able to log in until approved.</td><td class="mono">POST /api/public/register-center</td></tr>
+    <tr><td class="mono">FR-12</td><td class="c"><span class="tag">M</span></td><td>An administrator shall approve or reject a pending centre; both decisions shall be written to the permanent audit record.</td><td class="mono">POST /api/centers/{id}/approve|reject</td></tr>
+    <tr><td class="mono">FR-13</td><td class="c"><span class="tag">M</span></td><td>Public registration shall be rate limited per IP address (3 per 60 minutes), counted only on success so that input errors do not consume the quota.</td><td class="mono">app/security.py</td></tr>
+    <tr><td class="mono">FR-14</td><td class="c"><span class="tag warn">S</span></td><td>A centre shall be able to hold a logo image, uploadable only by that centre's manager, used on printed certificates and reports.</td><td class="mono">POST /api/centers/{id}/logo</td></tr>
+    <tr><td class="mono">FR-15</td><td class="c"><span class="tag warn">S</span></td><td>The super-administrator shall be able to suspend and reactivate any centre and read platform-wide statistics.</td><td class="mono">/api/super/*</td></tr>
+    <tr><td class="mono">FR-16</td><td class="c"><span class="tag neutral">C</span></td><td>The system shall publish an unauthenticated listing of leading centres for the public landing page.</td><td class="mono">GET /api/public/best-centers</td></tr>
+    <tr><td class="mono">FR-17</td><td class="c"><span class="tag warn">S</span></td><td>System administration shall be able to read a per-centre activity index over a time window, normalised by centre size and containing no student identifying data.</td><td class="mono">GET /api/admin/centers-activity</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.3 People and circles</h3>
+<table>
+  <caption>Table 4.3 — Functional requirements: teachers, students and circles</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-18</td><td class="c"><span class="tag">M</span></td><td>The manager shall create, amend and deactivate teacher records, optionally creating a linked user account for a circle teacher.</td><td class="mono">/api/teachers</td></tr>
+    <tr><td class="mono">FR-19</td><td class="c"><span class="tag">M</span></td><td>An external teacher shall receive no account; a request supplying credentials for one shall be rejected, and converting a circle teacher to external shall close their account.</td><td class="mono">app/routers/teachers.py</td></tr>
+    <tr><td class="mono">FR-20</td><td class="c"><span class="tag">M</span></td><td>Salary and marital status shall be removed from teacher responses for every role outside centre administration.</td><td class="mono">common.redact_teacher</td></tr>
+    <tr><td class="mono">FR-21</td><td class="c"><span class="tag warn">S</span></td><td>A teacher shall be transferable from one circle to another, with the audit record naming both circles.</td><td class="mono">POST /api/teachers/{id}/transfer</td></tr>
+    <tr><td class="mono">FR-22</td><td class="c"><span class="tag">M</span></td><td>The manager shall evaluate a teacher on five named criteria scored out of ten each, with written strengths and weaknesses, producing a total out of one hundred.</td><td class="mono">POST /api/teachers/{id}/evaluations</td></tr>
+    <tr><td class="mono">FR-23</td><td class="c"><span class="tag">M</span></td><td>A teacher's evaluation shall be readable by that teacher and by centre administration only — never by colleagues.</td><td class="mono">app/routers/teachers.py</td></tr>
+    <tr><td class="mono">FR-24</td><td class="c"><span class="tag">M</span></td><td>The manager shall enrol students with guardian details, memorisation plan, student type and circle assignment.</td><td class="mono">/api/students</td></tr>
+    <tr><td class="mono">FR-25</td><td class="c"><span class="tag">M</span></td><td>Student date of birth, guardian address and guardian name shall be encrypted at rest and decrypted only on authorised read.</td><td class="mono">app/pii.py</td></tr>
+    <tr><td class="mono">FR-26</td><td class="c"><span class="tag">M</span></td><td>Circles shall be created with teacher, schedule, time, location and maximum capacity, and shall maintain a current student count.</td><td class="mono">/api/halaqat</td></tr>
+    <tr><td class="mono">FR-27</td><td class="c"><span class="tag warn">S</span></td><td>The manager shall see every circle's aggregate performance in one view and open a circle to see its teacher, its students and each student's level.</td><td class="mono">/api/halaqat-overview</td></tr>
+    <tr><td class="mono">FR-28</td><td class="c"><span class="tag warn">S</span></td><td>A weekly academic timetable shall be maintainable per centre and readable by every role within its own scope.</td><td class="mono">/api/academic-schedules</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.4 Academic operations</h3>
+<table>
+  <caption>Table 4.4 — Functional requirements: recitation, attendance and review</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-29</td><td class="c"><span class="tag">M</span></td><td>A circle teacher shall record a recitation with sūrah, āyah range, type, qualitative evaluation, optional page count and error tags; the recording teacher's identity shall be taken from the token, never from the request body.</td><td class="mono">POST /api/recitations</td></tr>
+    <tr><td class="mono">FR-30</td><td class="c"><span class="tag">M</span></td><td>At most one recitation of each type shall be recordable per student per calendar day; a second attempt shall return 409 naming the existing record.</td><td class="mono">date_str guard</td></tr>
+    <tr><td class="mono">FR-31</td><td class="c"><span class="tag">M</span></td><td>Errors shall be taggable by a closed four-class taxonomy; where present the taxonomy shall take precedence over the legacy counters so that no error is counted twice.</td><td class="mono">app/errors_taxonomy.py</td></tr>
+    <tr><td class="mono">FR-32</td><td class="c"><span class="tag">M</span></td><td>A recitation shall be correctable and soft-deletable; a deleted recitation shall leave every derived metric, score and forecast.</td><td class="mono">PUT / DELETE /api/recitations/{id}</td></tr>
+    <tr><td class="mono">FR-33</td><td class="c"><span class="tag">M</span></td><td>A circle teacher shall record attendance for a circle on a date, in one submission, with four statuses.</td><td class="mono">POST /api/attendance</td></tr>
+    <tr><td class="mono">FR-34</td><td class="c"><span class="tag">M</span></td><td>Attendance shall be unique per student per day, enforced by a unique database index and not merely by an application check.</td><td class="mono">uniq_student_day</td></tr>
+    <tr><td class="mono">FR-35</td><td class="c"><span class="tag">M</span></td><td>Marking a student absent shall create a persisted notification for the guardian, readable later, independent of whether the guardian is connected.</td><td class="mono">sse.push_notification</td></tr>
+    <tr><td class="mono">FR-36</td><td class="c"><span class="tag">M</span></td><td>An attendance record shall be correctable and deletable, with both actions audited.</td><td class="mono">PUT / DELETE /api/attendance/{id}</td></tr>
+    <tr><td class="mono">FR-37</td><td class="c"><span class="tag warn">S</span></td><td>The system shall compute each student's review portion for today from that student's own memorised volume at a teacher-set daily rate, derived from the date rather than from stored state.</td><td class="mono">GET /api/review-plans/today</td></tr>
+    <tr><td class="mono">FR-38</td><td class="c"><span class="tag warn">S</span></td><td>The teacher shall see who has reviewed today and who is behind.</td><td class="mono">app/routers/review_plans.py</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.5 Finance</h3>
+<table>
+  <caption>Table 4.5 — Functional requirements: finance</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-39</td><td class="c"><span class="tag">M</span></td><td>The system shall record student fees of three types with due dates and payment state, and shall mark a fee paid with the payment date.</td><td class="mono">/api/fees</td></tr>
+    <tr><td class="mono">FR-40</td><td class="c"><span class="tag">M</span></td><td>A monthly fee shall not be creatable twice for the same student, type and due month.</td><td class="mono">409 guard</td></tr>
+    <tr><td class="mono">FR-41</td><td class="c"><span class="tag">M</span></td><td>The system shall record teacher salaries by month, and shall refuse a second salary for the same teacher, month and centre.</td><td class="mono">POST /api/salaries</td></tr>
+    <tr><td class="mono">FR-42</td><td class="c"><span class="tag">M</span></td><td>The system shall record centre expenses with category and date.</td><td class="mono">/api/expenses</td></tr>
+    <tr><td class="mono">FR-43</td><td class="c"><span class="tag">M</span></td><td>Every financial record shall be amendable, and cancellable by <em>voiding</em> — never by erasure — with a written reason, the actor and the time; a voided record shall be excluded from every total.</td><td class="mono">voided / void_reason</td></tr>
+    <tr><td class="mono">FR-44</td><td class="c"><span class="tag">M</span></td><td>Every financial action shall write a permanent audit entry that is never purged.</td><td class="mono">AUDIT_PERMANENT_ACTIONS</td></tr>
+    <tr><td class="mono">FR-45</td><td class="c"><span class="tag warn">S</span></td><td>The system shall present a financial summary of collections, salaries, expenses and outstanding fees for a centre.</td><td class="mono">GET /api/finance/summary</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.6 Competitions and certificates</h3>
+<table>
+  <caption>Table 4.6 — Functional requirements: competitions and certificates</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-46</td><td class="c"><span class="tag">M</span></td><td>A competition shall have a closed list of branches; branches shall be ranked entirely separately so that a memoriser of Juz' ʿAmma is never compared with a memoriser of the whole Qur'an.</td><td class="mono">COMPETITION_BRANCHES</td></tr>
+    <tr><td class="mono">FR-47</td><td class="c"><span class="tag">M</span></td><td>The manager shall appoint a judging panel of circle teachers; each judge shall record only their own marks and the final score shall be the panel average.</td><td class="mono">judge_scores[]</td></tr>
+    <tr><td class="mono">FR-48</td><td class="c"><span class="tag">M</span></td><td>A competition shall progress through draft → active → grading → approved → archived, and an approved competition shall be immutable: no scoring, no registration, no edit, no deletion.</td><td class="mono">CompetitionStatus</td></tr>
+    <tr><td class="mono">FR-49</td><td class="c"><span class="tag">M</span></td><td>Past years' competitions shall remain accessible by year.</td><td class="mono">GET /api/competitions/years</td></tr>
+    <tr><td class="mono">FR-50</td><td class="c"><span class="tag">M</span></td><td>The centre manager alone shall issue certificates: milestone certificates at 5, 10, 15 and 30 parts, and competition certificates after approval.</td><td class="mono">/api/certificates</td></tr>
+    <tr><td class="mono">FR-51</td><td class="c"><span class="tag">M</span></td><td>A milestone certificate shall be refused until the milestone is met, measured against pages actually recited, not against a claim.</td><td class="mono">409 guard</td></tr>
+    <tr><td class="mono">FR-52</td><td class="c"><span class="tag">M</span></td><td>Every certificate shall carry a serial number unique per centre per year, the issuer's identity and the issue time; the same certificate shall not be issuable twice, enforced by a unique index.</td><td class="mono">MK-YYYY-NNNNN</td></tr>
+    <tr><td class="mono">FR-53</td><td class="c"><span class="tag warn">S</span></td><td>A certificate issued in error shall be revocable, and the revocation shall be audited as the issue was.</td><td class="mono">DELETE /api/certificates/{id}</td></tr>
+    <tr><td class="mono">FR-54</td><td class="c"><span class="tag warn">S</span></td><td>The system shall list students who have reached a milestone but have not yet received its certificate.</td><td class="mono">GET /api/certificates/eligible</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.7 Analytics and motivation</h3>
+<table>
+  <caption>Table 4.7 — Functional requirements: analytics</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-55</td><td class="c"><span class="tag">M</span></td><td>The system shall compute five per-student metrics — mastery, momentum, precision, consistency and review depth — at read time from session records, never from stored derived values.</td><td class="mono">app/metrics.py</td></tr>
+    <tr><td class="mono">FR-56</td><td class="c"><span class="tag">M</span></td><td>Absence of data shall be represented as “no data”, not as zero, in every metric.</td><td class="mono">None semantics</td></tr>
+    <tr><td class="mono">FR-57</td><td class="c"><span class="tag">M</span></td><td>The system shall forecast Juz' and full-Qur'an completion dates using momentum, weighted error density and attendance rate, from a model trained on the centre's own history.</td><td class="mono">app/forecast.py</td></tr>
+    <tr><td class="mono">FR-58</td><td class="c"><span class="tag">M</span></td><td>Every forecast shall disclose the method used, the number of training rows and the coefficient of determination; a fallback estimate shall never be presented as a model output.</td><td class="mono">predict_weekly_pages</td></tr>
+    <tr><td class="mono">FR-59</td><td class="c"><span class="tag">M</span></td><td>Fitted coefficients that contradict domain direction shall be zeroed, never inverted.</td><td class="mono">_constrain_signs</td></tr>
+    <tr><td class="mono">FR-60</td><td class="c"><span class="tag">M</span></td><td>The system shall present four independent leaderboards rather than one composite ranking.</td><td class="mono">GET /api/performance/leaderboards</td></tr>
+    <tr><td class="mono">FR-61</td><td class="c"><span class="tag">M</span></td><td>Badges shall be awarded automatically on threshold attainment, granted once, and never withdrawn.</td><td class="mono">evaluate_badges</td></tr>
+    <tr><td class="mono">FR-62</td><td class="c"><span class="tag">M</span></td><td>Experience points shall be written to an append-only ledger with a unique key on (student, reason, source) so that reprocessing awards nothing twice.</td><td class="mono">xp_ledger</td></tr>
+    <tr><td class="mono">FR-63</td><td class="c"><span class="tag warn">S</span></td><td>Periodic challenges shall show live progress computed from the same session records.</td><td class="mono">challenge_progress</td></tr>
+    <tr><td class="mono">FR-64</td><td class="c"><span class="tag warn">S</span></td><td>A journey map shall show the student's position across the thirty parts of the Qur'an.</td><td class="mono">.../journey</td></tr>
+    <tr><td class="mono">FR-65</td><td class="c"><span class="tag neutral">C</span></td><td>An administrator shall be able to re-evaluate badges across an entire centre after enabling the layer on historical data.</td><td class="mono">POST /api/performance/recompute</td></tr>
+  </tbody>
+</table>
+
+<h3>4.2.8 Communication and governance</h3>
+<table>
+  <caption>Table 4.8 — Functional requirements: communication and governance</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:6%">Pri.</th><th>Requirement</th><th style="width:22%">Realisation</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">FR-66</td><td class="c"><span class="tag">M</span></td><td>Messaging shall follow a closed chain; permitted audiences shall be served by the API, not hard-coded in the client.</td><td class="mono">GET /api/messages/audiences</td></tr>
+    <tr><td class="mono">FR-67</td><td class="c"><span class="tag warn">S</span></td><td>Messages shall carry document attachments, uploaded separately and referenced by the message; download authorisation shall be evaluated on the message, not on the file identifier.</td><td class="mono">/api/messages/attachments</td></tr>
+    <tr><td class="mono">FR-68</td><td class="c"><span class="tag warn">S</span></td><td>A sent message shall be correctable and withdrawable by its sender.</td><td class="mono">PUT / DELETE /api/messages/{id}</td></tr>
+    <tr><td class="mono">FR-69</td><td class="c"><span class="tag">M</span></td><td>Notifications shall be persisted before being streamed, and the stream shall read from the database so that it works across worker processes.</td><td class="mono">app/sse.py</td></tr>
+    <tr><td class="mono">FR-70</td><td class="c"><span class="tag">M</span></td><td>The live stream shall be opened with a single-use ticket valid for sixty seconds, obtained with a normal Authorization header — never with an access token in the URL.</td><td class="mono">POST /api/notifications/stream-ticket</td></tr>
+    <tr><td class="mono">FR-71</td><td class="c"><span class="tag">M</span></td><td>Financial, authentication and permission events shall be written to a hash-chained audit log with atomic sequence numbers.</td><td class="mono">app/audit.py</td></tr>
+    <tr><td class="mono">FR-72</td><td class="c"><span class="tag">M</span></td><td>The audit chain shall be verifiable through an endpoint that recomputes the chain and reports any break.</td><td class="mono">GET /api/audit-logs/verify</td></tr>
+    <tr><td class="mono">FR-73</td><td class="c"><span class="tag warn">S</span></td><td>The system shall export students and attendance as UTF-8 CSV with a byte-order mark so that Arabic renders correctly in Excel; every export shall be audited.</td><td class="mono">/api/export/*.csv</td></tr>
+    <tr><td class="mono">FR-74</td><td class="c"><span class="tag">M</span></td><td>The system shall expose liveness and readiness endpoints without authentication.</td><td class="mono">/api/health, /api/health/ready</td></tr>
+  </tbody>
+</table>
+
+<h2>4.3 Non-functional requirements</h2>
+
+<table>
+  <caption>Table 4.9 — Non-functional requirements</caption>
+  <thead><tr><th style="width:9%">ID</th><th style="width:16%">Quality</th><th>Requirement and acceptance condition</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">NFR-01</td><td><strong>Security — isolation</strong></td><td>No request shall return data belonging to another centre, another circle or another student. Acceptance: 314 assertions across seven suites test for leakage rather than for request success; a 200 response is not a failure, a 200 response carrying another party's data is.</td></tr>
+    <tr><td class="mono">NFR-02</td><td><strong>Security — sessions</strong></td><td>Access tokens shall expire within 60 minutes; refresh tokens within 7 days; both shall carry a JTI and a user version; revocation shall be immediate and enforced on the server.</td></tr>
+    <tr><td class="mono">NFR-03</td><td><strong>Security — credentials</strong></td><td>Passwords shall be hashed with bcrypt at cost 12 or higher and shall require at least eight characters including a letter and a digit on every path that sets one.</td></tr>
+    <tr><td class="mono">NFR-04</td><td><strong>Security — data at rest</strong></td><td>Student date of birth, guardian address and guardian name shall be stored encrypted (Fernet, AES-128-CBC with HMAC). The system shall refuse to start in production without an encryption key.</td></tr>
+    <tr><td class="mono">NFR-05</td><td><strong>Security — availability</strong></td><td>Login shall be limited to 5 failures per IP per 15 minutes and 10 per account per 15 minutes; limiter state shall be correct across worker processes.</td></tr>
+    <tr><td class="mono">NFR-06</td><td><strong>Auditability</strong></td><td>Financial and permission events shall be tamper-evident; any break in the hash chain shall be detectable and any gap shall be explicitly marked rather than silently tolerated.</td></tr>
+    <tr><td class="mono">NFR-07</td><td><strong>Performance</strong></td><td>List endpoints shall not issue per-row database round trips. Acceptance: the honour roll computes scores for all students in two queries, not two per student; leaderboards and circle overviews batch their history loads.</td></tr>
+    <tr><td class="mono">NFR-08</td><td><strong>Performance — indexing</strong></td><td>Every hot query path, ownership lookup and TTL collection shall be indexed; indexes shall be created idempotently at start-up and conflicts resolved without failing the boot.</td></tr>
+    <tr><td class="mono">NFR-09</td><td><strong>Scalability</strong></td><td>The application shall run correctly with multiple Uvicorn workers; no correctness-bearing state shall live in process memory. The forecast model cache is explicitly per-worker and advisory only.</td></tr>
+    <tr><td class="mono">NFR-10</td><td><strong>Reliability</strong></td><td>An unhandled exception shall return a generic message with a request identifier and shall never return a stack trace to the client; every user-supplied identifier shall be validated, returning 400 rather than 500.</td></tr>
+    <tr><td class="mono">NFR-11</td><td><strong>Correctability</strong></td><td>Every administrative record shall be amendable after creation; financial records shall be voidable but not erasable.</td></tr>
+    <tr><td class="mono">NFR-12</td><td><strong>Usability</strong></td><td>The interface shall be Arabic and right-to-left; primary actions shall be reachable in at most two taps from the role dashboard; empty states shall state the cause.</td></tr>
+    <tr><td class="mono">NFR-13</td><td><strong>Portability</strong></td><td>The application shall be installable from the browser on Android, iOS and desktop without an app store, and shall start from a cached shell.</td></tr>
+    <tr><td class="mono">NFR-14</td><td><strong>Interpretability</strong></td><td>Every analytical output shall be explainable by reference to the session records that produced it. No metric shall be presented whose provenance cannot be shown to a parent.</td></tr>
+    <tr><td class="mono">NFR-15</td><td><strong>Honesty of claims</strong></td><td>Forecast accuracy shall not be asserted. Each prediction shall carry its method, training size and fit; a fallback shall be labelled as such.</td></tr>
+    <tr><td class="mono">NFR-16</td><td><strong>Maintainability</strong></td><td>Authorisation rules shall exist in exactly one module and be documented in exactly one document, changed together. Severity weights and calibration constants shall live in configuration, not inside functions.</td></tr>
+    <tr><td class="mono">NFR-17</td><td><strong>Operability</strong></td><td>A single-command deployment shall exist; backups shall be encrypted before touching disk; restoration shall be rehearsable.</td></tr>
+    <tr><td class="mono">NFR-18</td><td><strong>Privacy</strong></td><td>Minor data shall not be exported to third-party analytics. Supervisory views shall carry counts and dates, never student identities.</td></tr>
+  </tbody>
+</table>
+
+<h2>4.4 Business rules</h2>
+
+<table>
+  <caption>Table 4.10 — Business rules</caption>
+  <thead><tr><th style="width:9%">ID</th><th>Rule</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">BR-01</td><td>Recording a recitation or attendance is testimony; only the circle teacher who was present may create the record. Administration corrects, it does not attest.</td></tr>
+    <tr><td class="mono">BR-02</td><td>A recitation belongs to the teacher who recorded it; a colleague may not edit it. Centre administration may.</td></tr>
+    <tr><td class="mono">BR-03</td><td>One new-memorisation recitation and one review recitation per student per calendar day.</td></tr>
+    <tr><td class="mono">BR-04</td><td>One attendance record per student per calendar day, guaranteed by unique index.</td></tr>
+    <tr><td class="mono">BR-05</td><td>One salary per teacher per month per centre, counting only non-voided records.</td></tr>
+    <tr><td class="mono">BR-06</td><td>One monthly fee per student per due month per type.</td></tr>
+    <tr><td class="mono">BR-07</td><td>Money is voided, never deleted. A void requires a written reason and records the actor and time, and the record is excluded from every total thereafter.</td></tr>
+    <tr><td class="mono">BR-08</td><td>An approved competition is frozen. No marks, no registrations, no edits, no deletion — it may only be archived.</td></tr>
+    <tr><td class="mono">BR-09</td><td>A competition's final score is the arithmetic mean of the panel's marks; every mark is attributed to the judge who gave it.</td></tr>
+    <tr><td class="mono">BR-10</td><td>Competition branches are ranked separately, each from position one.</td></tr>
+    <tr><td class="mono">BR-11</td><td>A milestone certificate requires the milestone to be met, measured in pages actually recited (a Juz' is 604⁄30 ≈ 20.13 pages), with a half-page tolerance.</td></tr>
+    <tr><td class="mono">BR-12</td><td>A competition certificate requires the competition result to be approved first.</td></tr>
+    <tr><td class="mono">BR-13</td><td>The same certificate is never issued twice; the constraint is a unique index, not a code check.</td></tr>
+    <tr><td class="mono">BR-14</td><td>An external teacher has no account; conversion to external closes any existing account.</td></tr>
+    <tr><td class="mono">BR-15</td><td>Salary and marital status are visible only to centre administration.</td></tr>
+    <tr><td class="mono">BR-16</td><td>A teacher's evaluation is readable by that teacher and by administration only.</td></tr>
+    <tr><td class="mono">BR-17</td><td>Student and guardian accounts are issued after enrolment and bound by identifier; a forgotten password is replaced, never recovered.</td></tr>
+    <tr><td class="mono">BR-18</td><td>A publicly registered centre cannot operate until an administrator approves it.</td></tr>
+    <tr><td class="mono">BR-19</td><td>A badge, once earned, is never withdrawn; it certifies an achievement that occurred, not a current state.</td></tr>
+    <tr><td class="mono">BR-20</td><td>Experience points are granted once per (student, reason, source); reprocessing is a no-op.</td></tr>
+    <tr><td class="mono">BR-21</td><td>Precision is not computed from legacy counters, because those carry no error class; an untagged history yields “no data”, not zero.</td></tr>
+    <tr><td class="mono">BR-22</td><td>Judging is a task with a term, not a standing permission: the competitions menu item appears for a teacher only while a competition they judge is in progress.</td></tr>
+  </tbody>
+</table>
+
+<h2>4.5 Principal use cases</h2>
+
+<table>
+  <caption>Table 4.11 — Use case summary</caption>
+  <thead><tr><th style="width:8%">ID</th><th style="width:26%">Use case</th><th style="width:16%">Primary actor</th><th>Outcome</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">UC-01</td><td>Register a centre publicly</td><td>Prospective manager</td><td>Centre and manager account created inactive, pending approval; rate limited; audited.</td></tr>
+    <tr><td class="mono">UC-02</td><td>Approve a centre</td><td>Administrator</td><td>Centre and manager activated; permanent audit entry written.</td></tr>
+    <tr><td class="mono">UC-03</td><td>Enrol a student</td><td>Centre manager</td><td>Student record created with encrypted personal fields and circle assignment; circle count updated.</td></tr>
+    <tr><td class="mono">UC-04</td><td>Issue student and guardian accounts</td><td>Centre manager</td><td>Two accounts created, bound by identifier; passwords shown once; audited.</td></tr>
+    <tr><td class="mono">UC-05</td><td>Record a recitation</td><td>Circle teacher</td><td>Session stored with error tags; duplicate refused; XP granted idempotently; forecast cache invalidated; badges re-evaluated.</td></tr>
+    <tr><td class="mono">UC-06</td><td>Take the roll</td><td>Circle teacher</td><td>One record per student per day; absences generate persisted guardian notifications.</td></tr>
+    <tr><td class="mono">UC-07</td><td>Read a student's performance file</td><td>Teacher / manager / parent / student</td><td>Five metrics, forecast with disclosed method, badges, challenges and journey — all recomputed from records.</td></tr>
+    <tr><td class="mono">UC-08</td><td>Collect a fee</td><td>Centre manager</td><td>Fee marked paid with date; permanent audit entry; double payment refused.</td></tr>
+    <tr><td class="mono">UC-09</td><td>Pay a salary</td><td>Centre manager</td><td>Salary recorded; a second payment for the same month refused with 409.</td></tr>
+    <tr><td class="mono">UC-10</td><td>Void a financial record</td><td>Centre manager</td><td>Record marked voided with reason and actor; excluded from totals; audited permanently.</td></tr>
+    <tr><td class="mono">UC-11</td><td>Run a competition</td><td>Manager + judging panel</td><td>Panel appointed, contestants registered per branch, judges score independently, mean computed, ranks assigned per branch, manager approves and the result freezes.</td></tr>
+    <tr><td class="mono">UC-12</td><td>Issue a certificate</td><td>Centre manager</td><td>Eligibility verified against recited pages or approved results; serial allocated atomically; single issuance enforced by index; audited.</td></tr>
+    <tr><td class="mono">UC-13</td><td>Broadcast a message with a document</td><td>Manager / teacher</td><td>Audience validated server-side; attachment stored in GridFS after content sniffing; recipients notified.</td></tr>
+    <tr><td class="mono">UC-14</td><td>Verify the audit chain</td><td>Administrator</td><td>Each entry's hash recomputed and linked; breaks and gaps reported.</td></tr>
+    <tr><td class="mono">UC-15</td><td>Assess platform engagement</td><td>Administrator</td><td>Per-centre activity index over a window, normalised by size, with no student data.</td></tr>
+  </tbody>
+</table>
+
+<h3>4.5.1 Use case detail — UC-05, Record a recitation</h3>
+<table>
+  <tbody>
+    <tr><th style="width:22%">Primary actor</th><td>Circle teacher (<span class="mono">teacher</span>)</td></tr>
+    <tr><th>Preconditions</th><td>Teacher is authenticated; the account is linked to an active teacher record; the student is in one of the teacher's active circles.</td></tr>
+    <tr><th>Main flow</th><td>
+      1. Teacher opens the recitation screen and selects a student from his circle.<br>
+      2. He enters sūrah, āyah range, type (new or review) and, optionally, the page count.<br>
+      3. He tags the errors he heard using the four-class tagger, and gives an overall evaluation.<br>
+      4. The server rejects the request unless the caller's role is <span class="mono">teacher</span>.<br>
+      5. <span class="mono">check_student_access</span> confirms the student is in the caller's circle.<br>
+      6. The recording teacher is resolved from the token, not from the request body.<br>
+      7. A same-day record of the same type is searched; if found the request is refused with 409 naming the
+      existing record's sūrah.<br>
+      8. The record is written with <span class="mono">date</span>, <span class="mono">date_str</span> and
+      <span class="mono">center_id</span>.<br>
+      9. Experience points are granted idempotently, badges re-evaluated, and the centre's forecast model cache
+      invalidated.
+    </td></tr>
+    <tr><th>Alternative flows</th><td>
+      <strong>7a.</strong> Duplicate exists → 409 with guidance to edit the existing record.<br>
+      <strong>5a.</strong> Student outside the caller's circle → 403 “this student is not in your circle”.<br>
+      <strong>6a.</strong> No linked teacher record → 403 “your account is not linked to a teacher record”.<br>
+      <strong>9a.</strong> Motivation layer fails → the failure is logged and the recitation still succeeds: the
+      session is the real record, the points are a layer above it.
+    </td></tr>
+    <tr><th>Postconditions</th><td>One recitation stored; derived metrics, leaderboards and forecast reflect it at the next read; the XP ledger contains at most one entry per (student, reason, source).</td></tr>
+  </tbody>
+</table>
+
+</section>

@@ -1,0 +1,245 @@
+<!-- ============================ CHAPTER 3 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 3</span>Stakeholders and Users</h1>
+
+<p>Mishkaat defines six user roles. The role is not merely a label used to hide menu items: it is the input to a
+scope-resolution function that decides, for every query the system runs, which rows the caller may see. This chapter
+defines the roles, the scope model that binds them, and the deliberate exceptions where a role sees slightly more
+than its data scope would strictly allow.</p>
+
+<h2>3.1 User classes and characteristics</h2>
+
+<table>
+  <caption>Table 3.1 — User classes</caption>
+  <thead>
+    <tr><th style="width:14%">Role</th><th style="width:12%">Arabic</th><th style="width:22%">Who they are</th><th style="width:22%">Primary tasks</th><th>Data scope</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="mono">super_admin</td>
+      <td class="ar">المدير العام</td>
+      <td>A supervisory authority — a ministry, an association or the platform operator — overseeing many centres.</td>
+      <td>Register centres, suspend or reactivate them, view platform-wide statistics and per-centre activity.</td>
+      <td>Unrestricted (system-wide).</td>
+    </tr>
+    <tr>
+      <td class="mono">admin</td>
+      <td class="ar">مدير النظام</td>
+      <td>The platform administrator who operates the installation.</td>
+      <td>Create and approve centres, reject applications, reset passwords, read the audit log, message centre managers.</td>
+      <td>Unrestricted (system-wide).</td>
+    </tr>
+    <tr>
+      <td class="mono">center_manager</td>
+      <td class="ar">مدير المركز</td>
+      <td>The director of one centre.</td>
+      <td>Enrol students, issue student and guardian accounts, hire and evaluate teachers, create circles, run
+      finance, create competitions and appoint judges, approve results, issue certificates, correct any
+      administrative record.</td>
+      <td>One centre, complete — <strong>read everything, but record nothing academic</strong>.</td>
+    </tr>
+    <tr>
+      <td class="mono">teacher</td>
+      <td class="ar">المحفّظ / المعلّم</td>
+      <td>The circle teacher who listens to recitation. May alternatively be an <em>external</em> teacher of a
+      subject who visits circles.</td>
+      <td>Record recitation and attendance for his own students, correct his own records, read his students'
+      performance, judge a competition when appointed, message his manager.</td>
+      <td>His own circles and their students — nothing else.</td>
+    </tr>
+    <tr>
+      <td class="mono">student</td>
+      <td class="ar">الطالب</td>
+      <td>An enrolled student, often a minor, holding an account issued by the manager.</td>
+      <td>View his own recitations, attendance, metrics, journey, badges, challenges, forecast, certificates and fee
+      status; see his position among his circle peers.</td>
+      <td>Himself, plus the name of his circle and its teacher, plus aggregate peer positions in his circle.</td>
+    </tr>
+    <tr>
+      <td class="mono">parent</td>
+      <td class="ar">وليّ الأمر</td>
+      <td>The guardian of one or more enrolled students.</td>
+      <td>Follow each child's progress and attendance, receive absence notifications, view fees and certificates.</td>
+      <td>His children only, on the same terms as the student role.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">A role decision worth stating plainly</span>
+  The centre manager <strong>reads everything in his centre but records neither recitation nor attendance.</strong>
+  The reasoning is not technical: recording a recitation is testimony about a session the recorder attended. The
+  manager corrects errors by editing and deleting, but does not create a record attesting to a circle he was not in.
+  The same rule removes the manager from competition scoring: he appoints the panel and approves its result, but he
+  does not enter marks. This is enforced server-side by <span class="mono">scope.teacher_only()</span>, not by
+  hiding a button.
+</div>
+
+<h3>3.1.1 The external teacher</h3>
+<p>A centre may employ teachers who are not circle teachers: a language teacher, a visiting tajwīd specialist, an
+administrator who also teaches. These are recorded with <span class="mono">teacher_type: "external"</span> and
+<strong>no system account is created for them</strong>: a request that supplies a username or password for an
+external teacher is rejected with HTTP 400, and converting an existing circle teacher to external closes their
+account and invalidates their sessions. The reason is that an account in this system opens students' recitation,
+attendance and performance data — that is the trust of the circle, not the trust of a visitor giving a lesson in a
+subject. Someone who neither hears recitation nor marks attendance needs no door.</p>
+
+<h2>3.2 The scope-resolution chain</h2>
+
+<p>The teacher's scope is not stored on the user document. It is resolved at request time by walking a four-link
+chain, so that reassigning a circle immediately changes what a teacher can see, with no synchronisation step and no
+stale permission row:</p>
+
+<div class="diagram">  users._id                     the authenticated account
+      │
+      ▼  teachers.user_id        the teacher record bound to that account (active only)
+  teachers._id
+      │
+      ▼  halaqat.teacher_id      the circles this teacher currently teaches (active only)
+  halaqat._id
+      │
+      ▼  students.halaqah_id     the students inside those circles
+  students._id</div>
+<figcaption>Figure 3.1 — Resolution of a teacher's data scope (<span class="mono">app/scope.py</span>).</figcaption>
+
+<p>Two properties of this chain are load-bearing:</p>
+
+<ul>
+  <li><strong>A teacher with no linked record, or with no assigned circle, has an empty scope and sees nothing.</strong>
+  This is correct, not a defect: in the absence of an assignment the default is denial, not permission. The students
+  screen says “no circle has been assigned to you yet” rather than showing an unexplained empty list.</li>
+  <li><strong>An empty scope is represented as <span class="mono">None</span>, never as an empty filter.</strong>
+  In MongoDB, <span class="mono">{}</span> matches every document. A function that returned
+  <span class="mono">{}</span> for “nothing is visible” would return the whole collection — a total inversion that
+  reads as correct code. Every scope helper in the module returns <span class="mono">None</span> for the empty case
+  and every caller treats <span class="mono">None</span> as “return an empty list”.</li>
+</ul>
+
+<p>Student and guardian ownership resolves differently and equally deliberately. A student is matched to a record by
+<span class="mono">students.user_id</span> or by phone number; a guardian by
+<span class="mono">students.parent_user_id</span> or by phone. <strong>Never by name.</strong> A user can edit their
+own display name from their profile; matching on the name would mean that renaming yourself to a classmate's name
+opens that classmate's file, grades and fees. Name is not an ownership identifier.</p>
+
+<h2>3.3 Role capability matrix</h2>
+
+<table>
+  <caption>Table 3.2 — Capability matrix (✓ permitted · ○ read only · ✗ denied)</caption>
+  <thead>
+    <tr><th style="width:34%">Capability</th>
+        <th class="c">super_<br>admin</th><th class="c">admin</th><th class="c">center_<br>manager</th>
+        <th class="c">teacher</th><th class="c">student</th><th class="c">parent</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Create / approve / reject a centre</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Suspend or reactivate a centre</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Read the centre activity index</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Enrol a student</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Issue student / guardian accounts</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Create / edit teachers and circles</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Read teacher salaries</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td><strong>Record a recitation</strong></td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td><strong>Record attendance</strong></td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Correct / delete a recitation or attendance row</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓ own</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Read a student's performance file</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓ own circle</td><td class="c">○ self</td><td class="c">○ child</td></tr>
+    <tr><td>Fees, salaries, expenses</td><td class="c">○</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">○ own fees</td><td class="c">○ child's fees</td></tr>
+    <tr><td>Evaluate a teacher</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">○ own only</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Create a competition, appoint judges, approve results</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Enter competition marks</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✓ if on panel</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Read competition results of own centre</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">○</td><td class="c">○</td><td class="c">○</td></tr>
+    <tr><td><strong>Issue a certificate</strong></td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>View / print own certificates</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">○</td><td class="c">○</td></tr>
+    <tr><td>Leaderboards</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓ own circles</td><td class="c">○ own circle</td><td class="c">○ child's circle</td></tr>
+    <tr><td>CSV export</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Audit log</td><td class="c">✓</td><td class="c">✓</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td><td class="c">✗</td></tr>
+    <tr><td>Academic timetable</td><td class="c">✓</td><td class="c">✓</td><td class="c">✓</td><td class="c">○ own circles</td><td class="c">○ own circle</td><td class="c">○ child's circle</td></tr>
+  </tbody>
+</table>
+
+<h2>3.4 The teacher: what is granted and what is withheld</h2>
+
+<p>Because the circle teacher is the role with the most contested boundary — closest to the data, furthest from
+administrative authority — its permissions are stated explicitly.</p>
+
+<table>
+  <caption>Table 3.3 — Circle teacher: granted and withheld</caption>
+  <thead><tr><th style="width:50%">Granted</th><th>Withheld</th></tr></thead>
+  <tbody>
+    <tr><td>Read his circles' students, their files, recitations, attendance and metrics</td><td>Read a student from another circle — HTTP 403</td></tr>
+    <tr><td><strong>Record recitation and attendance</strong> for his students</td><td>Record either for a student who is not his</td></tr>
+    <tr><td>See his circles' timetable and their competition contestants</td><td>See another teacher's timetable or contestants</td></tr>
+    <tr><td>See himself in the teacher list</td><td>See colleagues or their salaries</td></tr>
+    <tr><td>Read his own evaluation</td><td>Read a colleague's evaluation</td></tr>
+    <tr><td><strong>See the centre's circle ranking in aggregate figures</strong></td><td>Open the detail of a circle that is not his</td></tr>
+    <tr><td>Message his centre manager, with attachments</td><td>Message a student, a guardian, or system administration</td></tr>
+    <tr><td><strong>Correct his own recitation and his circle's attendance after recording</strong></td><td>Edit a recitation recorded by a colleague</td></tr>
+    <tr><td><strong>Read all of his centre's competition records</strong></td><td>Act on them unless appointed to the judging panel</td></tr>
+    <tr><td>—</td><td>Create a competition, approve results, or issue a certificate</td></tr>
+    <tr><td>—</td><td>Enrol a new student in the system</td></tr>
+    <tr><td>—</td><td>Issue an account to a student or guardian</td></tr>
+    <tr><td>—</td><td>See finance, CSV export, the audit log, or centre details</td></tr>
+  </tbody>
+</table>
+
+<h2>3.5 The communication chain</h2>
+
+<p>Messaging is not an open directory. Each party addresses only those directly above and below them, which keeps
+system administration out of direct contact with children and their guardians:</p>
+
+<div class="diagram">      system admin  ⇄  centre manager  ⇄  teacher
+                             ⇅
+                    student / guardian</div>
+<figcaption>Figure 3.2 — The closed messaging chain.</figcaption>
+
+<table>
+  <caption>Table 3.4 — Permitted message audiences</caption>
+  <thead><tr><th style="width:28%">Sender</th><th>May address</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">admin / super_admin</td><td>Centre managers only — <strong>not</strong> teachers, students or guardians</td></tr>
+    <tr><td class="mono">center_manager</td><td>The teachers of their centre, their students, their guardians, <strong>and</strong> system administration</td></tr>
+    <tr><td class="mono">teacher</td><td>Their centre manager, and no one else</td></tr>
+    <tr><td class="mono">student / parent</td><td>Receive and reply; do not initiate broadcasts</td></tr>
+  </tbody>
+</table>
+
+<p>The permitted audiences are read from <span class="mono">GET /api/messages/audiences</span> and are never
+hard-coded in the front end. A client-side list diverges from the server rule at the first change, and then offers
+the user an option that returns 403 when pressed. Attachments are downloaded with the permission check applied to
+the <em>message</em>, not to the file: were the file identifier alone sufficient, anyone who guessed one would read
+another centre's document.</p>
+
+<h2>3.6 Deliberate exceptions to the scope rules</h2>
+
+<p>Four places open slightly more than the strict data scope. Each is a deliberate decision with a narrow,
+documented boundary.</p>
+
+<table>
+  <caption>Table 3.5 — Sanctioned scope exceptions</caption>
+  <thead><tr><th style="width:6%">#</th><th style="width:26%">Exception</th><th>Boundary and reason</th></tr></thead>
+  <tbody>
+    <tr><td class="c">E1</td><td><strong>Leaderboard scope is the circle, not the self</strong></td>
+      <td>A student's leaderboard was previously built on his own data scope — a single row — producing “rank 1 of 1”
+      on all four boards. A leaderboard with no peers is not incomplete; it defeats its purpose. The leaderboard
+      query therefore returns the student's circle: peer names, ranks and metric values. These are the aggregate
+      figures written on a blackboard in any mosque. <em>It opens no files</em>: reading a peer's record still passes
+      through <span class="mono">check_student_access</span> and still returns 403.</td></tr>
+    <tr><td class="c">E2</td><td><strong>Competition results are public within the centre</strong></td>
+      <td>A student sees all branches and everyone's ranking. A competition is a declared public event whose results
+      are read aloud.</td></tr>
+    <tr><td class="c">E3</td><td><strong>Circle ranking is visible to teachers</strong></td>
+      <td><span class="mono">GET /api/halaqat-overview/ranking</span> returns aggregate figures plus circle and
+      teacher names — and not one student name from another circle.</td></tr>
+    <tr><td class="c">E4</td><td><strong>Competition records are readable by every teacher of the centre</strong></td>
+      <td>A teacher reads his centre's competitions and their results; only <em>scoring</em> is restricted to the
+      appointed panel. Previously a non-judge received 403 and therefore could not know his centre held competitions
+      at all.</td></tr>
+  </tbody>
+</table>
+
+<div class="note key">
+  <span class="lbl">What none of the four exceptions opens</span>
+  The student file. Whoever sees a peer's name on a leaderboard or in a competition result cannot open that peer's
+  record: the request returns 403, and that assertion is part of the isolation test suite (§13.3).
+</div>
+
+</section>

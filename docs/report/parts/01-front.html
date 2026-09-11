@@ -1,0 +1,296 @@
+<!-- ============================ COVER ============================ -->
+<section class="cover">
+  <div class="top">
+    <div class="eyebrow">Scientific &amp; Engineering Report</div>
+    <h1>Mishkaat</h1>
+    <div class="arname">المشكاة</div>
+    <h2 class="sub">A Multi-Tenant Management, Analytics and Forecasting Platform<br>for Qur'an Memorisation Centres</h2>
+  </div>
+
+  <div>
+    <div class="rule"></div>
+    <dl>
+      <div><dt>System name</dt><dd>Mishkaat (<span class="ar">المشكاة</span>) — Qur'an Centre Management System</dd></div>
+      <div><dt>Application version</dt><dd>2.1.0</dd></div>
+      <div><dt>Document type</dt><dd>Full technical, architectural and scientific documentation</dd></div>
+      <div><dt>Document version</dt><dd>1.0 — first consolidated edition</dd></div>
+      <div><dt>Date of issue</dt><dd>11 September 2026</dd></div>
+      <div><dt>Repository</dt><dd><span class="mono">asse-byte/mishkaat</span></dd></div>
+      <div><dt>Development period</dt><dd>7 May 2026 – 10 September 2026 (63 commits)</dd></div>
+      <div><dt>Target deployment</dt><dd>Qur'an memorisation centres, Republic of Mali (currency: FCFA)</dd></div>
+      <div><dt>Primary interface language</dt><dd>Arabic (right-to-left)</dd></div>
+      <div><dt>Author &amp; rights holder</dt><dd>Abdoul Malick Cisse</dd></div>
+      <div><dt>Classification</dt><dd>Proprietary and confidential — all rights reserved</dd></div>
+    </dl>
+    <div class="rule"></div>
+  </div>
+
+  <div class="foot">
+    <strong>Copyright © 2026 Abdoul Malick Cisse. All rights reserved.</strong><br>
+    This document describes a proprietary and confidential system. It handles the personal data of minors;
+    every recommendation in Chapter&nbsp;10 (Security Engineering) and Chapter&nbsp;14 (Deployment &amp; Operations)
+    should be read as a precondition to production use, not as an optional hardening exercise.
+  </div>
+</section>
+
+<!-- ============================ ABSTRACT ============================ -->
+<section class="chapter-page">
+  <h1 class="chapter"><span class="num">Front Matter</span>Abstract</h1>
+
+  <div class="abstract">
+    <p><strong>Mishkaat</strong> (<span class="ar">المشكاة</span>, “the niche that holds the lamp”) is a
+    production-oriented, multi-tenant web platform for the administration and academic supervision of Qur'an
+    memorisation centres (<span class="ar">دور تحفيظ القرآن</span>). It replaces the paper registers, isolated
+    spreadsheets and oral reporting on which such centres traditionally depend, with a single auditable system
+    covering six user roles, eleven functional domains and a full analytical layer.</p>
+
+    <p>The system is built as a three-tier application: a React&nbsp;19 / TypeScript single-page front end
+    (installable as a Progressive Web App), a FastAPI / Python asynchronous REST back end exposing
+    <strong>136 endpoints across 22 routers</strong>, and a MongoDB document store of <strong>28 application
+    collections</strong> plus a GridFS binary store, governed by <strong>71 index definitions</strong> created at
+    application start-up.</p>
+
+    <p>Beyond conventional record keeping, Mishkaat contributes an <em>analytical engine</em> that converts raw
+    recitation and attendance records into interpretable academic signals: a four-class weighted error taxonomy,
+    five per-student performance metrics computed at read time (mastery, momentum, precision, consistency and review
+    depth), a multi-feature ordinary-least-squares model that forecasts Juz' and full-Qur'an completion dates from
+    memorisation <em>quality</em> as well as quantity, and a multi-criteria motivation layer of four independent
+    leaderboards, ten achievement badges, four periodic challenges and an append-only experience-point ledger.</p>
+
+    <p>Security is treated as a first-class functional requirement rather than a deployment concern, because the
+    platform stores identifying data about children. The report documents a layered control set: short-lived
+    access tokens with refresh-token rotation in an <span class="mono">httpOnly</span> cookie, a token revocation
+    list with <span class="mono">user_version</span> invalidation, dual-key (per-IP and per-account) rate limiting,
+    Fernet field-level encryption of personally identifying student attributes at rest, a SHA-256 hash-chained audit
+    log with atomic sequencing, content-sniffing file-upload validation, and a single-gate authorisation model whose
+    scope boundaries — system, centre, <span class="ar">حلقة</span> (study circle) and self — are defined in one
+    module and asserted by <strong>314 isolation assertions</strong> across seven test suites.</p>
+
+    <p>This document specifies the problem domain, the delimited scope, the stakeholder model, the functional and
+    non-functional requirements, the architecture, the complete data dictionary and relationship model, the API
+    surface, the mathematics of the analytical engine, the security architecture, the business workflows, the user
+    interface, the verification strategy, the operational topology, and the system's measured limitations and
+    forward work.</p>
+  </div>
+
+  <h2>Keywords</h2>
+  <p class="small">Qur'an memorisation management · educational management information system (EMIS) · multi-tenant
+  SaaS · role-based access control · broken object level authorisation (BOLA) · learning analytics · completion
+  forecasting · ordinary least squares regression · gamification · tamper-evident audit logging · field-level
+  encryption · FastAPI · MongoDB · React · Progressive Web App · Arabic RTL interfaces.</p>
+
+  <h2>At a glance</h2>
+  <div class="stat-grid">
+    <div class="stat"><div class="v">136</div><div class="k">REST endpoints</div></div>
+    <div class="stat"><div class="v">22</div><div class="k">API routers</div></div>
+    <div class="stat"><div class="v">28+2</div><div class="k">DB collections (+ GridFS)</div></div>
+    <div class="stat"><div class="v">71</div><div class="k">Index definitions</div></div>
+    <div class="stat"><div class="v">6</div><div class="k">User roles</div></div>
+    <div class="stat"><div class="v">10,390</div><div class="k">Back-end lines (Python)</div></div>
+    <div class="stat"><div class="v">15,843</div><div class="k">Front-end lines (TS/TSX)</div></div>
+    <div class="stat"><div class="v">2,169</div><div class="k">Test lines (7 suites)</div></div>
+    <div class="stat"><div class="v">314</div><div class="k">Isolation assertions</div></div>
+    <div class="stat"><div class="v">5</div><div class="k">Performance metrics</div></div>
+    <div class="stat"><div class="v">4</div><div class="k">Independent leaderboards</div></div>
+    <div class="stat"><div class="v">35</div><div class="k">Audited action types</div></div>
+  </div>
+</section>
+
+<!-- ============================ TOC ============================ -->
+<section class="chapter-page">
+  <h1 class="chapter"><span class="num">Front Matter</span>Table of Contents</h1>
+
+  <div class="toc">
+  <ol>
+    <li>
+      <div class="lvl1"><span class="n">1</span><span>Introduction</span><span class="pg" data-find="CHAPTER 1"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">1.1</span><span>Project identification</span></div></li>
+        <li><div class="lvl2"><span class="n">1.2</span><span>Background and motivation</span></div></li>
+        <li><div class="lvl2"><span class="n">1.3</span><span>Problem statement</span></div></li>
+        <li><div class="lvl2"><span class="n">1.4</span><span>Aim and objectives</span></div></li>
+        <li><div class="lvl2"><span class="n">1.5</span><span>The proposed solution</span></div></li>
+        <li><div class="lvl2"><span class="n">1.6</span><span>Contributions of the work</span></div></li>
+        <li><div class="lvl2"><span class="n">1.7</span><span>Organisation of this report</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">2</span><span>Scope, Assumptions and Delimitations</span><span class="pg" data-find="CHAPTER 2"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">2.1</span><span>Functional scope (in scope)</span></div></li>
+        <li><div class="lvl2"><span class="n">2.2</span><span>Out of scope</span></div></li>
+        <li><div class="lvl2"><span class="n">2.3</span><span>Deliberate exclusions and their rationale</span></div></li>
+        <li><div class="lvl2"><span class="n">2.4</span><span>Assumptions</span></div></li>
+        <li><div class="lvl2"><span class="n">2.5</span><span>Constraints</span></div></li>
+        <li><div class="lvl2"><span class="n">2.6</span><span>Operating environment</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">3</span><span>Stakeholders and Users</span><span class="pg" data-find="CHAPTER 3"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">3.1</span><span>User classes and characteristics</span></div></li>
+        <li><div class="lvl2"><span class="n">3.2</span><span>The scope-resolution chain</span></div></li>
+        <li><div class="lvl2"><span class="n">3.3</span><span>Role capability matrix</span></div></li>
+        <li><div class="lvl2"><span class="n">3.4</span><span>The teacher: what is granted and what is withheld</span></div></li>
+        <li><div class="lvl2"><span class="n">3.5</span><span>The communication chain</span></div></li>
+        <li><div class="lvl2"><span class="n">3.6</span><span>Deliberate exceptions to the scope rules</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">4</span><span>Requirements Specification</span><span class="pg" data-find="CHAPTER 4"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">4.1</span><span>Requirement identification scheme</span></div></li>
+        <li><div class="lvl2"><span class="n">4.2</span><span>Functional requirements</span></div></li>
+        <li><div class="lvl2"><span class="n">4.3</span><span>Non-functional requirements</span></div></li>
+        <li><div class="lvl2"><span class="n">4.4</span><span>Business rules</span></div></li>
+        <li><div class="lvl2"><span class="n">4.5</span><span>Principal use cases</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">5</span><span>System Architecture</span><span class="pg" data-find="CHAPTER 5"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">5.1</span><span>Architectural style and rationale</span></div></li>
+        <li><div class="lvl2"><span class="n">5.2</span><span>Logical view</span></div></li>
+        <li><div class="lvl2"><span class="n">5.3</span><span>Deployment view</span></div></li>
+        <li><div class="lvl2"><span class="n">5.4</span><span>Back-end module inventory</span></div></li>
+        <li><div class="lvl2"><span class="n">5.5</span><span>Router inventory</span></div></li>
+        <li><div class="lvl2"><span class="n">5.6</span><span>Front-end structure</span></div></li>
+        <li><div class="lvl2"><span class="n">5.7</span><span>Request lifecycle</span></div></li>
+        <li><div class="lvl2"><span class="n">5.8</span><span>Recurring design patterns</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">6</span><span>Technology Stack</span><span class="pg" data-find="CHAPTER 6"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">6.1</span><span>Back-end technologies</span></div></li>
+        <li><div class="lvl2"><span class="n">6.2</span><span>Front-end technologies</span></div></li>
+        <li><div class="lvl2"><span class="n">6.3</span><span>Infrastructure and operations</span></div></li>
+        <li><div class="lvl2"><span class="n">6.4</span><span>Development tooling</span></div></li>
+        <li><div class="lvl2"><span class="n">6.5</span><span>Dependency policy</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">7</span><span>Database Design and Data Dictionary</span><span class="pg" data-find="CHAPTER 7"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">7.1</span><span>Choice of a document store</span></div></li>
+        <li><div class="lvl2"><span class="n">7.2</span><span>Collection inventory</span></div></li>
+        <li><div class="lvl2"><span class="n">7.3</span><span>Entity-relationship model</span></div></li>
+        <li><div class="lvl2"><span class="n">7.4</span><span>Relationship catalogue</span></div></li>
+        <li><div class="lvl2"><span class="n">7.5</span><span>Data dictionary — core entities</span></div></li>
+        <li><div class="lvl2"><span class="n">7.6</span><span>Data dictionary — academic records</span></div></li>
+        <li><div class="lvl2"><span class="n">7.7</span><span>Data dictionary — financial records</span></div></li>
+        <li><div class="lvl2"><span class="n">7.8</span><span>Data dictionary — competitions and certificates</span></div></li>
+        <li><div class="lvl2"><span class="n">7.9</span><span>Data dictionary — analytics and motivation</span></div></li>
+        <li><div class="lvl2"><span class="n">7.10</span><span>Data dictionary — communication and governance</span></div></li>
+        <li><div class="lvl2"><span class="n">7.11</span><span>Data dictionary — security and ephemeral state</span></div></li>
+        <li><div class="lvl2"><span class="n">7.12</span><span>Indexing strategy</span></div></li>
+        <li><div class="lvl2"><span class="n">7.13</span><span>Integrity, retention and deletion semantics</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">8</span><span>API Specification</span><span class="pg" data-find="CHAPTER 8"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">8.1</span><span>Conventions</span></div></li>
+        <li><div class="lvl2"><span class="n">8.2</span><span>Endpoint catalogue</span></div></li>
+        <li><div class="lvl2"><span class="n">8.3</span><span>Error model</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">9</span><span>The Analytical Engine</span><span class="pg" data-find="CHAPTER 9"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">9.1</span><span>Provenance and scientific basis</span></div></li>
+        <li><div class="lvl2"><span class="n">9.2</span><span>The weighted error taxonomy</span></div></li>
+        <li><div class="lvl2"><span class="n">9.3</span><span>The five performance metrics</span></div></li>
+        <li><div class="lvl2"><span class="n">9.4</span><span>Completion forecasting</span></div></li>
+        <li><div class="lvl2"><span class="n">9.5</span><span>The motivation layer</span></div></li>
+        <li><div class="lvl2"><span class="n">9.6</span><span>Derived instruments</span></div></li>
+        <li><div class="lvl2"><span class="n">9.7</span><span>Invariant design decisions</span></div></li>
+        <li><div class="lvl2"><span class="n">9.8</span><span>Calibration parameters</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">10</span><span>Security Engineering</span><span class="pg" data-find="CHAPTER 10"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">10.1</span><span>Data sensitivity and threat model</span></div></li>
+        <li><div class="lvl2"><span class="n">10.2</span><span>Authentication and session lifecycle</span></div></li>
+        <li><div class="lvl2"><span class="n">10.3</span><span>Authorisation architecture</span></div></li>
+        <li><div class="lvl2"><span class="n">10.4</span><span>Credential policy and recovery</span></div></li>
+        <li><div class="lvl2"><span class="n">10.5</span><span>Rate limiting and lockout</span></div></li>
+        <li><div class="lvl2"><span class="n">10.6</span><span>Personal data protection at rest</span></div></li>
+        <li><div class="lvl2"><span class="n">10.7</span><span>Tamper-evident audit logging</span></div></li>
+        <li><div class="lvl2"><span class="n">10.8</span><span>File upload security</span></div></li>
+        <li><div class="lvl2"><span class="n">10.9</span><span>Transport and HTTP hardening</span></div></li>
+        <li><div class="lvl2"><span class="n">10.10</span><span>Fail-fast production guards</span></div></li>
+        <li><div class="lvl2"><span class="n">10.11</span><span>Residual risks</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">11</span><span>Business Workflows</span><span class="pg" data-find="CHAPTER 11"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">11.1</span><span>Centre onboarding and approval</span></div></li>
+        <li><div class="lvl2"><span class="n">11.2</span><span>Enrolment and account issuance</span></div></li>
+        <li><div class="lvl2"><span class="n">11.3</span><span>The daily recitation cycle</span></div></li>
+        <li><div class="lvl2"><span class="n">11.4</span><span>Attendance and absence notification</span></div></li>
+        <li><div class="lvl2"><span class="n">11.5</span><span>The competition lifecycle</span></div></li>
+        <li><div class="lvl2"><span class="n">11.6</span><span>Certificate issuance</span></div></li>
+        <li><div class="lvl2"><span class="n">11.7</span><span>Financial operations and the void policy</span></div></li>
+        <li><div class="lvl2"><span class="n">11.8</span><span>Messaging</span></div></li>
+        <li><div class="lvl2"><span class="n">11.9</span><span>Idempotency guards</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">12</span><span>User Interface and Interaction Design</span><span class="pg" data-find="CHAPTER 12"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">12.1</span><span>Design language</span></div></li>
+        <li><div class="lvl2"><span class="n">12.2</span><span>Route map and client-side guards</span></div></li>
+        <li><div class="lvl2"><span class="n">12.3</span><span>Role dashboards</span></div></li>
+        <li><div class="lvl2"><span class="n">12.4</span><span>Component inventory</span></div></li>
+        <li><div class="lvl2"><span class="n">12.5</span><span>Progressive Web App delivery</span></div></li>
+        <li><div class="lvl2"><span class="n">12.6</span><span>Printing and document output</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">13</span><span>Verification and Quality Assurance</span><span class="pg" data-find="CHAPTER 13"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">13.1</span><span>Testing philosophy</span></div></li>
+        <li><div class="lvl2"><span class="n">13.2</span><span>Test suite inventory</span></div></li>
+        <li><div class="lvl2"><span class="n">13.3</span><span>Representative invariants</span></div></li>
+        <li><div class="lvl2"><span class="n">13.4</span><span>Static quality gates</span></div></li>
+        <li><div class="lvl2"><span class="n">13.5</span><span>Coverage gaps</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">14</span><span>Deployment and Operations</span><span class="pg" data-find="CHAPTER 14"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">14.1</span><span>Deployment topologies</span></div></li>
+        <li><div class="lvl2"><span class="n">14.2</span><span>Configuration reference</span></div></li>
+        <li><div class="lvl2"><span class="n">14.3</span><span>Backup and disaster recovery</span></div></li>
+        <li><div class="lvl2"><span class="n">14.4</span><span>Health and observability</span></div></li>
+        <li><div class="lvl2"><span class="n">14.5</span><span>Centre onboarding checklist</span></div></li>
+        <li><div class="lvl2"><span class="n">14.6</span><span>Scaling considerations</span></div></li>
+      </ol>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">15</span><span>Project Metrics and Development History</span><span class="pg" data-find="CHAPTER 15"></span></div>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">16</span><span>Evaluation, Limitations and Future Work</span><span class="pg" data-find="CHAPTER 16"></span></div>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">17</span><span>Conclusion</span><span class="pg" data-find="CHAPTER 17"></span></div>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">—</span><span>References</span><span class="pg" data-find="References and Sources"></span></div>
+    </li>
+    <li>
+      <div class="lvl1"><span class="n">A–D</span><span>Appendices</span><span class="pg" data-find="Appendix A"></span></div>
+      <ol>
+        <li><div class="lvl2"><span class="n">A</span><span>Environment variable reference</span></div></li>
+        <li><div class="lvl2"><span class="n">B</span><span>Audit action catalogue</span></div></li>
+        <li><div class="lvl2"><span class="n">C</span><span>Complete endpoint index</span></div></li>
+        <li><div class="lvl2"><span class="n">D</span><span>Glossary of domain terms</span></div></li>
+      </ol>
+    </li>
+  </ol>
+  </div>
+</section>
