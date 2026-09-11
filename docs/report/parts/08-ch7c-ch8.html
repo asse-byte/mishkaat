@@ -1,0 +1,311 @@
+<section class="chapter-page">
+<h2>7.12 Indexing strategy</h2>
+
+<p>Seventy-one index definitions are declared in <span class="mono">app/startup.py</span> and created on every boot.
+Creation is idempotent and defensive: a definition that conflicts with an existing index of the same key (MongoDB
+error 85, <span class="mono">IndexOptionsConflict</span>) causes the old index to be dropped and recreated rather
+than aborting the boot, and a unique index that cannot be built because legacy duplicates exist logs an explicit
+warning and leaves the service running — <strong>activating the constraint would stop the whole deployment; the
+warning tells the operator to clean the duplicates and restart so that the guarantee becomes real.</strong></p>
+
+<table>
+  <caption>Table 7.18 — Index catalogue</caption>
+  <thead><tr><th style="width:19%">Collection</th><th style="width:38%">Index key</th><th style="width:11%">Properties</th><th>Query it serves</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">users</td><td class="mono">username</td><td>unique</td><td>Login; also the race guard on registration.</td></tr>
+    <tr><td class="mono">users</td><td class="mono">role · center_id · phone</td><td>—</td><td>Role filters, tenant listing, guardian matching.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">center_id · halaqah_id</td><td>—</td><td>Tenant and circle scope resolution.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">(center_id, is_active)</td><td>compound</td><td>“Active students of this centre”, the most frequent scoped query.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">user_id · phone · parent_phone</td><td>—</td><td>Ownership lookups inside <span class="mono">check_student_access</span>.</td></tr>
+    <tr><td class="mono">teachers</td><td class="mono">center_id · user_id</td><td>—</td><td>Tenant listing; the account→teacher-record link in the scope chain.</td></tr>
+    <tr><td class="mono">halaqat</td><td class="mono">center_id · teacher_id</td><td>—</td><td>Tenant listing; the teacher→circles link in the scope chain.</td></tr>
+    <tr><td class="mono">centers</td><td class="mono">manager_id</td><td>—</td><td>Manager→centre resolution.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">student_id</td><td>—</td><td>Per-student history.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">(student_id, date ↓)</td><td>compound</td><td>Timeline and metric computation.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">(student_id, date_str)</td><td>compound</td><td>The once-per-day guard. <strong>Deliberately not unique</strong>: a student may have one new-memorisation and one review session on the same day, and the distinction belongs in code, not in the key — and legacy rows carry no <span class="mono">date_str</span> at all.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">teacher_id · (center_id, date ↓)</td><td>—</td><td>Per-teacher views; centre activity measurement.</td></tr>
+    <tr><td class="mono">attendance</td><td class="mono">(student_id, date_str)</td><td><strong>unique</strong></td><td><span class="mono">uniq_student_day</span> — the business rule, not a hint. Re-submitting the roll updates rather than inserting.</td></tr>
+    <tr><td class="mono">attendance</td><td class="mono">student_id · (student_id, date ↓) · halaqah_id · (halaqah_id, date_str) · (center_id, date ↓)</td><td>—</td><td>Per-student history, per-circle roll for a day, per-centre attendance rate.</td></tr>
+    <tr><td class="mono">fees</td><td class="mono">student_id · status · (center_id, status) · (student_id, status)</td><td>—</td><td>Outstanding-fee dashboards, per-student fee views.</td></tr>
+    <tr><td class="mono">salaries</td><td class="mono">teacher_id · (center_id, created_at ↓) · (center_id, month)</td><td>—</td><td>Listings and the duplicate-payment guard.</td></tr>
+    <tr><td class="mono">expenses</td><td class="mono">(center_id, created_at ↓)</td><td>compound</td><td>Financial reports.</td></tr>
+    <tr><td class="mono">review_plans</td><td class="mono">(center_id, created_at ↓) · teacher_id</td><td>—</td><td>Plan listings.</td></tr>
+    <tr><td class="mono">academic_schedules</td><td class="mono">(center_id, day, time_slot)</td><td>compound</td><td>Weekly timetable retrieval.</td></tr>
+    <tr><td class="mono">teacher_evaluations</td><td class="mono">(center_id, teacher_id)</td><td>compound</td><td>Per-teacher evaluation history.</td></tr>
+    <tr><td class="mono">competitions</td><td class="mono">center_id</td><td>—</td><td>Tenant listing.</td></tr>
+    <tr><td class="mono">competition_contestants</td><td class="mono">(competition_id, student_id)</td><td>compound</td><td>Contestant lookup and duplicate-registration check.</td></tr>
+    <tr><td class="mono">certificates</td><td class="mono">(student_id, milestone)</td><td><strong>unique, partial</strong> <span class="mono">kind = milestone</span></td><td>One milestone certificate per student — enforced in the database, because a code check followed by a write succeeds twice when the button is pressed twice at once.</td></tr>
+    <tr><td class="mono">certificates</td><td class="mono">(competition_id, student_id)</td><td><strong>unique, partial</strong> <span class="mono">kind = competition</span></td><td>One competition certificate per contestant.</td></tr>
+    <tr><td class="mono">certificates</td><td class="mono">serial · (center_id, issued_at ↓)</td><td>unique / compound</td><td>Serial uniqueness; centre certificate register.</td></tr>
+    <tr><td class="mono">xp_ledger</td><td class="mono">(student_id, reason, source_id)</td><td><strong>unique</strong></td><td>Idempotent awarding. Without it any repeat can inflate a student's balance without limit.</td></tr>
+    <tr><td class="mono">xp_ledger</td><td class="mono">(student_id, created_at ↓) · (center_id, created_at ↓)</td><td>—</td><td>Balances and centre-wide totals.</td></tr>
+    <tr><td class="mono">student_badges</td><td class="mono">(student_id, badge_code)</td><td><strong>unique</strong></td><td>One award per badge per student.</td></tr>
+    <tr><td class="mono">student_badges</td><td class="mono">(center_id, earned_at ↓)</td><td>compound</td><td>Recent awards in a centre.</td></tr>
+    <tr><td class="mono">bulk_messages</td><td class="mono">(center_id, sender_id)</td><td>compound</td><td>Inbox and outbox.</td></tr>
+    <tr><td class="mono">notifications</td><td class="mono">(user_id, created_at ↓) · (user_id, created_at ↑) · (user_id, read)</td><td>—</td><td>The list view, the ascending stream poll, and the unread badge.</td></tr>
+    <tr><td class="mono">notifications</td><td class="mono">created_at</td><td><strong>TTL 180 d</strong></td><td>Automatic retention limit.</td></tr>
+    <tr><td class="mono">audit_logs</td><td class="mono">seq</td><td><strong>unique, partial</strong> (numeric only)</td><td>Chain ordering; partial so that pre-sequencing rows do not block the index.</td></tr>
+    <tr><td class="mono">audit_logs</td><td class="mono">timestamp · action · (center_id, timestamp ↓)</td><td>—</td><td>Chronological paging and filtering.</td></tr>
+    <tr><td class="mono">revoked_tokens</td><td class="mono">jti / expires_at</td><td>unique / <strong>TTL 0</strong></td><td>Blacklist lookup; self-cleaning at natural token expiry.</td></tr>
+    <tr><td class="mono">login_attempts</td><td class="mono">last_seen</td><td><strong>TTL</strong> ≥ 1 h</td><td>Lockout state garbage collection.</td></tr>
+    <tr><td class="mono">register_attempts</td><td class="mono">last_seen</td><td><strong>TTL 2 h</strong></td><td>Registration window.</td></tr>
+    <tr><td class="mono">reset_requests</td><td class="mono">last_seen</td><td><strong>TTL 2 h</strong></td><td>Reset-request window.</td></tr>
+    <tr><td class="mono">password_resets</td><td class="mono">username / expires_at</td><td>unique / <strong>TTL 0</strong></td><td>One live code per account; expired codes delete themselves instead of accumulating.</td></tr>
+    <tr><td class="mono">stream_tickets</td><td class="mono">ticket / created_at</td><td>unique / <strong>TTL 300 s</strong></td><td>Single-use stream tickets.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.13 Integrity, retention and deletion semantics</h2>
+
+<h3>7.13.1 Referential integrity</h3>
+<p>References are string-encoded <span class="mono">ObjectId</span> values in ordinary fields. There is no
+cascading delete. Integrity is maintained by three mechanisms instead: <strong>(a)</strong> every write validates
+that the referenced document exists and lies inside the caller's scope before inserting — a competition judge must
+belong to the centre, an attendance record's student must belong to the named circle, a salary's teacher must
+belong to the paying centre; <strong>(b)</strong> deletion is predominantly soft, so dangling references do not
+arise; <strong>(c)</strong> reads tolerate a missing referent by rendering a placeholder rather than failing.</p>
+
+<h3>7.13.2 Three deletion semantics</h3>
+<table>
+  <caption>Table 7.19 — Deletion semantics by record class</caption>
+  <thead><tr><th style="width:17%">Semantics</th><th style="width:24%">Applies to</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Soft delete</strong></td><td>Recitations, students</td><td><span class="mono">is_deleted: true</span>. The row survives for audit but leaves every metric, score, leaderboard and forecast. Filters are written <span class="mono">{is_deleted: {$ne: true}}</span> and never <span class="mono">{is_deleted: false}</span>, because historical rows do not carry the field at all and an equality test would hide every one of them.</td></tr>
+    <tr><td><strong>Void</strong></td><td>Fees, salaries, expenses</td><td><span class="mono">voided: true</span> with a mandatory reason, actor and time. The row is excluded from every total. Money is cancelled, never erased — and a void that did not also remove the amount from the sums would be a cancellation on screen and money still present in the figures.</td></tr>
+    <tr><td><strong>Hard delete</strong></td><td>Attendance rows, competition registrations, messages, certificates (revocation)</td><td>Physical removal, always accompanied by an audit entry naming the actor and the removed record.</td></tr>
+  </tbody>
+</table>
+
+<h3>7.13.3 Retention</h3>
+<ul>
+  <li><strong>Never purged:</strong> audit entries for financial actions (fee collection, salary payment, expense
+  creation and deletion) and for permission and credential actions (password changes and resets, centre
+  registration, approval, rejection and status change). These carry no <span class="mono">purge_at</span> field.</li>
+  <li><strong>Two years:</strong> all other audit entries carry <span class="mono">purge_at = timestamp + 730 days</span>.</li>
+  <li><strong>180 days:</strong> notifications, expired automatically by a TTL index on <span class="mono">created_at</span>.</li>
+  <li><strong>Minutes to hours:</strong> every security collection, expired by TTL so that transient state cannot
+  grow without bound in a long-running deployment.</li>
+  <li><strong>Indefinite:</strong> all academic, financial and identity records, subject to the centre's own policy.</li>
+</ul>
+
+<h3>7.13.4 Normalisation posture</h3>
+<p>The schema is normalised where correctness depends on it and denormalised where display does. Error severity
+weights are the clearest case: the weight is <em>not</em> stored with the error. Only the class code is stored, and
+the weight lives in one module. This is a deliberate removal of a transitive dependency — the weights are declared
+provisional and will be recalibrated on real data, and had they been written alongside each error, recalibration
+could never repair historical records and the same error would carry different weights in different rows.</p>
+
+<p>Conversely, names are denormalised freely: <span class="mono">student_name</span> on a recitation,
+<span class="mono">teacher_name</span> on a circle, <span class="mono">halaqah_name</span> on a student,
+<span class="mono">center_name</span> on a certificate. These are display copies on records that are already
+historical — a certificate should print the centre name as it was at issue — and they remove a join from every list
+view. <span class="mono">center_id</span> is copied onto recitations, attendance and fees for the same reason: it
+converts a two-collection scope query into a single indexed lookup.</p>
+
+</section>
+
+<!-- ============================ CHAPTER 8 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 8</span>API Specification</h1>
+
+<h2>8.1 Conventions</h2>
+
+<ul>
+  <li>All endpoints are prefixed <span class="mono">/api</span> and exchange JSON, except the login form
+  (multipart), file upload (multipart), CSV export (<span class="mono">text/csv</span>), logo retrieval (image) and
+  the notification stream (<span class="mono">text/event-stream</span>).</li>
+  <li>Authentication is a bearer access token in the <span class="mono">Authorization</span> header. Only the
+  refresh endpoint relies on a cookie. Unauthenticated endpoints are exactly five: health, readiness, public centre
+  registration, the public best-centres listing, and login.</li>
+  <li><strong>Scope is applied server-side to every list endpoint.</strong> A query parameter may <em>narrow</em>
+  within the caller's scope; it can never widen it. Passing <span class="mono">?halaqah_id=</span> or a path
+  identifier outside the caller's scope returns 403, not a filtered 200.</li>
+  <li>List endpoints accept <span class="mono">limit</span> and <span class="mono">skip</span> where volume warrants
+  it, with server-enforced ceilings.</li>
+  <li>Every identifier supplied by a client is converted through <span class="mono">safe_object_id</span>, which
+  returns HTTP 400 for a malformed value rather than allowing a 500.</li>
+  <li>Interactive OpenAPI documentation is served at <span class="mono">/api/docs</span> in development and is
+  disabled entirely — schema included — in production.</li>
+</ul>
+
+<h2>8.2 Endpoint catalogue</h2>
+
+<table>
+  <caption>Table 8.1 — Authentication (<span class="mono">auth.py</span>)</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/login</td><td>public</td><td>Authenticate; returns access token, user, expiry, and sets the refresh cookie. Rate limited per IP and per account; logs <span class="mono">LOGIN_SUCCESS</span>, <span class="mono">LOGIN_FAILED</span> or <span class="mono">LOGIN_DENIED_PENDING</span>.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/refresh</td><td>cookie</td><td>Rotate the refresh token and issue a new access token; the old refresh token is revoked.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/auth/me</td><td>any</td><td>The authenticated user's profile.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/logout</td><td>any</td><td>Revoke tokens server-side and clear the cookie.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/change-password</td><td>any</td><td>Change own password; bumps <span class="mono">user_version</span>, invalidating all other sessions.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/forgot-password</td><td>public</td><td>Issue a hashed, time-limited reset code; rate limited by IP and account.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/auth/reset-codes</td><td>admin</td><td>Administrative retrieval of outstanding reset requests (no mail transport exists).</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/reset-password</td><td>public + code</td><td>Complete a reset; five wrong attempts invalidate the code.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/admin-reset-password</td><td>admin</td><td>Direct reset by an administrator; permanently audited.</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/auth/profile</td><td>any</td><td>Update own name, email and phone.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.2 — Centres and supervision (<span class="mono">centers.py</span>, <span class="mono">center_activity.py</span>)</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers</td><td>scoped</td><td>List centres; a non-administrator sees only their own.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/centers</td><td>admin</td><td>Create a centre and, optionally, its manager account with complexity-checked credentials.</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/centers/{id}</td><td>admin, own manager</td><td>Amend a centre.</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/centers/{id}</td><td>admin</td><td>Remove a centre.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers/{id}/details</td><td>admin, own manager</td><td>Centre detail with counts.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers/pending</td><td>admin</td><td>Centres awaiting a decision.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/centers/{id}/approve</td><td>admin</td><td>Activate the centre and its manager; permanent audit entry.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/centers/{id}/reject</td><td>admin</td><td>Reject the application; permanent audit entry.</td></tr>
+    <tr><td class="mono">POST/GET/DELETE</td><td class="mono">/api/centers/{id}/logo</td><td>own manager</td><td>Upload, serve and remove the centre logo (GridFS, content-sniffed, ≤ 512 KB).</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/public/register-center</td><td>public</td><td>Self-registration; creates an inactive centre and manager pending approval. 3 per hour per IP.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/public/best-centers</td><td>public</td><td>Aggregate listing for the landing page.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/admin/system/status</td><td>admin</td><td>Platform status summary.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/admin/centers-activity</td><td>admin</td><td>Per-centre activity index over a window; counts and dates only, no student data.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/super/centers</td><td>super_admin</td><td>Register a centre with its manager.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/super/centers/{id}/status</td><td>super_admin</td><td>Suspend or reactivate a centre; permanently audited.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/super/dashboard/stats</td><td>super_admin</td><td>Platform-wide statistics.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.3 — People, circles and timetable</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/students</td><td>all roles, scoped</td><td>Students within the caller's scope; a teacher sees only his circles', a student only himself.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/students/{id}</td><td>scoped</td><td>Single student, through the ownership gate.</td></tr>
+    <tr><td class="mono">POST / PUT / DELETE</td><td class="mono">/api/students[/{id}]</td><td>admin, manager</td><td>Enrol, amend, deactivate. Personal fields are encrypted on write.</td></tr>
+    <tr><td class="mono">GET / POST</td><td class="mono">/api/students/{id}/accounts</td><td>manager</td><td>List issued accounts (never passwords); issue student and/or guardian accounts.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/students/{id}/accounts/reset</td><td>manager</td><td>Replace one holder's password; shown once, audited.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/teachers</td><td>staff, scoped</td><td>Teacher list; salary and marital status redacted outside administration; a teacher sees only himself.</td></tr>
+    <tr><td class="mono">POST / PUT / DELETE</td><td class="mono">/api/teachers[/{id}]</td><td>admin, manager</td><td>Create (optionally with an account for a circle teacher), amend, deactivate.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/teachers/{id}/transfer</td><td>admin, manager</td><td>Move a teacher between circles; audited with both circles.</td></tr>
+    <tr><td class="mono">POST / GET / DELETE</td><td class="mono">/api/teachers/{id}/evaluations[/{eid}]</td><td>manager; own teacher reads</td><td>Five-criterion evaluation with strengths and weaknesses.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat</td><td>all roles, scoped</td><td>Circles within scope — a teacher sees his own, a student his own, not the whole centre.</td></tr>
+    <tr><td class="mono">POST / PUT / DELETE</td><td class="mono">/api/halaqat[/{id}]</td><td>admin, manager</td><td>Circle lifecycle.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat-overview</td><td>staff</td><td>Every circle of the centre with its aggregate performance in one row.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat-overview/ranking</td><td>staff</td><td>Circle ranking in aggregate figures — readable by teachers, naming no student of another circle.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat-overview/{id}</td><td>staff, in scope</td><td>Circle detail: teacher, evaluation, students and each student's level. A circle outside scope returns 403.</td></tr>
+    <tr><td class="mono">GET / POST / PUT / DELETE</td><td class="mono">/api/academic-schedules[/{id}]</td><td>read: all scoped<br>write: staff</td><td>Weekly timetable.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.4 — Academic records</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/recitations</td><td>all roles, scoped</td><td>Recitations within scope; a cross-scope <span class="mono">?student_id=</span> returns 403.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/recitations</td><td><strong>teacher only</strong></td><td>Record a session. Teacher identity from the token; duplicate same-day session refused with 409; XP and badges granted idempotently.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/recitations/student/{id}</td><td>scoped</td><td>One student's history.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/recitations/{id}</td><td>recording teacher; administration</td><td>Correct or soft-delete; audited.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/analytics/predict/{student_id}</td><td>scoped</td><td>Completion forecast for one student.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance</td><td>staff, scoped</td><td>Attendance within scope; a circle outside scope returns 403.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance/halaqah/{id}</td><td>staff, in scope</td><td>The roll for one circle on a date.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/attendance</td><td><strong>teacher only</strong></td><td>Submit the roll; upserts on (student, day); absences notify guardians; attendance XP granted once per day.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance/student/{id}</td><td>scoped</td><td>One student's attendance history.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance/center</td><td>staff</td><td>Centre-wide attendance view.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/attendance/{id}</td><td>teacher; administration</td><td>Correct a status or remove a row; audited.</td></tr>
+    <tr><td class="mono">GET / POST / PUT / DELETE</td><td class="mono">/api/review-plans[/{id}]</td><td>staff</td><td>Review plans and the per-student daily rate.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/review-plans/today</td><td>scoped</td><td>Today's derived review portion for every student in scope, plus who has reviewed and who is behind.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.5 — Finance</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/fees</td><td>scoped</td><td>Fees; a guardian sees their children's, a student their own.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/fees</td><td>admin, manager</td><td>Create a charge; duplicate monthly fee refused with 409.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/fees/{id}/pay</td><td>admin, manager</td><td>Record collection; a second attempt returns 409. Permanently audited.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/fees/{id}</td><td>admin, manager</td><td>Correct; or void with a reason — never erase.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/fees/student/{id}</td><td>scoped</td><td>One student's fees.</td></tr>
+    <tr><td class="mono">GET / POST</td><td class="mono">/api/salaries</td><td>admin, manager</td><td>List and pay salaries; a second payment for the same teacher and month is refused with 409 naming the existing amount.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/salaries/{id}</td><td>admin, manager</td><td>Correct or void.</td></tr>
+    <tr><td class="mono">GET / POST</td><td class="mono">/api/expenses</td><td>admin, manager</td><td>List and create expenses.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/expenses/{id}</td><td>admin, manager</td><td>Correct or void with a reason.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/finance/summary</td><td>admin, manager</td><td>Collections, salaries, expenses and outstanding balances, all excluding voided rows.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.6 — Competitions and certificates</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/branches</td><td>any</td><td>The closed branch list.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/my-role</td><td>any</td><td>Whether the caller is currently on a panel — drives menu visibility, since judging is a task with a term, not a standing permission.</td></tr>
+    <tr><td class="mono">GET / POST</td><td class="mono">/api/competitions</td><td>read: centre<br>create: manager</td><td>List and create; judges are validated against the centre and their names read from their records.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/years</td><td>centre</td><td>Years with competitions, for the archive.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/competitions/{id}</td><td>manager</td><td>Amend or remove — refused once approved.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/{id}/approve</td><td>manager</td><td>Approve results; freezes the competition. Audited.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/{id}/archive</td><td>manager</td><td>Archive an approved competition.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/{id}/register</td><td>manager, panel judge</td><td>Register a contestant in a branch; one registration per student.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/{id}/contestants</td><td>centre, scoped</td><td>Contestants grouped by branch, each branch ranked from one.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/contestants/{id}/grade</td><td><strong>panel judge only</strong></td><td>Record this judge's marks (memorisation ≤ 70, tajwīd ≤ 20, voice ≤ 10); recomputes the panel mean. Administration is refused: it approves the result, it does not set it.</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/competitions/contestants/{id}</td><td>manager</td><td>Withdraw a contestant.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/certificates</td><td>scoped</td><td>Issued certificates; students and guardians see their own and print them.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/certificates/eligible</td><td>manager</td><td>Students who have reached a milestone but hold no certificate for it.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/certificates/milestone</td><td>manager</td><td>Issue a memorisation certificate; refused until the milestone is met in recited pages.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/certificates/competition/{cid}</td><td>manager</td><td>Issue a competition certificate; refused before results are approved.</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/certificates/{id}</td><td>manager</td><td>Revoke one issued in error; audited as the issue was.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 8.7 — Analytics, communication and governance</caption>
+  <thead><tr><th style="width:7%">Method</th><th style="width:26%">Path</th><th style="width:16%">Access</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET</td><td class="mono">/api/dashboard/stats</td><td>any</td><td>Role-aware statistics; the role is inferred from the token, not taken from the path.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/dashboard/honor-roll</td><td>scoped</td><td>Top students by the composite score, computed in two queries for the whole set.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/analytics/rankings</td><td>scoped</td><td>Ranked students within scope.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/analytics/student/{id}</td><td>scoped</td><td>Analytical profile of one student.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/error-types</td><td>any</td><td>The taxonomy with labels, descriptions and weights — so the client never hard-codes a weight.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/students/{id}</td><td>scoped</td><td>Five metrics, forecast with method and fit, badges, challenges and XP.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/students/{id}/journey</td><td>scoped</td><td>Position across the thirty parts.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/leaderboards</td><td>scoped</td><td>Four independent boards plus the caller's own position.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/challenges/{id}</td><td>scoped</td><td>Challenge progress computed from session records.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/performance/recompute</td><td>manager</td><td>Re-evaluate badges across a centre after enabling the layer on historical data.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/audiences</td><td>any</td><td>Whom the caller may address — the authoritative list.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/messages/attachments</td><td>sender roles</td><td>Upload a document (≤ 5 MB; PNG, JPEG, WEBP or PDF by content sniffing).</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/messages/broadcast</td><td>sender roles</td><td>Send to a permitted audience.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/inbox · /broadcasts</td><td>any</td><td>Received and sent messages.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/messages/{id}/reply</td><td>recipient</td><td>Reply on the thread.</td></tr>
+    <tr><td class="mono">PUT / DELETE</td><td class="mono">/api/messages/{id}</td><td>sender</td><td>Correct or withdraw a sent message.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/{id}/attachments/{fid}</td><td>message recipients</td><td>Download an attachment — authorised on the message, not on the file identifier.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/notifications</td><td>any</td><td>Stored notifications.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/notifications/{id}/read · /read-all</td><td>any</td><td>Mark read.</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/notifications/stream-ticket</td><td>any</td><td>Obtain a single-use, 60-second ticket with a normal Authorization header.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/notifications/stream</td><td>ticket</td><td>Server-sent event stream, reading from the database so it works from any worker.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/audit-logs</td><td>admin</td><td>Filterable audit listing.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/audit-logs/verify</td><td>admin</td><td>Recompute the hash chain and report breaks and marked gaps.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/export/students.csv</td><td>admin, manager</td><td>UTF-8 CSV with BOM; audited as <span class="mono">EXPORT_STUDENTS</span>.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/export/attendance.csv</td><td>admin, manager</td><td>Attendance export for a date range.</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/health · /api/health/ready</td><td>public</td><td>Liveness and database readiness.</td></tr>
+  </tbody>
+</table>
+
+<h2>8.3 Error model</h2>
+
+<table>
+  <caption>Table 8.8 — Status codes and their meaning in this API</caption>
+  <thead><tr><th style="width:9%">Code</th><th style="width:22%">Meaning here</th><th>Representative causes</th></tr></thead>
+  <tbody>
+    <tr><td class="c mono">200</td><td>Success</td><td>Note that a 200 carrying an empty list is the correct answer for an empty scope.</td></tr>
+    <tr><td class="c mono">400</td><td>Malformed input</td><td>Invalid <span class="mono">ObjectId</span>; unknown error-tag code; page count outside (0, 604]; unrecognised competition branch; credentials supplied for an external teacher; username already taken.</td></tr>
+    <tr><td class="c mono">401</td><td>Not authenticated</td><td>Missing, expired, malformed or revoked token; token type mismatch; stale <span class="mono">user_version</span>; token issued before the last password change.</td></tr>
+    <tr><td class="c mono">403</td><td>Authenticated but not permitted</td><td>Out-of-scope circle or student; an administrator attempting to record a recitation; a non-judge attempting to mark; a disabled account presenting a valid token. <strong>Never treated by the client as session expiry.</strong></td></tr>
+    <tr><td class="c mono">404</td><td>Not found</td><td>Missing record, or a file identifier that does not resolve.</td></tr>
+    <tr><td class="c mono">409</td><td>Conflicting state</td><td>The duplicate guards: a same-day recitation, a same-month salary, a same-month fee, an already-paid fee, an already-voided record, a certificate already issued, a milestone not yet reached, an edit to an approved competition.</td></tr>
+    <tr><td class="c mono">413</td><td>Payload too large</td><td>Logo over 512 KB or document over 5 MB, detected during chunked reading rather than after buffering the whole upload.</td></tr>
+    <tr><td class="c mono">429</td><td>Rate limited</td><td>Login lockout (per IP or per account), registration window exceeded, reset-request window exceeded. The message states the remaining time.</td></tr>
+    <tr><td class="c mono">500</td><td>Internal error</td><td>Returns <span class="mono">{detail, request_id}</span> only. The traceback is logged with the same request identifier and never sent to the client.</td></tr>
+  </tbody>
+</table>
+
+<p>Error messages are written in Arabic for the user and are deliberately specific where specificity helps
+(“a memorisation session was already recorded for this student today — edit the existing record”) and deliberately
+generic where specificity would help an attacker (password reset returns the same response whether or not the
+account exists).</p>
+
+</section>

@@ -1,0 +1,245 @@
+<!-- ============================ CHAPTER 15 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 15</span>Project Metrics and Development History</h1>
+
+<h2>15.1 Size metrics</h2>
+
+<table>
+  <caption>Table 15.1 — Code base size</caption>
+  <thead><tr><th style="width:34%">Measure</th><th class="c" style="width:16%">Value</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Back-end source (Python)</td><td class="c num">10,390</td><td>Including the entry wrapper and the index migration script.</td></tr>
+    <tr><td>— domain routers</td><td class="c num">6,866</td><td>22 modules.</td></tr>
+    <tr><td>— cross-cutting modules</td><td class="c num">~3,400</td><td>17 modules, including 638 lines of Pydantic models and 562 of start-up.</td></tr>
+    <tr><td>Front-end source (TS/TSX)</td><td class="c num">15,843</td><td>27 pages, 6 role dashboards, 23 components, contexts, services, libraries and types.</td></tr>
+    <tr><td>Test source (Python)</td><td class="c num">2,169</td><td>7 suites.</td></tr>
+    <tr><td>Tracked text files</td><td class="c num">32,346</td><td>Excluding lock files and binary assets.</td></tr>
+    <tr><td>Tracked files</td><td class="c num">198</td><td>Including operational templates and generated icons.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 15.2 — Interface and data surface</caption>
+  <thead><tr><th style="width:34%">Measure</th><th class="c" style="width:16%">Value</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>REST endpoints</td><td class="c num">136</td><td>62 GET, 43 POST, 14 PUT, 17 DELETE.</td></tr>
+    <tr><td>Routers</td><td class="c num">22</td><td>Included in a fixed order so that literal paths precede parameterised ones.</td></tr>
+    <tr><td>Application collections</td><td class="c num">28</td><td>Plus the two GridFS collections of the <span class="mono">files</span> bucket.</td></tr>
+    <tr><td>Index definitions</td><td class="c num">71</td><td>Created idempotently at start-up, including 9 unique or partial-unique constraints and 8 TTL indexes.</td></tr>
+    <tr><td>User roles</td><td class="c num">6</td><td>Resolved through a four-level scope model.</td></tr>
+    <tr><td>Audited action types</td><td class="c num">35</td><td>12 classified as permanent and never purged.</td></tr>
+    <tr><td>Client routes</td><td class="c num">26</td><td>Each with a role guard mirroring the server.</td></tr>
+    <tr><td>Performance metrics</td><td class="c num">5</td><td>Plus 2 exposed forecasting features.</td></tr>
+    <tr><td>Badges / challenges / boards</td><td class="c num">10 / 4 / 4</td><td>Motivation layer.</td></tr>
+    <tr><td>Isolation assertion sites</td><td class="c num">314</td><td>Across 7 suites.</td></tr>
+  </tbody>
+</table>
+
+<h2>15.2 Development history</h2>
+
+<table>
+  <caption>Table 15.3 — Commit distribution</caption>
+  <thead><tr><th style="width:20%">Period</th><th class="c" style="width:14%">Commits</th><th>Character of the work</th></tr></thead>
+  <tbody>
+    <tr><td>May 2026</td><td class="c num">15</td><td>Foundation and the first full security hardening pass: token lifecycle, bcrypt cost, password complexity, twenty-two cross-tenant authorisation fixes, database-backed rate limiting, field-level encryption of personal data, the centre approval workflow, and the first 31 indexes.</td></tr>
+    <tr><td>September 2026</td><td class="c num">48</td><td>A second review pass (dual-key limiting, hashed reset codes, atomic audit sequencing, the removal of name-based ownership matching, security headers); then the circle-level scope model; then the analytical layer; then a sequence of owner-directed feature batches — competitions with judging panels, teacher evaluation, student and guardian accounts, certificates and centre identity, the closed messaging chain, correctability of administrative acts, and the derived review plan.</td></tr>
+    <tr><th>Total</th><th class="c">63</th><th>7 May – 10 September 2026</th></tr>
+  </tbody>
+</table>
+
+<h3>15.2.1 Development method</h3>
+<p>Two characteristics of how the work proceeded are visible in the repository and are worth recording, because they
+explain the shape of the system.</p>
+
+<p><strong>The project pivoted once, early and completely.</strong> An initial mobile application built with Expo and
+React Native reached a working MVP — authentication, dashboards, and CRUD for students, teachers and finance — and
+was then abandoned in favour of a web application. The current PWA delivery (§12.5) is the resolution of that
+decision: installable on a phone without a store, from one code base.</p>
+
+<p><strong>Defects were fixed at their root and recorded at the site.</strong> Non-obvious decisions carry an inline
+record stating what the previous behaviour was and why it was wrong. This report draws on those records directly, and
+they are the reason it can state, for each mechanism, the specific failure it answers rather than a general
+rationale. The same discipline produced the rule that a leak is closed in the module that decides scope rather than
+in the endpoint where it was noticed — after patching endpoint by endpoint demonstrably failed.</p>
+
+<h2>15.3 Documentation artefacts</h2>
+
+<table>
+  <caption>Table 15.4 — Documents in the repository</caption>
+  <thead><tr><th style="width:30%">Document</th><th>Content</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">README.md</td><td>Requirements, how to run, project layout, features, PWA installation.</td></tr>
+    <tr><td class="mono">docs/PERMISSIONS.md</td><td><strong>The authorisation reference.</strong> Changing a permission requires changing this document and <span class="mono">scope.py</span> together — a rule written because the two had already diverged once.</td></tr>
+    <tr><td class="mono">docs/PERFORMANCE_LAYER.md</td><td>Requirement-to-code mapping for the analytical layer, the formulas, the invariant decisions, the calibration table, and what was deliberately not carried over.</td></tr>
+    <tr><td class="mono">SECURITY_CHECKLIST.md</td><td>The per-centre onboarding checklist (§14.5).</td></tr>
+    <tr><td class="mono">PRODUCTION_HEALTH_REPORT.md</td><td>The security review of 2026-05-22: every vulnerability with its previous behaviour and its fix.</td></tr>
+    <tr><td class="mono">DEPLOYMENT_GUIDE.md</td><td>Deployment by Docker Compose and by hand, with the production security checklist.</td></tr>
+    <tr><td class="mono">ops/README.md</td><td>The operations runbook: topology, systemd sandboxing, backups, secret hygiene, health monitoring.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================ CHAPTER 16 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 16</span>Evaluation, Limitations and Future Work</h1>
+
+<h2>16.1 Evaluation against the objectives</h2>
+
+<table>
+  <caption>Table 16.1 — Objective attainment</caption>
+  <thead><tr><th style="width:7%">Obj.</th><th style="width:13%">Status</th><th>Evidence and qualification</th></tr></thead>
+  <tbody>
+    <tr><td class="c mono">O1</td><td><span class="tag">Met</span></td><td>Fourteen functional domains, 136 endpoints, 28 collections. Complete record management for every entity named in the scope.</td></tr>
+    <tr><td class="c mono">O2</td><td><span class="tag">Met</span></td><td>A four-level scope model in one module, one ownership gate, and 314 assertions testing for leakage rather than success. <em>Qualification:</em> testing proves the boundary for the paths it covers; it is not a proof of absence of leaks, which is why the rule requiring new endpoints to be added to the suite exists.</td></tr>
+    <tr><td class="c mono">O3</td><td><span class="tag">Met</span></td><td>A weighted taxonomy and five metrics that separate quality from quantity, computed at read time from session records.</td></tr>
+    <tr><td class="c mono">O4</td><td><span class="tag warn">Partly</span></td><td>The model is implemented, trained per centre, sign-constrained and fully disclosed. <strong>Its accuracy is unmeasured</strong> and the system claims none — see §16.2.</td></tr>
+    <tr><td class="c mono">O5</td><td><span class="tag">Met</span></td><td>Four boards, ten badges, four challenges, an append-only idempotent ledger.</td></tr>
+    <tr><td class="c mono">O6</td><td><span class="tag">Met</span></td><td>Field-level encryption, short-lived tokens with revocation, dual-key limiting, a hash-chained audit log, content-sniffed uploads, fail-fast production guards. <em>Qualification:</em> phone numbers remain plaintext by necessity (§10.11).</td></tr>
+    <tr><td class="c mono">O7</td><td><span class="tag">Met</span></td><td>Edit and cancel paths on every administrative record; money voided with a reason and excluded from every total.</td></tr>
+    <tr><td class="c mono">O8</td><td><span class="tag">Met</span></td><td>Arabic RTL interface, six role dashboards, installable PWA, explained empty states. <em>Qualification:</em> no formal usability study has been conducted with the intended teachers.</td></tr>
+    <tr><td class="c mono">O9</td><td><span class="tag">Met</span></td><td>A single-command deployment with isolated networks, sandboxed systemd units, encrypted off-host backups, health endpoints and a per-centre onboarding checklist. <em>Qualification:</em> the restore drill is documented but no evidence of execution is in the repository.</td></tr>
+  </tbody>
+</table>
+
+<h2>16.2 Limitations</h2>
+
+<table>
+  <caption>Table 16.2 — Limitations, stated without mitigation</caption>
+  <thead><tr><th style="width:6%">#</th><th style="width:26%">Limitation</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td class="c">L1</td><td><strong>The forecast is unvalidated</strong></td><td>What has been tested is that recitation quality changes the prediction, which is the contribution claimed. Whether the predicted dates are <em>correct</em> requires a cohort of real completions to compare against. No accuracy figure is presented anywhere, and the source's own “80% within ±2 weeks” is a design target, not a result.</td></tr>
+    <tr><td class="c">L2</td><td><strong>Every analytical constant is provisional</strong></td><td>The severity weights, the mastery ceiling, the smoothing factor, the severity threshold and the window lengths are design choices awaiting calibration against real data. They are in configuration for exactly this reason.</td></tr>
+    <tr><td class="c">L3</td><td><strong>Page counts are an approximation when not entered</strong></td><td>Derivation from an āyah range assumes uniform verse density across the mushaf, which is false — early sūrahs have far longer verses than late ones. The teacher can enter the true page count, and should for accuracy.</td></tr>
+    <tr><td class="c">L4</td><td><strong>No front-end test suite</strong></td><td>Interface regressions are caught by hand.</td></tr>
+    <tr><td class="c">L5</td><td><strong>No load testing</strong></td><td>Performance is reasoned from the index and query design; no measured throughput or latency figure is claimed.</td></tr>
+    <tr><td class="c">L6</td><td><strong>Single-language interface</strong></td><td>Arabic only. Deliberate (§2.3.2), but it limits adoption outside Arabic-reading administrations.</td></tr>
+    <tr><td class="c">L7</td><td><strong>No offline data entry</strong></td><td>The shell is cached but writes require connectivity — a real constraint where circles are held in places with poor coverage.</td></tr>
+    <tr><td class="c">L8</td><td><strong>Notifications are in-application only</strong></td><td>A guardian who does not open the application does not learn of an absence. SMS is the channel that would actually reach them in this context.</td></tr>
+    <tr><td class="c">L9</td><td><strong>Naive UTC timestamps</strong></td><td>Consistent, but requiring timezone awareness for a multi-region deployment.</td></tr>
+    <tr><td class="c">L10</td><td><strong>The sponsorship page is a prototype</strong></td><td>Backed by hard-coded sample data with no endpoint behind it. It is presentation, not function, and is documented as such rather than counted as a feature.</td></tr>
+    <tr><td class="c">L11</td><td><strong>No cross-centre analytics</strong></td><td>The activity index measures engagement, not academic outcomes. A supervisory body cannot yet compare centres on memorisation results — deliberately, since that would require reading across tenant boundaries.</td></tr>
+    <tr><td class="c">L12</td><td><strong>Bulk read is limited by scope, not prevented</strong></td><td>An authorised insider can extract everything within their own scope. Export is audited; it is not rate-limited.</td></tr>
+  </tbody>
+</table>
+
+<h2>16.3 Future work</h2>
+
+<table>
+  <caption>Table 16.3 — Prioritised forward work</caption>
+  <thead><tr><th style="width:8%">Pri.</th><th style="width:26%">Item</th><th>Scope of the work</th></tr></thead>
+  <tbody>
+    <tr><td class="c"><span class="tag">1</span></td><td><strong>Forecast validation and calibration</strong></td><td>Collect a season of real completions; measure the error distribution; recalibrate the severity weights and <span class="mono">d_max</span> against them. Only then may any accuracy claim be made — and it must be published with the model version it refers to.</td></tr>
+    <tr><td class="c"><span class="tag">1</span></td><td><strong>SMS notification channel</strong></td><td>Absence alerts and reset codes delivered to a phone. The notification records already exist and are persisted; only the transport is missing.</td></tr>
+    <tr><td class="c"><span class="tag">1</span></td><td><strong>Continuous integration</strong></td><td>Run the seven suites, the static gates and the dependency audit on every push. The procedure exists; the automation does not.</td></tr>
+    <tr><td class="c"><span class="tag warn">2</span></td><td><strong>Offline write queue</strong></td><td>Queue recitation and attendance entries in the service worker and reconcile on reconnection. Idempotency keys already exist for both — the once-per-day keys make replay safe, which is the hard part.</td></tr>
+    <tr><td class="c"><span class="tag warn">2</span></td><td><strong>Front-end test suite</strong></td><td>Component tests for the error tagger, the account modal and the certificate sheet; end-to-end coverage of the role guards.</td></tr>
+    <tr><td class="c"><span class="tag warn">2</span></td><td><strong>PII key rotation tooling</strong></td><td>A re-encryption pass, written before a rotation is ever attempted rather than during one.</td></tr>
+    <tr><td class="c"><span class="tag warn">2</span></td><td><strong>Timezone-aware timestamps</strong></td><td>A data migration: every stored row and every comparison. Not a function substitution.</td></tr>
+    <tr><td class="c"><span class="tag neutral">3</span></td><td><strong>Full English interface</strong></td><td>A broad mechanical translation pass, deserving its own review.</td></tr>
+    <tr><td class="c"><span class="tag neutral">3</span></td><td><strong>Qur'anic corpus integration</strong></td><td>A verse-level database would make page counts exact, validate āyah ranges, and enable sūrah-accurate review portions.</td></tr>
+    <tr><td class="c"><span class="tag neutral">3</span></td><td><strong>Replica set and read splitting</strong></td><td>Availability, plus moving analytical reads to a secondary.</td></tr>
+    <tr><td class="c"><span class="tag neutral">3</span></td><td><strong>Server-side document generation</strong></td><td>Certificates as PDFs generated server-side, so that a certificate is a stored artefact rather than a browser print.</td></tr>
+    <tr><td class="c"><span class="tag neutral">3</span></td><td><strong>Payment integration</strong></td><td>Mobile money for fee collection. It changes the regulatory posture of the system and should be scoped as a separate project (§2.2).</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================ CHAPTER 17 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 17</span>Conclusion</h1>
+
+<p>Mishkaat set out to do two things: to give a Qur'an memorisation centre a single, auditable system for its
+academic, administrative and financial work, and to make the <em>quality</em> of memorisation — not merely its
+quantity — measurable, comparable and explainable. Both are delivered in the system documented here, and the second
+is what distinguishes it from a school-administration product with Arabic labels.</p>
+
+<p>The engineering position that the system takes, and which this report has traced through every chapter, can be
+stated in five sentences.</p>
+
+<ol>
+  <li><strong>Authorisation is a design problem, not a set of checks.</strong> Seventeen data leaks came from one
+  root cause — a system that knew about centres but not about circles — and patching them individually returned them
+  with the next endpoint. Defining the four scope levels in one module, gating every student identifier through one
+  function, and asserting the boundary with tests that look for leakage rather than for success is what actually
+  closed them.</li>
+  <li><strong>Derived values must not be stored.</strong> Every metric, rank and forecast is a function of the
+  session records at the moment of the query, which is what makes a student's position explainable by pointing at
+  their recitations. A stored metric would diverge from its sources at the first correction and take the
+  explicability of the whole motivation layer with it.</li>
+  <li><strong>Uniqueness that matters belongs in the database.</strong> A check followed by a write is not atomic,
+  and the duplicate it fails to prevent is not a cosmetic duplicate in a list: it is a salary paid twice, a
+  certificate issued twice, a metric inflated against the truth.</li>
+  <li><strong>Every administrative act is fallible, and money is voided rather than erased.</strong> A system with no
+  correction path forces its users to work around it, and the records then stop describing reality — which is the
+  failure the software was adopted to fix.</li>
+  <li><strong>Claims must be proportionate to evidence.</strong> The forecast returns its method, its training size
+  and its fit, and no confidence figure, because none has been measured. A coefficient that contradicts the domain is
+  zeroed rather than inverted. A metric with no data returns “no data”, not zero. A system that tells a parent
+  something it cannot support loses the standing it needs to say anything at all.</li>
+</ol>
+
+<p>What remains is honest and specific. The forecasting model is implemented and quality-sensitive but its accuracy
+is unvalidated; the analytical constants are provisional by declaration and await calibration against real
+memorisation data; there is no automated front-end testing and no measured performance envelope; and notifications
+do not yet reach a guardian who is not looking at the application. These are stated in Chapter 16 with the work each
+would require, because a report that presents a system as complete is less useful than one that says precisely where
+the edges are.</p>
+
+<p>The system is, on the evidence assembled in this report, ready for supervised production use in a centre whose
+operator completes the onboarding checklist of §14.5 — and it is ready to be measured, which is the precondition for
+the calibration work that comes next.</p>
+
+</section>
+
+<!-- ============================ REFERENCES ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Back Matter</span>References and Sources</h1>
+
+<h2>Primary sources — the system itself</h2>
+<ol class="small">
+  <li>Mishkaat source repository, <span class="mono">asse-byte/mishkaat</span>, application version 2.1.0. Every
+  factual statement in Chapters 5–14 is drawn from this code base: the router and module inventories, the endpoint
+  catalogue, the data dictionary, the index definitions, the formulas and constants of the analytical engine, the
+  security mechanisms, and the deployment manifests.</li>
+  <li><span class="mono">docs/PERMISSIONS.md</span> — the authorisation reference: the scope model, the capability
+  matrix, the messaging chain, the sanctioned exceptions and the rules that are not to be broken.</li>
+  <li><span class="mono">docs/PERFORMANCE_LAYER.md</span> — the requirement-to-code mapping of the analytical layer,
+  its formulas, its invariant decisions and its calibration table.</li>
+  <li><span class="mono">PRODUCTION_HEALTH_REPORT.md</span> — security review of 22 May 2026, documenting each
+  vulnerability's previous behaviour and its fix.</li>
+  <li><span class="mono">SECURITY_CHECKLIST.md</span> — the per-centre pre-onboarding security procedure.</li>
+  <li><span class="mono">DEPLOYMENT_GUIDE.md</span> and <span class="mono">ops/README.md</span> — deployment
+  topologies, sandboxing, backup pipeline and operational monitoring.</li>
+  <li>Inline decision records throughout <span class="mono">backend/app/</span> and
+  <span class="mono">frontend/src/</span>, each stating the behaviour that preceded a change and why it was wrong.</li>
+</ol>
+
+<h2>External sources</h2>
+<ol start="8" class="small">
+  <li><em>Halaqtna</em> — graduation project report, CPIT-498, Faculty of Computing and Information Technology, King
+  Abdulaziz University. Source of the analytical layer's requirements FR6–FR18, of the five metrics, of the
+  three-feature forecasting design, of the multi-criteria motivation model, and of the provisional constants of its
+  Table 3.4. Its own statement that these constants are provisional and that its accuracy target is a design goal is
+  carried into this system and this report.</li>
+  <li>Hassan, S. and Zailaini, M. A. — classification of recitation and tajwīd errors in Qur'an memorisation
+  assessment; the basis for a closed, comparable error taxonomy in place of free-text error notes.</li>
+  <li>OWASP Application Security Verification Standard and the OWASP API Security Top Ten — the basis for the
+  treatment of broken object level authorisation (BOLA/IDOR), the password-storage guidance (bcrypt cost 12) and
+  the session-management controls documented in Chapter 10.</li>
+  <li>FastAPI, Pydantic, Motor, MongoDB, React, Vite and Tailwind CSS project documentation, at the versions pinned
+  in <span class="mono">backend/requirements.txt</span> and <span class="mono">frontend/package.json</span>.</li>
+  <li>Web application manifest and service worker specifications (W3C) — the basis for the Progressive Web App
+  delivery described in §12.5.</li>
+</ol>
+
+<div class="note">
+  <span class="lbl">On the provenance of factual claims</span>
+  Counts and measurements in this report (lines of code, endpoint totals, collection and index counts, assertion
+  counts, commit distribution) were taken directly from the repository at the state of 11 September 2026. Where a
+  count derived from the source differs from a figure stated in the project's own documentation, both are given and
+  the difference explained — see §13.2.
+</div>
+
+</section>

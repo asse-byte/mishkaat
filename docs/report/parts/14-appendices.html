@@ -1,0 +1,271 @@
+<!-- ============================ APPENDIX A ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Appendix A</span>Environment Variable Reference</h1>
+
+<table>
+  <caption>Table A.1 — Runtime and security configuration</caption>
+  <thead><tr><th style="width:26%">Variable</th><th style="width:13%">Default</th><th style="width:11%" class="c">Required</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">APP_ENV</td><td class="mono">development</td><td class="c">always</td><td><span class="mono">production</span> enables every fail-fast guard, disables the interactive API documentation and its schema, marks the refresh cookie <span class="mono">Secure</span>, and adds HSTS.</td></tr>
+    <tr><td class="mono">SECRET_KEY</td><td>built-in</td><td class="c"><strong>prod</strong></td><td>JWT signing and reset-code HMAC key. The built-in default aborts the boot in production. Generate with <span class="mono">secrets.token_hex(64)</span>.</td></tr>
+    <tr><td class="mono">PII_ENCRYPTION_KEY</td><td>—</td><td class="c"><strong>prod</strong></td><td>Fernet key for student personal data. Absent in production aborts the boot; in development an ephemeral key is generated with a warning that the data will not survive a restart. <strong>Losing it destroys the encrypted fields permanently.</strong></td></tr>
+    <tr><td class="mono">MONGO_URL</td><td class="mono">mongodb://localhost:27017</td><td class="c">always</td><td>Connection URI. Use a scoped application user, never the root account.</td></tr>
+    <tr><td class="mono">DB_NAME</td><td class="mono">quran_center</td><td class="c">always</td><td>Database name.</td></tr>
+    <tr><td class="mono">ALLOWED_ORIGINS</td><td>localhost:3000, :5173, 127.0.0.1:3000</td><td class="c">always</td><td>Comma-separated origins; surrounding whitespace is stripped. <span class="mono">*</span> aborts the boot in production because credentials are enabled.</td></tr>
+    <tr><td class="mono">TRUST_PROXY</td><td class="mono">false</td><td class="c">—</td><td>Honour <span class="mono">X-Forwarded-For</span>. True only behind a proxy you control; false behind one locks out every user after five failures from one person, true without one lets a client forge the header.</td></tr>
+    <tr><td class="mono">INITIAL_ADMIN_PASSWORD</td><td>—</td><td class="c">first prod boot</td><td>Bootstraps the administrator. In development a random password is generated and printed once.</td></tr>
+    <tr><td class="mono">INITIAL_SUPER_ADMIN_PASSWORD</td><td>—</td><td class="c">first prod boot</td><td>Bootstraps the super-administrator. <strong>Must differ from the administrator's</strong> — a leak of one must not be a leak of both.</td></tr>
+    <tr><td class="mono">ADMIN_EMAIL</td><td class="mono">admin@quran-center.com</td><td class="c">—</td><td>Administrator contact address.</td></tr>
+    <tr><td class="mono">SEED_DEMO_DATA</td><td class="mono">false</td><td class="c">—</td><td>Seeds demo users, centres, circles and students. <strong>Never true in production</strong>; absence of demo accounts is a checklist item.</td></tr>
+    <tr><td class="mono">ACCESS_TOKEN_EXPIRE_MINUTES</td><td class="mono">60</td><td class="c">—</td><td>Access token lifetime; lower for higher-sensitivity deployments.</td></tr>
+    <tr><td class="mono">REFRESH_TOKEN_EXPIRE_DAYS</td><td class="mono">7</td><td class="c">—</td><td>Refresh token lifetime, and the cookie's max-age.</td></tr>
+    <tr><td class="mono">BCRYPT_ROUNDS</td><td class="mono">12</td><td class="c">—</td><td>Password hashing cost. Raise to 13–14 where CPU allows.</td></tr>
+    <tr><td class="mono">MAX_ACCOUNT_ATTEMPTS</td><td class="mono">10</td><td class="c">—</td><td>Per-account failure limit — what stops an attacker who rotates IP addresses. The per-IP limit of 5 per 15 minutes is fixed.</td></tr>
+    <tr><td class="mono">ACCOUNT_LOCKOUT_MINUTES</td><td class="mono">15</td><td class="c">—</td><td>Per-account lockout duration.</td></tr>
+    <tr><td class="mono">RESET_CODE_TTL_MINUTES</td><td class="mono">10</td><td class="c">—</td><td>Reset-code lifetime; five wrong guesses invalidate it regardless.</td></tr>
+    <tr><td class="mono">UVICORN_WORKERS</td><td class="mono">4</td><td class="c">—</td><td>Worker processes (container environment).</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table A.2 — Analytical calibration (all optional)</caption>
+  <thead><tr><th style="width:32%">Variable</th><th style="width:14%" class="c">Default</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">MASTERY_DMAX</td><td class="c">3.0</td><td>Weighted error density at which mastery reaches zero.</td></tr>
+    <tr><td class="mono">MOMENTUM_ALPHA</td><td class="c">0.4</td><td>Exponential smoothing factor for momentum.</td></tr>
+    <tr><td class="mono">HIGH_SEVERITY_THRESHOLD</td><td class="c">0.5</td><td>Weight at or above which an error counts as severe.</td></tr>
+    <tr><td class="mono">CONSISTENCY_WINDOW_SESSIONS</td><td class="c">8</td><td>Sessions in the consistency window.</td></tr>
+    <tr><td class="mono">REVIEW_DEPTH_WINDOW_DAYS</td><td class="c">28</td><td>Review-depth window.</td></tr>
+    <tr><td class="mono">XP_PER_PAGE</td><td class="c">10</td><td>Points per page recited.</td></tr>
+    <tr><td class="mono">XP_PER_SESSION</td><td class="c">5</td><td>Points per attended session.</td></tr>
+    <tr><td class="mono">VERSES_PER_PAGE</td><td class="c">6236/604</td><td>Āyah-to-page derivation.</td></tr>
+    <tr><td class="mono">TOTAL_QURAN_PAGES</td><td class="c">604</td><td>Mushaf page count.</td></tr>
+    <tr><td class="mono">TOTAL_QURAN_VERSES</td><td class="c">6236</td><td>Mushaf āyah count.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table A.3 — Container stack variables (<span class="mono">docker-compose.yml</span>)</caption>
+  <thead><tr><th style="width:28%">Variable</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">MONGO_ROOT_USER / _PASSWORD</td><td>MongoDB root credentials; required, with no default, so the stack cannot start unconfigured.</td></tr>
+    <tr><td class="mono">MONGO_APP_USER / _PASSWORD</td><td>The scoped application user created on first boot by <span class="mono">ops/mongo-init.js</span>. These must reach the Mongo container: when they did not, the init script skipped user creation and the application then failed authentication, so the whole stack never came up.</td></tr>
+    <tr><td class="mono">RETENTION_DAYS</td><td>Backup retention (default 30).</td></tr>
+    <tr><td class="mono">GPG_RECIPIENT</td><td>Backup encryption recipient. Only the <em>public</em> key is installed on the production host.</td></tr>
+    <tr><td class="mono">RCLONE_REMOTE</td><td>Optional off-host backup destination.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================ APPENDIX B ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Appendix B</span>Audit Action Catalogue</h1>
+
+<p>Thirty-five action types are written to the hash-chained audit log. Those marked <span class="tag">PERM</span> are
+classified permanent: they carry no <span class="mono">purge_at</span> and are never removed. All others expire 730
+days after they are written.</p>
+
+<table>
+  <caption>Table B.1 — Audited actions</caption>
+  <thead><tr><th style="width:28%">Action</th><th style="width:11%" class="c">Class</th><th>Recorded when</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8">Authentication and credentials</th></tr>
+    <tr><td class="mono">LOGIN_SUCCESS</td><td class="c">2 years</td><td>A successful authentication.</td></tr>
+    <tr><td class="mono">LOGIN_FAILED</td><td class="c">2 years</td><td>A failed attempt. A spike from one address within the lockout window is the brute-force signal.</td></tr>
+    <tr><td class="mono">LOGIN_DENIED_PENDING</td><td class="c">2 years</td><td>A manager of an unapproved centre attempted to log in.</td></tr>
+    <tr><td class="mono">LOGOUT</td><td class="c">2 years</td><td>Tokens revoked and the cookie cleared.</td></tr>
+    <tr><td class="mono">PASSWORD_CHANGED</td><td class="c"><span class="tag">PERM</span></td><td>Self-service change; invalidates every other session.</td></tr>
+    <tr><td class="mono">PASSWORD_RESET_VIA_CODE</td><td class="c"><span class="tag">PERM</span></td><td>Reset completed with a valid code.</td></tr>
+    <tr><td class="mono">ADMIN_RESET_PASSWORD</td><td class="c"><span class="tag">PERM</span></td><td>An administrator set another user's password.</td></tr>
+    <tr><td class="mono">PROFILE_UPDATED</td><td class="c">2 years</td><td>Name, email or phone changed.</td></tr>
+    <tr><td class="mono">ACCOUNT_ISSUED</td><td class="c">2 years</td><td>A student or guardian account was created by the manager.</td></tr>
+    <tr><td class="mono">ACCOUNT_PASSWORD_RESET</td><td class="c">2 years</td><td>A student or guardian password was replaced.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8">Tenancy and governance</th></tr>
+    <tr><td class="mono">PUBLIC_REGISTER_CENTER</td><td class="c">2 years</td><td>A public self-registration; a spike is the spam signal.</td></tr>
+    <tr><td class="mono">ADMIN_REGISTER_CENTER</td><td class="c">2 years</td><td>A centre created by an administrator.</td></tr>
+    <tr><td class="mono">SUPER_REGISTER_CENTER</td><td class="c"><span class="tag">PERM</span></td><td>A centre created by the super-administrator.</td></tr>
+    <tr><td class="mono">CENTER_APPROVED</td><td class="c"><span class="tag">PERM</span></td><td>A pending centre was activated.</td></tr>
+    <tr><td class="mono">CENTER_REJECTED</td><td class="c"><span class="tag">PERM</span></td><td>An application was refused.</td></tr>
+    <tr><td class="mono">SUPER_CENTER_STATUS_CHANGE</td><td class="c"><span class="tag">PERM</span></td><td>A centre suspended or reactivated.</td></tr>
+    <tr><td class="mono">CENTER_LOGO_UPDATED</td><td class="c">2 years</td><td>Centre identity changed.</td></tr>
+    <tr><td class="mono">EXPORT_STUDENTS</td><td class="c">2 years</td><td>A CSV export of student data was taken.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8">Finance — all permanent</th></tr>
+    <tr><td class="mono">collect_fee</td><td class="c"><span class="tag">PERM</span></td><td>A fee was collected.</td></tr>
+    <tr><td class="mono">update_fee</td><td class="c">2 years</td><td>A fee record was corrected.</td></tr>
+    <tr><td class="mono">void_fee</td><td class="c">2 years</td><td>A fee was voided with a written reason.</td></tr>
+    <tr><td class="mono">pay_salary</td><td class="c"><span class="tag">PERM</span></td><td>A salary was paid.</td></tr>
+    <tr><td class="mono">update_salary</td><td class="c">2 years</td><td>A salary record was corrected.</td></tr>
+    <tr><td class="mono">void_salary</td><td class="c">2 years</td><td>A salary was voided.</td></tr>
+    <tr><td class="mono">create_expense</td><td class="c"><span class="tag">PERM</span></td><td>An expense was recorded.</td></tr>
+    <tr><td class="mono">update_expense</td><td class="c">2 years</td><td>An expense was corrected.</td></tr>
+    <tr><td class="mono">delete_expense</td><td class="c"><span class="tag">PERM</span></td><td>An expense was voided.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8">Academic and honours</th></tr>
+    <tr><td class="mono">UPDATE_RECITATION</td><td class="c">2 years</td><td>A session was corrected.</td></tr>
+    <tr><td class="mono">DELETE_RECITATION</td><td class="c">2 years</td><td>A session was soft-deleted.</td></tr>
+    <tr><td class="mono">UPDATE_ATTENDANCE</td><td class="c">2 years</td><td>An attendance status was corrected.</td></tr>
+    <tr><td class="mono">DELETE_ATTENDANCE</td><td class="c">2 years</td><td>An attendance row was removed.</td></tr>
+    <tr><td class="mono">TEACHER_TRANSFERRED</td><td class="c">2 years</td><td>A teacher moved between circles; the entry names both.</td></tr>
+    <tr><td class="mono">COMPETITION_CREATED</td><td class="c">2 years</td><td>A competition was created; the entry records the panel size.</td></tr>
+    <tr><td class="mono">COMPETITION_APPROVED</td><td class="c">2 years</td><td>Results approved; the competition froze.</td></tr>
+    <tr><td class="mono">CERTIFICATE_ISSUED</td><td class="c">2 years</td><td>A certificate was issued; the entry records its serial.</td></tr>
+    <tr><td class="mono">CERTIFICATE_REVOKED</td><td class="c">2 years</td><td>A certificate issued in error was revoked.</td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================ APPENDIX C ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Appendix C</span>Complete Endpoint Index</h1>
+
+<p>All 136 endpoints, in the order the routers are mounted. Router order is deliberate: literal paths are registered
+before parameterised ones, so that <span class="mono">/api/centers/{id}</span> cannot swallow
+<span class="mono">/api/centers/pending</span>.</p>
+
+<table>
+  <caption>Table C.1 — Endpoint index (1 of 2)</caption>
+  <thead><tr><th style="width:9%">Method</th><th style="width:41%">Path</th><th style="width:9%">Method</th><th>Path</th></tr></thead>
+  <tbody>
+    <tr><th colspan="4" style="background:#f3f6f8">auth (10) · audit_logs (2) · notifications (5) · dashboard (4)</th></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/login</td><td class="mono">POST</td><td class="mono">/api/auth/refresh</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/auth/me</td><td class="mono">POST</td><td class="mono">/api/auth/logout</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/change-password</td><td class="mono">POST</td><td class="mono">/api/auth/forgot-password</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/auth/reset-codes</td><td class="mono">POST</td><td class="mono">/api/auth/reset-password</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/auth/admin-reset-password</td><td class="mono">PUT</td><td class="mono">/api/auth/profile</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/audit-logs</td><td class="mono">GET</td><td class="mono">/api/audit-logs/verify</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/notifications</td><td class="mono">POST</td><td class="mono">/api/notifications/{id}/read</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/notifications/read-all</td><td class="mono">POST</td><td class="mono">/api/notifications/stream-ticket</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/notifications/stream</td><td class="mono">GET</td><td class="mono">/api/dashboard/stats</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/dashboard/honor-roll</td><td class="mono">GET</td><td class="mono">/api/analytics/rankings</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/analytics/student/{id}</td><td></td><td></td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">centers (17) · center_activity (1)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers</td><td class="mono">GET</td><td class="mono">/api/public/best-centers</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/admin/system/status</td><td class="mono">POST</td><td class="mono">/api/public/register-center</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/centers/{id}/approve</td><td class="mono">POST</td><td class="mono">/api/centers/{id}/reject</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers/pending</td><td class="mono">POST</td><td class="mono">/api/centers</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/centers/{id}</td><td class="mono">POST</td><td class="mono">/api/centers/{id}/logo</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/centers/{id}/logo</td><td class="mono">DELETE</td><td class="mono">/api/centers/{id}/logo</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/centers/{id}</td><td class="mono">GET</td><td class="mono">/api/centers/{id}/details</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/super/centers</td><td class="mono">POST</td><td class="mono">/api/super/centers/{id}/status</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/super/dashboard/stats</td><td class="mono">GET</td><td class="mono">/api/admin/centers-activity</td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">students (5) · accounts (3) · teachers (8)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/students</td><td class="mono">GET</td><td class="mono">/api/students/{id}</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/students</td><td class="mono">PUT</td><td class="mono">/api/students/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/students/{id}</td><td class="mono">GET</td><td class="mono">/api/students/{id}/accounts</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/students/{id}/accounts</td><td class="mono">POST</td><td class="mono">/api/students/{id}/accounts/reset</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/teachers</td><td class="mono">POST</td><td class="mono">/api/teachers</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/teachers/{id}</td><td class="mono">POST</td><td class="mono">/api/teachers/{id}/transfer</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/teachers/{id}</td><td class="mono">POST</td><td class="mono">/api/teachers/{id}/evaluations</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/teachers/{id}/evaluations</td><td class="mono">DELETE</td><td class="mono">/api/teachers/{id}/evaluations/{eid}</td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">halaqat (4) · halaqat_overview (3) · schedules (4)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat</td><td class="mono">POST</td><td class="mono">/api/halaqat</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/halaqat/{id}</td><td class="mono">DELETE</td><td class="mono">/api/halaqat/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat-overview</td><td class="mono">GET</td><td class="mono">/api/halaqat-overview/ranking</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/halaqat-overview/{id}</td><td class="mono">POST</td><td class="mono">/api/academic-schedules</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/academic-schedules</td><td class="mono">PUT</td><td class="mono">/api/academic-schedules/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/academic-schedules/{id}</td><td></td><td></td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table C.2 — Endpoint index (2 of 2)</caption>
+  <thead><tr><th style="width:9%">Method</th><th style="width:41%">Path</th><th style="width:9%">Method</th><th>Path</th></tr></thead>
+  <tbody>
+    <tr><th colspan="4" style="background:#f3f6f8">competitions (13) · certificates (5)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/branches</td><td class="mono">GET</td><td class="mono">/api/competitions/my-role</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions</td><td class="mono">GET</td><td class="mono">/api/competitions</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/competitions/years</td><td class="mono">PUT</td><td class="mono">/api/competitions/{id}</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/{id}/approve</td><td class="mono">POST</td><td class="mono">/api/competitions/{id}/archive</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/{id}/register</td><td class="mono">GET</td><td class="mono">/api/competitions/{id}/contestants</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/competitions/contestants/{id}/grade</td><td class="mono">DELETE</td><td class="mono">/api/competitions/contestants/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/competitions/{id}</td><td class="mono">GET</td><td class="mono">/api/certificates</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/certificates/eligible</td><td class="mono">POST</td><td class="mono">/api/certificates/milestone</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/certificates/competition/{cid}</td><td class="mono">DELETE</td><td class="mono">/api/certificates/{id}</td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">messages (9) · recitations (6) · performance (6)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/audiences</td><td class="mono">POST</td><td class="mono">/api/messages/attachments</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/messages/broadcast</td><td class="mono">GET</td><td class="mono">/api/messages/inbox</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/broadcasts</td><td class="mono">POST</td><td class="mono">/api/messages/{id}/reply</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/messages/{id}</td><td class="mono">DELETE</td><td class="mono">/api/messages/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/messages/{id}/attachments/{fid}</td><td class="mono">GET</td><td class="mono">/api/recitations</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/recitations</td><td class="mono">GET</td><td class="mono">/api/recitations/student/{id}</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/recitations/{id}</td><td class="mono">DELETE</td><td class="mono">/api/recitations/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/analytics/predict/{id}</td><td class="mono">GET</td><td class="mono">/api/performance/error-types</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/students/{id}</td><td class="mono">GET</td><td class="mono">/api/performance/students/{id}/journey</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/performance/leaderboards</td><td class="mono">GET</td><td class="mono">/api/performance/challenges/{id}</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/performance/recompute</td><td></td><td></td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">attendance (7) · finance (15)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance</td><td class="mono">GET</td><td class="mono">/api/attendance/halaqah/{id}</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/attendance</td><td class="mono">GET</td><td class="mono">/api/attendance/student/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/attendance/center</td><td class="mono">PUT</td><td class="mono">/api/attendance/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/attendance/{id}</td><td class="mono">GET</td><td class="mono">/api/fees</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/fees</td><td class="mono">POST</td><td class="mono">/api/fees/{id}/pay</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/fees/{id}</td><td class="mono">DELETE</td><td class="mono">/api/fees/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/fees/student/{id}</td><td class="mono">GET</td><td class="mono">/api/salaries</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/salaries</td><td class="mono">PUT</td><td class="mono">/api/salaries/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/salaries/{id}</td><td class="mono">GET</td><td class="mono">/api/expenses</td></tr>
+    <tr><td class="mono">POST</td><td class="mono">/api/expenses</td><td class="mono">PUT</td><td class="mono">/api/expenses/{id}</td></tr>
+    <tr><td class="mono">DELETE</td><td class="mono">/api/expenses/{id}</td><td class="mono">GET</td><td class="mono">/api/finance/summary</td></tr>
+    <tr><th colspan="4" style="background:#f3f6f8">review_plans (5) · exports (2) · health (2)</th></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/review-plans</td><td class="mono">POST</td><td class="mono">/api/review-plans</td></tr>
+    <tr><td class="mono">PUT</td><td class="mono">/api/review-plans/{id}</td><td class="mono">DELETE</td><td class="mono">/api/review-plans/{id}</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/review-plans/today</td><td class="mono">GET</td><td class="mono">/api/export/students.csv</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/export/attendance.csv</td><td class="mono">GET</td><td class="mono">/api/health</td></tr>
+    <tr><td class="mono">GET</td><td class="mono">/api/health/ready</td><td></td><td></td></tr>
+  </tbody>
+</table>
+</section>
+
+<!-- ============================ APPENDIX D ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Appendix D</span>Glossary of Domain Terms</h1>
+
+<table>
+  <caption>Table D.1 — Arabic and domain terminology used in this report</caption>
+  <thead><tr><th style="width:20%">Term</th><th style="width:13%">Arabic</th><th>Meaning in this system</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Mishkaat</strong></td><td class="ar">المشكاة</td><td>The system's name; the niche in a wall that holds a lamp.</td></tr>
+    <tr><td><strong>Ḥalaqah</strong> (pl. ḥalaqāt)</td><td class="ar">حلقة / حلقات</td><td>A study circle: a group of students with one teacher. In Mishkaat it is a first-class authorisation scope, not a subdivision of a centre.</td></tr>
+    <tr><td><strong>Muḥaffiẓ</strong></td><td class="ar">محفّظ</td><td>The circle teacher — literally “the one who causes memorisation”. Modelled as the <span class="mono">teacher</span> role with <span class="mono">teacher_type: halaqah</span>.</td></tr>
+    <tr><td><strong>Tasmīʿ</strong></td><td class="ar">تسميع</td><td>Recitation from memory to the teacher; the central academic event and the source of every performance metric.</td></tr>
+    <tr><td><strong>Murājaʿah</strong></td><td class="ar">مراجعة</td><td>Review of previously memorised material, as opposed to new memorisation. Recorded as <span class="mono">recitation_type: review</span>.</td></tr>
+    <tr><td><strong>Juzʾ</strong> (pl. ajzāʾ)</td><td class="ar">جزء / أجزاء</td><td>One of the thirty parts of the Qur'an; ≈ 20.13 pages of the 604-page mushaf.</td></tr>
+    <tr><td><strong>Juzʾ ʿAmma</strong></td><td class="ar">جزء عمّ</td><td>The thirtieth part; the entry-level competition branch.</td></tr>
+    <tr><td><strong>Khatm / Khatmah</strong></td><td class="ar">ختم / ختمة</td><td>Completion of the entire Qur'an; the highest milestone and the highest badge.</td></tr>
+    <tr><td><strong>Ḥāfiẓ</strong></td><td class="ar">حافظ</td><td>One who has memorised the Qur'an.</td></tr>
+    <tr><td><strong>Tajwīd</strong></td><td class="ar">تجويد</td><td>The rules of correct recitation — articulation, elongation, stopping. One error class and one competition criterion.</td></tr>
+    <tr><td><strong>Mushaf</strong></td><td class="ar">مصحف</td><td>The printed copy of the Qur'an. The reference edition here has 604 pages and 6,236 āyāt.</td></tr>
+    <tr><td><strong>Āyah</strong> (pl. āyāt)</td><td class="ar">آية / آيات</td><td>A verse. Recitation ranges are recorded in āyāt and converted to pages.</td></tr>
+    <tr><td><strong>Sūrah</strong></td><td class="ar">سورة</td><td>A chapter; 114 in total.</td></tr>
+    <tr><td><strong>Ḥafṣ ʿan ʿĀṣim</strong></td><td class="ar">حفص عن عاصم</td><td>A transmission of the Qur'anic reading; recorded as a teacher's specialisation.</td></tr>
+    <tr><td><strong>Walī al-amr</strong></td><td class="ar">وليّ الأمر</td><td>The guardian; the <span class="mono">parent</span> role.</td></tr>
+    <tr><td><strong>Dār / markaz taḥfīẓ</strong></td><td class="ar">دار / مركز تحفيظ</td><td>A Qur'an memorisation centre; the tenant of this multi-tenant system.</td></tr>
+    <tr><td><strong>FCFA</strong></td><td>—</td><td>West African CFA franc, the default currency.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8">Technical terms</th></tr>
+    <tr><td><strong>BOLA / IDOR</strong></td><td>—</td><td>Broken object level authorisation: reading another party's record by supplying its identifier. The threat that <span class="mono">check_student_access</span> exists to prevent.</td></tr>
+    <tr><td><strong>Scope</strong></td><td class="ar">النطاق</td><td>The set of records a user may see, resolved at four levels: system, centre, circle, self.</td></tr>
+    <tr><td><strong>Fail closed</strong></td><td>—</td><td>Absent assignment means denial. An empty scope yields nothing, never everything.</td></tr>
+    <tr><td><strong>Void</strong></td><td class="ar">إلغاء</td><td>Cancelling a financial record by marking it with a reason and excluding it from every total — never by deletion.</td></tr>
+    <tr><td><strong>Soft delete</strong></td><td class="ar">حذف ناعم</td><td>Marking an academic record deleted so that it leaves every computation while remaining available for audit.</td></tr>
+    <tr><td><strong>TPI</strong></td><td>—</td><td>The teacher evaluation total: five criteria scored out of ten each, summing to one hundred.</td></tr>
+    <tr><td><strong>Momentum</strong></td><td class="ar">الزخم</td><td>Exponentially smoothed new-memorisation pages per week.</td></tr>
+    <tr><td><strong>Mastery</strong></td><td class="ar">الإتقان</td><td>An index derived from weighted error density per page.</td></tr>
+    <tr><td><strong>Precision</strong></td><td class="ar">الدقّة</td><td>The inverse share of severe errors among tagged errors.</td></tr>
+    <tr><td><strong>Consistency</strong></td><td class="ar">الانتظام</td><td>Attendance across the last eight sessions.</td></tr>
+    <tr><td><strong>Review depth</strong></td><td class="ar">عمق المراجعة</td><td>Review pages relative to new pages over 28 days, capped at 200%.</td></tr>
+    <tr><td><strong>XP ledger</strong></td><td>—</td><td>The append-only experience-point record, made idempotent by a unique key on (student, reason, source).</td></tr>
+    <tr><td><strong>PWA</strong></td><td>—</td><td>Progressive Web App: installable from the browser without an application store.</td></tr>
+    <tr><td><strong>GridFS</strong></td><td>—</td><td>MongoDB's binary storage; holds centre logos and message attachments.</td></tr>
+    <tr><td><strong>TTL index</strong></td><td>—</td><td>An index that deletes documents automatically after a period; used for every transient security collection and for notification retention.</td></tr>
+    <tr><td><strong>JTI</strong></td><td>—</td><td>The unique identifier of a token, used for server-side revocation.</td></tr>
+    <tr><td><strong>Fernet</strong></td><td>—</td><td>The authenticated symmetric encryption scheme (AES-128-CBC with HMAC-SHA256) used for student personal fields.</td></tr>
+  </tbody>
+</table>
+
+<div style="margin-top:3em;padding-top:1.2em;border-top:2px solid var(--accent);text-align:center;" class="small">
+  <strong>End of report.</strong><br>
+  Mishkaat — Scientific &amp; Engineering Report, version 1.0, 11 September 2026.<br>
+  Copyright © 2026 Abdoul Malick Cisse. Proprietary and confidential. All rights reserved.
+</div>
+</section>
+
+</body>
+</html>

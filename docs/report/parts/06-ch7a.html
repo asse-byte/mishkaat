@@ -1,0 +1,164 @@
+<!-- ============================ CHAPTER 7 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 7</span>Database Design and Data Dictionary</h1>
+
+<h2>7.1 Choice of a document store</h2>
+
+<p>The persistence layer is MongoDB 7. The choice is defensible on three grounds specific to this domain, and it
+carries one cost that the design pays explicitly.</p>
+
+<ul>
+  <li><strong>The academic record is naturally document-shaped and evolving.</strong> A recitation acquired an
+  optional page count and a map of error tags after the system was in use; a competition contestant carries an array
+  of per-judge marks whose length varies with the size of the panel; a message carries an array of attachment
+  descriptors and an array of replies. In a relational schema each of these is a join table and a migration.</li>
+  <li><strong>Read patterns are aggregate and scope-filtered.</strong> Almost every screen asks for “all rows for
+  this set of students” — a single <span class="mono">$in</span> query on an indexed field. The system deliberately
+  avoids per-row queries (§5.8), and a document store serves this shape well.</li>
+  <li><strong>Operational simplicity.</strong> One database process, one backup artefact — and, because uploaded
+  files live in GridFS inside the same database, one restore brings back logos and attachments with the records
+  that reference them.</li>
+</ul>
+
+<div class="note warn">
+  <span class="lbl">The cost, and how it is paid</span>
+  A document store enforces no referential integrity and no uniqueness unless asked. The design therefore treats
+  <strong>unique and partial indexes as business rules</strong>, not as performance hints: attendance uniqueness per
+  student per day, certificate uniqueness per student per milestone, XP uniqueness per (student, reason, source) and
+  badge uniqueness per (student, badge) are all database constraints. An application-level check followed by a write
+  is not atomic — two simultaneous clicks each find nothing and each insert — which is precisely the duplication the
+  check was written to prevent.
+</div>
+
+<h2>7.2 Collection inventory</h2>
+
+<table>
+  <caption>Table 7.1 — All collections, by purpose</caption>
+  <thead><tr><th style="width:20%">Collection</th><th style="width:13%">Class</th><th style="width:9%" class="c">Lifetime</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">users</td><td>Core identity</td><td class="c">Permanent</td><td>Every account of every role; the only collection holding credentials.</td></tr>
+    <tr><td class="mono">centers</td><td>Core / tenant</td><td class="c">Permanent</td><td>The tenant root. Every scoped record carries a <span class="mono">center_id</span>.</td></tr>
+    <tr><td class="mono">students</td><td>Core entity</td><td class="c">Permanent</td><td>Enrolled students, with encrypted personal fields and links to their own and their guardian's accounts.</td></tr>
+    <tr><td class="mono">teachers</td><td>Core entity</td><td class="c">Permanent</td><td>Employment records; the bridge between a user account and the circles that account may see.</td></tr>
+    <tr><td class="mono">halaqat</td><td>Core entity</td><td class="c">Permanent</td><td>Study circles: teacher, schedule, capacity, occupancy.</td></tr>
+    <tr><td class="mono">recitations</td><td>Academic record</td><td class="c">Permanent<br>(soft delete)</td><td>The central academic event; the source of every performance metric and forecast.</td></tr>
+    <tr><td class="mono">attendance</td><td>Academic record</td><td class="c">Permanent</td><td>One row per student per day; drives consistency, attendance rate and absence notification.</td></tr>
+    <tr><td class="mono">academic_schedules</td><td>Academic record</td><td class="c">Permanent</td><td>The weekly timetable.</td></tr>
+    <tr><td class="mono">review_plans</td><td>Academic record</td><td class="c">Permanent</td><td>Per-student or per-circle review plans and the daily review rate.</td></tr>
+    <tr><td class="mono">fees</td><td>Financial</td><td class="c">Permanent<br>(void only)</td><td>Student fees with type, due date and payment state.</td></tr>
+    <tr><td class="mono">salaries</td><td>Financial</td><td class="c">Permanent<br>(void only)</td><td>Teacher salary payments by month.</td></tr>
+    <tr><td class="mono">expenses</td><td>Financial</td><td class="c">Permanent<br>(void only)</td><td>Centre expenditure.</td></tr>
+    <tr><td class="mono">competitions</td><td>Events</td><td class="c">Permanent</td><td>Competitions, branches, judging panels, lifecycle state.</td></tr>
+    <tr><td class="mono">competition_contestants</td><td>Events</td><td class="c">Permanent</td><td>One row per registered student per competition, holding per-judge marks.</td></tr>
+    <tr><td class="mono">certificates</td><td>Events</td><td class="c">Permanent</td><td>Issued certificates with serial, issuer and time.</td></tr>
+    <tr><td class="mono">teacher_evaluations</td><td>HR</td><td class="c">Permanent</td><td>Five-criterion teacher evaluations with a computed total.</td></tr>
+    <tr><td class="mono">xp_ledger</td><td>Motivation</td><td class="c">Permanent<br>(append only)</td><td>One immutable row per experience-point award.</td></tr>
+    <tr><td class="mono">student_badges</td><td>Motivation</td><td class="c">Permanent</td><td>One row per badge earned; never removed.</td></tr>
+    <tr><td class="mono">bulk_messages</td><td>Communication</td><td class="c">Permanent</td><td>Broadcast messages with attachments and replies.</td></tr>
+    <tr><td class="mono">notifications</td><td>Communication</td><td class="c">TTL 180 d</td><td>Stored per-user notifications; also the source of the live stream.</td></tr>
+    <tr><td class="mono">audit_logs</td><td>Governance</td><td class="c">Mixed</td><td>Hash-chained action log; financial and permission actions never purged, the rest after 2 years.</td></tr>
+    <tr><td class="mono">counters</td><td>Infrastructure</td><td class="c">Permanent</td><td>Atomic sequence generator: the audit sequence and one certificate series per centre per year.</td></tr>
+    <tr><td class="mono">revoked_tokens</td><td>Security</td><td class="c">TTL to expiry</td><td>The JTI blacklist; entries self-delete when the token would have expired anyway.</td></tr>
+    <tr><td class="mono">login_attempts</td><td>Security</td><td class="c">TTL ≥ 1 h</td><td>Dual-key (IP and account) failure counters and lockout deadlines.</td></tr>
+    <tr><td class="mono">register_attempts</td><td>Security</td><td class="c">TTL 2 h</td><td>Per-IP public registration window.</td></tr>
+    <tr><td class="mono">reset_requests</td><td>Security</td><td class="c">TTL 2 h</td><td>Password-reset request windows by IP and by account.</td></tr>
+    <tr><td class="mono">password_resets</td><td>Security</td><td class="c">TTL to expiry</td><td>Hashed reset codes with an attempt counter.</td></tr>
+    <tr><td class="mono">stream_tickets</td><td>Security</td><td class="c">TTL 5 min</td><td>Single-use tickets for opening the notification stream (valid 60 s in code).</td></tr>
+    <tr><td class="mono">files.files / files.chunks</td><td>Binary</td><td class="c">Permanent</td><td>GridFS bucket holding centre logos and message attachments with their sniffed content type.</td></tr>
+  </tbody>
+</table>
+
+<p class="small">Twenty-eight application collections plus the two GridFS collections that constitute the
+<span class="mono">files</span> bucket.</p>
+
+<h2>7.3 Entity-relationship model</h2>
+
+<div class="diagram">                         ┌──────────────┐
+                         │   centers    │◄──────────── tenant root
+                         │  _id, name   │
+                         └──┬────┬───┬──┘
+          manager_id ───────┘    │   └────────────────────────────┐
+                ┌───────────┐    │ center_id                      │ center_id
+                │   users   │    │                                │
+                │ _id, role │    │                                │
+                └─┬───┬───┬─┘    │                                │
+      user_id ────┘   │   └──────┼──── parent_user_id             │
+          ┌───────────▼──┐       │        ┌──────────────┐        │
+          │   teachers   │       └───────►│   students   │◄───────┘
+          │ _id, user_id │                │ _id, user_id │
+          └───────┬──────┘                └──┬───┬───┬───┘
+       teacher_id │                halaqah_id│   │   │ student_id
+          ┌───────▼──────┐                   │   │   └──────────────┐
+          │   halaqat    │◄──────────────────┘   │                  │
+          │ _id, name    │                       │                  │
+          └───────┬──────┘             ┌─────────▼──────┐   ┌───────▼────────┐
+     halaqah_id   │                    │  recitations   │   │      fees      │
+          ┌───────▼──────┐             │ error_tags{}   │   │ voided?        │
+          │  attendance  │             └───────┬────────┘   └────────────────┘
+          │ uniq(student,│                     │ (source)
+          │      day)    │              ┌──────▼──────┐   ┌────────────────┐
+          └──────────────┘              │  xp_ledger  │   │ student_badges │
+                                        │ uniq(s,r,x) │   │ uniq(s,badge)  │
+          ┌──────────────┐              └─────────────┘   └────────────────┘
+          │ academic_    │
+          │ schedules    │  halaqa_id → halaqat, teacher_id → teachers
+          └──────────────┘
+          ┌──────────────┐  judges[] → teachers          ┌──────────────────┐
+          │ competitions │◄──── competition_id ──────────│   contestants    │
+          └──────────────┘                               │ judge_scores[]   │
+                                                         └────────┬─────────┘
+          ┌──────────────┐                                        │
+          │ certificates │◄──── competition_id + student_id ───────┘
+          │ serial uniq  │◄──── student_id + milestone (unique, partial)
+          └──────────────┘
+          ┌──────────────┐   ┌────────────────────┐   ┌──────────────┐
+          │ bulk_messages│   │ teacher_evaluations│   │  audit_logs  │
+          │ attachments[]│   │ teacher_id, tpi    │   │ seq → hash   │
+          │   → GridFS   │   └────────────────────┘   │   chain      │
+          └──────────────┘                            └──────────────┘</div>
+<figcaption>Figure 7.1 — Entity-relationship model. Arrows point from the referencing field to the referenced
+collection. Every arrow is a string-encoded <span class="mono">ObjectId</span> stored as a plain field, not a
+database-enforced foreign key (§7.13).</figcaption>
+
+<h2>7.4 Relationship catalogue</h2>
+
+<table>
+  <caption>Table 7.2 — Relationships</caption>
+  <thead><tr><th style="width:24%">From</th><th style="width:22%">To</th><th style="width:9%" class="c">Cardinality</th><th>Field and meaning</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">centers</td><td class="mono">users</td><td class="c">1 : 1</td><td><span class="mono">centers.manager_id</span> — the centre's manager account.</td></tr>
+    <tr><td class="mono">users</td><td class="mono">centers</td><td class="c">N : 1</td><td><span class="mono">users.center_id</span> — the tenant an account belongs to. Null for system administrators.</td></tr>
+    <tr><td class="mono">teachers</td><td class="mono">users</td><td class="c">1 : 1</td><td><span class="mono">teachers.user_id</span> — the account bound to this employment record. Absent for external teachers.</td></tr>
+    <tr><td class="mono">teachers</td><td class="mono">centers</td><td class="c">N : 1</td><td><span class="mono">teachers.center_id</span>.</td></tr>
+    <tr><td class="mono">halaqat</td><td class="mono">teachers</td><td class="c">N : 1</td><td><span class="mono">halaqat.teacher_id</span> — a teacher may hold several circles; a circle has one teacher. <span class="mono">teacher_name</span> is denormalised for listing.</td></tr>
+    <tr><td class="mono">halaqat</td><td class="mono">centers</td><td class="c">N : 1</td><td><span class="mono">halaqat.center_id</span>.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">halaqat</td><td class="c">N : 1</td><td><span class="mono">students.halaqah_id</span> (+ denormalised <span class="mono">halaqah_name</span>). This field <em>is</em> circle membership — there is no join table.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">users</td><td class="c">1 : 1</td><td><span class="mono">students.user_id</span> — the student's own account, issued after enrolment.</td></tr>
+    <tr><td class="mono">students</td><td class="mono">users</td><td class="c">N : 1</td><td><span class="mono">students.parent_user_id</span> — the guardian's account; one guardian may hold several children.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">students</td><td class="c">N : 1</td><td><span class="mono">recitations.student_id</span>, with <span class="mono">center_id</span> denormalised so that centre-scoped activity queries need no join.</td></tr>
+    <tr><td class="mono">recitations</td><td class="mono">teachers</td><td class="c">N : 1</td><td><span class="mono">recitations.teacher_id</span> — the <em>teacher record</em> ID, resolved from the token, never the account ID.</td></tr>
+    <tr><td class="mono">attendance</td><td class="mono">students / halaqat</td><td class="c">N : 1</td><td><span class="mono">student_id</span> + <span class="mono">halaqah_id</span>, unique on (<span class="mono">student_id</span>, <span class="mono">date_str</span>).</td></tr>
+    <tr><td class="mono">fees</td><td class="mono">students</td><td class="c">N : 1</td><td><span class="mono">fees.student_id</span>; <span class="mono">center_id</span> copied from the student at creation.</td></tr>
+    <tr><td class="mono">salaries</td><td class="mono">teachers</td><td class="c">N : 1</td><td><span class="mono">salaries.teacher_id</span> + <span class="mono">month</span>, unique in effect by the 409 guard.</td></tr>
+    <tr><td class="mono">academic_schedules</td><td class="mono">halaqat / teachers</td><td class="c">N : 1</td><td><span class="mono">halaqa_id</span>, <span class="mono">teacher_id</span>.</td></tr>
+    <tr><td class="mono">teacher_evaluations</td><td class="mono">teachers</td><td class="c">N : 1</td><td><span class="mono">teacher_id</span>, scoped by <span class="mono">center_id</span>.</td></tr>
+    <tr><td class="mono">competitions</td><td class="mono">teachers</td><td class="c">1 : N</td><td><span class="mono">competitions.judges[]</span> — an embedded array of {teacher_id, teacher_name}; names are read from the teacher record, never from the request.</td></tr>
+    <tr><td class="mono">competition_contestants</td><td class="mono">competitions / students</td><td class="c">N : 1</td><td><span class="mono">competition_id</span> + <span class="mono">student_id</span>; one registration per student per competition.</td></tr>
+    <tr><td class="mono">competition_contestants</td><td class="mono">(embedded)</td><td class="c">1 : N</td><td><span class="mono">judge_scores[]</span> — one entry per judge, each carrying the judge's identity, marks and timestamp.</td></tr>
+    <tr><td class="mono">certificates</td><td class="mono">students</td><td class="c">N : 1</td><td>Unique per (student, milestone) and per (competition, student), enforced by partial unique indexes.</td></tr>
+    <tr><td class="mono">xp_ledger</td><td class="mono">students</td><td class="c">N : 1</td><td>Unique per (student_id, reason, source_id) — the mechanism that makes awarding idempotent.</td></tr>
+    <tr><td class="mono">student_badges</td><td class="mono">students</td><td class="c">N : 1</td><td>Unique per (student_id, badge_code).</td></tr>
+    <tr><td class="mono">bulk_messages</td><td class="mono">users / files</td><td class="c">N : 1 / 1 : N</td><td><span class="mono">sender_id</span>; <span class="mono">attachments[].file_id</span> into GridFS; <span class="mono">replies[]</span> embedded.</td></tr>
+    <tr><td class="mono">notifications</td><td class="mono">users</td><td class="c">N : 1</td><td><span class="mono">user_id</span>; <span class="mono">data</span> carries the context (e.g. the student the alert concerns).</td></tr>
+    <tr><td class="mono">audit_logs</td><td class="mono">users / centers</td><td class="c">N : 1</td><td><span class="mono">actor_id</span>, <span class="mono">center_id</span>; chained to the previous entry by <span class="mono">previous_hash</span>.</td></tr>
+    <tr><td class="mono">centers</td><td class="mono">files</td><td class="c">1 : 1</td><td><span class="mono">centers.logo_file_id</span> into GridFS.</td></tr>
+  </tbody>
+</table>
+
+<h3>7.4.1 The access path expressed as relationships</h3>
+<p>The authorisation chain of §3.2 is a traversal of four of these relationships in reverse:
+<span class="mono">users._id → teachers.user_id → halaqat.teacher_id → students.halaqah_id</span>. Because each link is
+a plain indexed field rather than a materialised permission table, changing a circle's teacher changes that
+teacher's visibility on the next request, with nothing to synchronise and no stale grant to revoke.</p>
+
+</section>

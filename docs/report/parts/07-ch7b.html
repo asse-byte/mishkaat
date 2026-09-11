@@ -1,0 +1,325 @@
+<section class="chapter-page">
+<h2>7.5 Data dictionary — core entities</h2>
+
+<p>Field types are given as stored in MongoDB. <span class="tag">PK</span> marks the primary key,
+<span class="tag neutral">FK</span> a reference to another collection, <span class="tag warn">ENC</span> a field
+encrypted at rest, and <span class="tag no">IDX</span> a field participating in at least one index.</p>
+
+<table>
+  <caption>Table 7.3 — <span class="mono">users</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>Account identifier; referenced as a string by <span class="mono">teachers.user_id</span>, <span class="mono">students.user_id</span>, <span class="mono">students.parent_user_id</span> and <span class="mono">centers.manager_id</span>.</td></tr>
+    <tr><td class="mono">username</td><td class="mono">string</td><td><span class="tag no">IDX</span> unique</td><td>Login name. The unique index is the only defence against a race between two simultaneous registrations of the same name; the code catches the resulting duplicate-key error rather than relying on a prior read.</td></tr>
+    <tr><td class="mono">name</td><td class="mono">string</td><td></td><td>Display name. <strong>Self-editable and therefore never an ownership identifier.</strong></td></tr>
+    <tr><td class="mono">email</td><td class="mono">string?</td><td></td><td>Optional contact address.</td></tr>
+    <tr><td class="mono">phone</td><td class="mono">string?</td><td><span class="tag no">IDX</span></td><td>Used as a legacy ownership match for student and guardian accounts issued before identifier binding.</td></tr>
+    <tr><td class="mono">role</td><td class="mono">enum</td><td><span class="tag no">IDX</span></td><td>One of <span class="mono">super_admin, admin, center_manager, teacher, student, parent</span>.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Tenant binding. Null for system-wide roles; an absent value for a centre-scoped role yields an empty scope, not a global one.</td></tr>
+    <tr><td class="mono">hashed_password</td><td class="mono">string</td><td></td><td>bcrypt hash at cost 12. Plaintext is never stored, logged or returned.</td></tr>
+    <tr><td class="mono">is_active</td><td class="mono">bool</td><td></td><td>Disabled accounts are rejected at login <em>and</em> when presenting a previously valid token.</td></tr>
+    <tr><td class="mono">user_version</td><td class="mono">int</td><td></td><td>Incremented on every password change. A token carrying a stale <span class="mono">uv</span> claim is rejected, so one password change logs out every device.</td></tr>
+    <tr><td class="mono">password_changed_at</td><td class="mono">datetime?</td><td></td><td>Second invalidation check: a token issued before this instant is rejected.</td></tr>
+    <tr><td class="mono">approval_status</td><td class="mono">string?</td><td></td><td>On a manager account created by public registration: <span class="mono">pending</span> until an administrator approves.</td></tr>
+    <tr><td class="mono">created_at</td><td class="mono">datetime</td><td></td><td>Creation timestamp (naive UTC).</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.4 — <span class="mono">centers</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>The tenant identifier carried by almost every other collection.</td></tr>
+    <tr><td class="mono">name</td><td class="mono">string</td><td></td><td>Centre name, printed on certificates and reports.</td></tr>
+    <tr><td class="mono">address</td><td class="mono">string</td><td></td><td>Physical address.</td></tr>
+    <tr><td class="mono">phone</td><td class="mono">string?</td><td></td><td>Contact number.</td></tr>
+    <tr><td class="mono">manager_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The manager's account. Indexed because the manager→centre lookup runs on every scoped request.</td></tr>
+    <tr><td class="mono">manager_name</td><td class="mono">string?</td><td></td><td>Denormalised for listings.</td></tr>
+    <tr><td class="mono">currency</td><td class="mono">string</td><td></td><td>Default <span class="mono">FCFA</span>; used by the finance screens.</td></tr>
+    <tr><td class="mono">status</td><td class="mono">string</td><td></td><td>Commercial state, default <span class="mono">trial</span>.</td></tr>
+    <tr><td class="mono">approval_status</td><td class="mono">string?</td><td></td><td><span class="mono">pending</span> / <span class="mono">approved</span> / <span class="mono">rejected</span> for publicly registered centres.</td></tr>
+    <tr><td class="mono">is_active</td><td class="mono">bool</td><td></td><td>False until approved, and settable to false by the super-administrator to suspend a centre.</td></tr>
+    <tr><td class="mono">logo_file_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span></td><td>GridFS identifier of the centre's logo. Uploadable only by that centre's own manager — an earlier defect let a system administrator attach a logo to an arbitrary centre.</td></tr>
+    <tr><td class="mono">created_at</td><td class="mono">datetime</td><td></td><td>Creation timestamp.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.5 — <span class="mono">students</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>Student identifier, referenced by every academic and financial record.</td></tr>
+    <tr><td class="mono">name</td><td class="mono">string</td><td></td><td>Full name.</td></tr>
+    <tr><td class="mono">date_of_birth</td><td class="mono">string</td><td><span class="tag warn">ENC</span></td><td>Encrypted at rest with Fernet. Decrypted only on an authorised read.</td></tr>
+    <tr><td class="mono">parent_name</td><td class="mono">string?</td><td><span class="tag warn">ENC</span></td><td>Encrypted: it identifies the guardian of a minor.</td></tr>
+    <tr><td class="mono">guardian_address</td><td class="mono">string?</td><td><span class="tag warn">ENC</span></td><td>Encrypted.</td></tr>
+    <tr><td class="mono">phone</td><td class="mono">string?</td><td><span class="tag no">IDX</span></td><td><strong>Deliberately not encrypted</strong>: it is one of the ownership-matching keys used by <span class="mono">check_student_access</span> and must be queryable.</td></tr>
+    <tr><td class="mono">parent_phone</td><td class="mono">string?</td><td><span class="tag no">IDX</span></td><td>Same rationale; also the fallback link for guardian accounts predating identifier binding, and the key used to find the guardian on an absence alert.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Tenant.</td></tr>
+    <tr><td class="mono">halaqah_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Circle membership. A null value places the student outside every teacher's scope.</td></tr>
+    <tr><td class="mono">halaqah_name</td><td class="mono">string?</td><td></td><td>Denormalised circle name, used on certificates and listings.</td></tr>
+    <tr><td class="mono">memorization_plan</td><td class="mono">enum?</td><td></td><td><span class="mono">plan_2_years … plan_5_years</span>, or <span class="mono">plan_review</span>.</td></tr>
+    <tr><td class="mono">student_type</td><td class="mono">enum</td><td></td><td><span class="mono">memorizing</span> or <span class="mono">reviewing</span>.</td></tr>
+    <tr><td class="mono">user_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The student's own account, issued by the manager after enrolment. <strong>The primary ownership key.</strong></td></tr>
+    <tr><td class="mono">parent_user_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span></td><td>The guardian's account — an identifier link that survives a phone number change.</td></tr>
+    <tr><td class="mono">enrollment_date</td><td class="mono">datetime</td><td></td><td>Enrolment timestamp.</td></tr>
+    <tr><td class="mono">progress</td><td class="mono">float</td><td></td><td>Legacy percentage figure retained for older screens. <em>Not</em> the source of any metric in Chapter 9.</td></tr>
+    <tr><td class="mono">current_surah / current_ayah</td><td class="mono">string? / int?</td><td></td><td>Last recorded position.</td></tr>
+    <tr><td class="mono">is_active</td><td class="mono">bool</td><td><span class="tag no">IDX</span></td><td>Compound-indexed with <span class="mono">center_id</span> for the common “active students of this centre” query.</td></tr>
+    <tr><td class="mono">is_deleted</td><td class="mono">bool?</td><td></td><td>Soft-delete marker. Filters use <span class="mono">$ne: true</span> so that historical rows without the field remain visible.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.6 — <span class="mono">teachers</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>The teacher-record identifier — the value written to <span class="mono">recitations.teacher_id</span> and <span class="mono">halaqat.teacher_id</span>. Distinct from the account ID, and confusing the two previously made recitation recording fail for every teacher.</td></tr>
+    <tr><td class="mono">user_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The bound account. Absent for external teachers, who have none.</td></tr>
+    <tr><td class="mono">name</td><td class="mono">string</td><td></td><td>Teacher name.</td></tr>
+    <tr><td class="mono">phone</td><td class="mono">string?</td><td></td><td>Contact number.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Tenant.</td></tr>
+    <tr><td class="mono">teacher_type</td><td class="mono">enum</td><td></td><td><span class="mono">halaqah</span> (circle teacher) or <span class="mono">external</span> (no account, narrower scope, not wider).</td></tr>
+    <tr><td class="mono">job_title</td><td class="mono">string?</td><td></td><td>Free-text post for external and administrative staff.</td></tr>
+    <tr><td class="mono">specialization</td><td class="mono">string?</td><td></td><td>Recitation transmission or subject (e.g. <span class="ar">حفص عن عاصم</span>).</td></tr>
+    <tr><td class="mono">marital_status</td><td class="mono">enum?</td><td></td><td><strong>Redacted</strong> from responses for every role outside centre administration.</td></tr>
+    <tr><td class="mono">work_schedule</td><td class="mono">enum?</td><td></td><td><span class="mono">full_time</span> / <span class="mono">part_time</span>.</td></tr>
+    <tr><td class="mono">salary</td><td class="mono">float?</td><td></td><td><strong>Redacted</strong> outside centre administration. Exposing it previously let every student, guardian and colleague read every teacher's pay.</td></tr>
+    <tr><td class="mono">is_active</td><td class="mono">bool</td><td></td><td>Only active records resolve a scope; deactivation removes visibility immediately.</td></tr>
+    <tr><td class="mono">hire_date</td><td class="mono">datetime</td><td></td><td>Employment start.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.7 — <span class="mono">halaqat</span> (study circles)</caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>Circle identifier — the unit of the teacher's data scope.</td></tr>
+    <tr><td class="mono">name</td><td class="mono">string</td><td></td><td>Circle name (e.g. <span class="ar">حلقة الفجر</span>).</td></tr>
+    <tr><td class="mono">teacher_id</td><td class="mono">string?</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The teaching teacher's record ID. This field, with <span class="mono">is_active</span>, <em>is</em> the teacher's permission grant.</td></tr>
+    <tr><td class="mono">teacher_name</td><td class="mono">string?</td><td></td><td>Denormalised for listings and for the student's view of “my circle and its teacher”.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Tenant.</td></tr>
+    <tr><td class="mono">schedule</td><td class="mono">string</td><td></td><td>Human-readable recurrence (e.g. “daily after Fajr”).</td></tr>
+    <tr><td class="mono">time / location</td><td class="mono">string?</td><td></td><td>Time span and room.</td></tr>
+    <tr><td class="mono">max_students</td><td class="mono">int</td><td></td><td>Capacity, default 20.</td></tr>
+    <tr><td class="mono">current_students</td><td class="mono">int</td><td></td><td>Occupancy counter, recomputed on membership change.</td></tr>
+    <tr><td class="mono">is_active</td><td class="mono">bool</td><td></td><td>Inactive circles drop out of every teacher scope resolution.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.6 Data dictionary — academic records</h2>
+
+<table>
+  <caption>Table 7.8 — <span class="mono">recitations</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td>Session identifier; also the <span class="mono">source_id</span> of the XP award for that session.</td></tr>
+    <tr><td class="mono">student_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Subject of the session. Compound-indexed with <span class="mono">date</span> descending for the timeline, and with <span class="mono">date_str</span> for the daily uniqueness check.</td></tr>
+    <tr><td class="mono">student_name</td><td class="mono">string?</td><td></td><td>Denormalised.</td></tr>
+    <tr><td class="mono">teacher_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The teacher record that recorded it, <strong>taken from the token</strong>, never from the request body.</td></tr>
+    <tr><td class="mono">teacher_name</td><td class="mono">string?</td><td></td><td>Denormalised.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Copied from the student. Added because recitations were the only table without it, forcing every centre-activity query through the students collection.</td></tr>
+    <tr><td class="mono">surah_number</td><td class="mono">int?</td><td></td><td>Sūrah number 1–114.</td></tr>
+    <tr><td class="mono">surah_name</td><td class="mono">string</td><td></td><td>Sūrah name as entered.</td></tr>
+    <tr><td class="mono">start_ayah / end_ayah</td><td class="mono">int</td><td></td><td>Recited range. Used to derive a page count when one is not entered.</td></tr>
+    <tr><td class="mono">pages_count</td><td class="mono">float?</td><td></td><td>Explicit page count, validated to (0, 604]. When present it takes precedence over derivation; all metrics are per page.</td></tr>
+    <tr><td class="mono">recitation_type</td><td class="mono">enum</td><td></td><td><span class="mono">new</span> (fresh memorisation) or <span class="mono">review</span>. Momentum counts only <span class="mono">new</span>; review depth is the ratio between the two.</td></tr>
+    <tr><td class="mono">evaluation</td><td class="mono">enum</td><td></td><td><span class="mono">excellent / good / acceptable / needs_improvement</span> — the teacher's overall judgement, input to the legacy composite score.</td></tr>
+    <tr><td class="mono">error_tags</td><td class="mono">object?</td><td></td><td>Map of error class code → count, validated against the closed taxonomy. <strong>An empty map means “tagged, no errors found” (perfect precision); an absent field means “predates tagging”</strong> and yields no precision value at all.</td></tr>
+    <tr><td class="mono">mistakes_count<br>hesitations_count<br>tajweed_errors_count</td><td class="mono">int</td><td></td><td>Legacy free counters, retained for historical data and older clients. Mapped into the taxonomy on read, and superseded entirely when <span class="mono">error_tags</span> is present so that no error is counted twice.</td></tr>
+    <tr><td class="mono">notes</td><td class="mono">string?</td><td></td><td>Teacher's free note.</td></tr>
+    <tr><td class="mono">date</td><td class="mono">datetime</td><td><span class="tag no">IDX</span></td><td>Exact timestamp.</td></tr>
+    <tr><td class="mono">date_str</td><td class="mono">string</td><td><span class="tag no">IDX</span></td><td><span class="mono">YYYY-MM-DD</span> day key. Written explicitly because a millisecond timestamp supports neither a daily uniqueness check nor a day index.</td></tr>
+    <tr><td class="mono">is_deleted</td><td class="mono">bool?</td><td></td><td>Soft delete: the row survives for audit, and leaves every metric, score and forecast.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.9 — <span class="mono">attendance</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th style="width:11%">Keys</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">_id</td><td class="mono">ObjectId</td><td><span class="tag">PK</span></td><td></td></tr>
+    <tr><td class="mono">student_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Part of the unique key <span class="mono">uniq_student_day</span>.</td></tr>
+    <tr><td class="mono">student_name</td><td class="mono">string?</td><td></td><td>Denormalised.</td></tr>
+    <tr><td class="mono">halaqah_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>The circle whose roll was taken; compound-indexed with <span class="mono">date_str</span> for the daily roll view.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td><span class="tag neutral">FK</span> <span class="tag no">IDX</span></td><td>Copied from the student; without it the dashboard attendance rate returned empty.</td></tr>
+    <tr><td class="mono">status</td><td class="mono">enum</td><td></td><td><span class="mono">present / absent / late / excused</span>. Present, late and excused all count as attendance for the consistency metric.</td></tr>
+    <tr><td class="mono">notes</td><td class="mono">string?</td><td></td><td>Reason or comment.</td></tr>
+    <tr><td class="mono">date</td><td class="mono">datetime</td><td><span class="tag no">IDX</span></td><td>Session timestamp.</td></tr>
+    <tr><td class="mono">date_str</td><td class="mono">string</td><td><span class="tag no">IDX</span> unique with student</td><td>Day key. The unique index makes re-submission of the roll an <em>update</em>, which is what a teacher correcting a mark expects — previously it inserted a second, contradictory row and the absence stayed in the attendance rate forever.</td></tr>
+    <tr><td class="mono">recorded_by</td><td class="mono">string</td><td><span class="tag neutral">FK</span></td><td>The account that took the roll.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.10 — <span class="mono">academic_schedules</span> and <span class="mono">review_plans</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">academic_schedules</span> — the weekly timetable</th></tr>
+    <tr><td class="mono">subject</td><td class="mono">string</td><td>Subject taught in the slot.</td></tr>
+    <tr><td class="mono">day / time_slot</td><td class="mono">string</td><td>Weekday and period; compound-indexed with <span class="mono">center_id</span>.</td></tr>
+    <tr><td class="mono">halaqa_id / teacher_id</td><td class="mono">string</td><td>References to the circle and the teacher, with denormalised names on read.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string?</td><td>Tenant. Optional on the request model because a system administrator is bound to no centre — reading it as a required field previously produced a 500.</td></tr>
+    <tr><td class="mono">room_number</td><td class="mono">string?</td><td>Room.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">review_plans</span> — review programme</th></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td>Tenant; compound-indexed with <span class="mono">created_at</span>.</td></tr>
+    <tr><td class="mono">juz_per_day</td><td class="mono">float?</td><td><strong>The rate that personalises the daily portion.</strong> Set by the teacher when the default of one Juz' per day does not suit a student — a young beginner or an accomplished ḥāfiẓ.</td></tr>
+    <tr><td class="mono">student_id / halaqah_id / teacher_id</td><td class="mono">string?</td><td>Target of the plan.</td></tr>
+    <tr><td class="mono">title / description / notes</td><td class="mono">string?</td><td>Free text.</td></tr>
+    <tr><td class="mono">surahs</td><td class="mono">string[]?</td><td>Named sūrahs in the plan.</td></tr>
+    <tr><td class="mono">start_date / end_date</td><td class="mono">string?</td><td>Plan period.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.7 Data dictionary — financial records</h2>
+
+<table>
+  <caption>Table 7.11 — <span class="mono">fees</span>, <span class="mono">salaries</span>, <span class="mono">expenses</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">fees</span></th></tr>
+    <tr><td class="mono">student_id / student_name</td><td class="mono">string</td><td>Subject of the charge; indexed alone and with <span class="mono">status</span>.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td>Copied from the student at creation; indexed with <span class="mono">status</span> for the outstanding-fees dashboard.</td></tr>
+    <tr><td class="mono">amount</td><td class="mono">float</td><td>Charge in the centre's currency.</td></tr>
+    <tr><td class="mono">fee_type</td><td class="mono">enum</td><td><span class="mono">monthly / annual / registration</span>. Monthly fees are guarded against duplication per student per due month.</td></tr>
+    <tr><td class="mono">due_date</td><td class="mono">string</td><td>Due date; the month component participates in the duplicate guard.</td></tr>
+    <tr><td class="mono">status</td><td class="mono">enum</td><td><span class="mono">pending / paid / overdue</span>.</td></tr>
+    <tr><td class="mono">paid_date</td><td class="mono">datetime?</td><td>Set when collected; a second collection attempt returns 409.</td></tr>
+    <tr><td class="mono">created_at / created_by</td><td class="mono">datetime / string</td><td>Provenance.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">salaries</span></th></tr>
+    <tr><td class="mono">teacher_id / teacher_name</td><td class="mono">string</td><td>Payee.</td></tr>
+    <tr><td class="mono">month</td><td class="mono">string</td><td><span class="mono">YYYY-MM</span>. The triple (teacher, month, centre) must be unique among non-voided rows — a duplicate is money leaving twice.</td></tr>
+    <tr><td class="mono">amount / notes</td><td class="mono">float / string?</td><td>Payment.</td></tr>
+    <tr><td class="mono">center_id / created_at / status</td><td class="mono">string / datetime / string</td><td>Tenant, timestamp and state (<span class="mono">paid</span>).</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">expenses</span></th></tr>
+    <tr><td class="mono">title / category / amount / date</td><td class="mono">string / string? / float / string</td><td>Expenditure line.</td></tr>
+    <tr><td class="mono">center_id / created_at</td><td class="mono">string / datetime</td><td>Tenant and timestamp; compound-indexed.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8">Void fields — present on all three collections</th></tr>
+    <tr><td class="mono">voided</td><td class="mono">bool?</td><td>Set instead of deletion. Every aggregate filters with <span class="mono">{voided: {$ne: true}}</span> — marking a row without excluding it from the sums would be a cancellation on screen and money still present in the figures.</td></tr>
+    <tr><td class="mono">void_reason</td><td class="mono">string?</td><td>Mandatory written reason.</td></tr>
+    <tr><td class="mono">voided_at / voided_by</td><td class="mono">datetime / string</td><td>When and by whom.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.8 Data dictionary — competitions and certificates</h2>
+
+<table>
+  <caption>Table 7.12 — <span class="mono">competitions</span> and <span class="mono">competition_contestants</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">competitions</span></th></tr>
+    <tr><td class="mono">title / date / year</td><td class="mono">string / string / int</td><td>Identity. The year is derived from the date when not supplied, and drives the archive-by-year view.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string</td><td>Tenant; indexed.</td></tr>
+    <tr><td class="mono">branches</td><td class="mono">string[]</td><td>Selected from the closed list: whole Qur'an, 15 parts, 10 parts, 5 parts, Juz' ʿAmma. A branch outside the list is rejected with 400 — free text would make results impossible to aggregate or archive across centres.</td></tr>
+    <tr><td class="mono">judges</td><td class="mono">object[]</td><td><span class="mono">{teacher_id, teacher_name}</span>. Each judge is verified to belong to the centre, and the <em>name is read from the teacher record</em>, not accepted from the request.</td></tr>
+    <tr><td class="mono">status</td><td class="mono">enum</td><td><span class="mono">draft → active → grading → approved → archived</span>. Transition to <span class="mono">grading</span> happens automatically on the first mark.</td></tr>
+    <tr><td class="mono">approved_at / approved_by</td><td class="mono">datetime? / string?</td><td>Approval freezes the competition against all further change.</td></tr>
+    <tr><td class="mono">notes / created_at</td><td class="mono">string? / datetime</td><td></td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">competition_contestants</span></th></tr>
+    <tr><td class="mono">competition_id / student_id</td><td class="mono">string</td><td>Compound-indexed; one registration per student per competition.</td></tr>
+    <tr><td class="mono">center_id / student_name / halaqah_name</td><td class="mono">string</td><td>Tenant and denormalised display fields.</td></tr>
+    <tr><td class="mono">category</td><td class="mono">string</td><td>The branch entered. Ranking is computed <em>within</em> the branch, each from position one.</td></tr>
+    <tr><td class="mono">judge_scores</td><td class="mono">object[]</td><td>One entry per judge: <span class="mono">judge_teacher_id, judge_name, hifdh_score</span> (0–70), <span class="mono">tajweed_score</span> (0–20), <span class="mono">voice_score</span> (0–10), <span class="mono">total</span>, <span class="mono">notes</span>, <span class="mono">graded_at</span>. Re-marking replaces only that judge's entry.</td></tr>
+    <tr><td class="mono">total_score / judges_count</td><td class="mono">float / int</td><td>The mean of the panel's totals and the number of judges who have marked. Previously a single score on the contestant meant the last judge to open the screen silently erased his colleague's marking.</td></tr>
+    <tr><td class="mono">rank_in_branch</td><td class="mono">int?</td><td>Position within the branch, computed on read.</td></tr>
+    <tr><td class="mono">grades</td><td class="mono">object?</td><td>Legacy single-grade structure retained for older records.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.13 — <span class="mono">certificates</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">serial</td><td class="mono">string</td><td><span class="mono">MK-YYYY-NNNNN</span>, allocated from an atomic counter keyed by centre and year. A <span class="mono">count + 1</span> scheme would give two simultaneous issues the same number — exactly what happens on an awards day. Globally unique index.</td></tr>
+    <tr><td class="mono">kind</td><td class="mono">enum</td><td><span class="mono">milestone</span> or <span class="mono">competition</span>.</td></tr>
+    <tr><td class="mono">center_id / center_name</td><td class="mono">string</td><td>Issuing centre; compound-indexed with <span class="mono">issued_at</span>.</td></tr>
+    <tr><td class="mono">student_id / student_name / halaqah_name</td><td class="mono">string</td><td>Recipient.</td></tr>
+    <tr><td class="mono">title / subtitle</td><td class="mono">string</td><td>Printed headings, e.g. “Certificate of memorisation and honour” with the milestone label.</td></tr>
+    <tr><td class="mono">milestone</td><td class="mono">enum?</td><td><span class="mono">juz5 / juz10 / half / khatm</span> — 5, 10, 15 and 30 parts. Unique per student, enforced by a partial unique index.</td></tr>
+    <tr><td class="mono">pages_memorized</td><td class="mono">float?</td><td>The measured basis of the award at the moment of issue.</td></tr>
+    <tr><td class="mono">competition_id / branch / rank / score / judges_names</td><td class="mono">string? / string? / int? / float? / string[]</td><td>Competition certificates. Unique per (competition, student) by partial unique index.</td></tr>
+    <tr><td class="mono">issued_by / issued_by_name / issued_at</td><td class="mono">string / string / datetime</td><td>Issuance is a recorded act, not an ephemeral print: a certificate that is later questioned can be traced in the record, and it cannot be printed twice unknowingly.</td></tr>
+  </tbody>
+</table>
+
+<table>
+  <caption>Table 7.14 — <span class="mono">teacher_evaluations</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">teacher_id / center_id</td><td class="mono">string</td><td>Subject and tenant; compound-indexed.</td></tr>
+    <tr><td class="mono">evaluation_date</td><td class="mono">string</td><td>Date of the assessment.</td></tr>
+    <tr><td class="mono">performance, commitment,<br>sincerity, seriousness, diligence</td><td class="mono">int?</td><td>The five criteria, each validated to 0–10. Together they total one hundred.</td></tr>
+    <tr><td class="mono">strengths / weaknesses</td><td class="mono">string[]</td><td>Written observations. The point of the design is that the score is never a single opaque number whose composition is unknown.</td></tr>
+    <tr><td class="mono">tpi</td><td class="mono">float</td><td>The computed total.</td></tr>
+    <tr><td class="mono">attendance_rate, tajweed_proficiency,<br>student_retention, average_memorization_speed,<br>discipline</td><td class="mono">optional</td><td>Superseded criteria, kept optional so that earlier evaluations remain readable.</td></tr>
+    <tr><td class="mono">evaluated_by / teacher_name / notes / created_at</td><td class="mono">string / string / string? / datetime</td><td>Provenance. Readable by the teacher concerned and by administration only.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.9 Data dictionary — analytics and motivation</h2>
+
+<table>
+  <caption>Table 7.15 — <span class="mono">xp_ledger</span> and <span class="mono">student_badges</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">xp_ledger</span> — append-only</th></tr>
+    <tr><td class="mono">student_id</td><td class="mono">string</td><td>Recipient; indexed with <span class="mono">created_at</span>.</td></tr>
+    <tr><td class="mono">center_id</td><td class="mono">string?</td><td>Tenant, for centre-wide queries.</td></tr>
+    <tr><td class="mono">amount</td><td class="mono">int</td><td>Points granted: 10 per page recited, 5 per attended session, plus badge awards.</td></tr>
+    <tr><td class="mono">reason</td><td class="mono">string</td><td><span class="mono">recitation</span>, <span class="mono">attendance</span>, <span class="mono">badge</span>.</td></tr>
+    <tr><td class="mono">source_id</td><td class="mono">string?</td><td>The originating record: a recitation ID, a <span class="mono">student:date</span> pair for attendance, or a badge code. <strong>The unique index on (student_id, reason, source_id) is what makes awarding idempotent</strong> — re-submitting a roll or reprocessing a session grants nothing twice, and the resulting duplicate-key error is treated as success.</td></tr>
+    <tr><td class="mono">created_at</td><td class="mono">datetime</td><td>Award time. Rows are never updated or deleted.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">student_badges</span></th></tr>
+    <tr><td class="mono">student_id / badge_code</td><td class="mono">string</td><td>Unique together: a badge is earned once.</td></tr>
+    <tr><td class="mono">center_id / earned_at</td><td class="mono">string? / datetime</td><td>Tenant and time. A badge is never withdrawn — it certifies an achievement that occurred; the current state is what the metrics and boards show.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.10 Data dictionary — communication and governance</h2>
+
+<table>
+  <caption>Table 7.16 — <span class="mono">bulk_messages</span>, <span class="mono">notifications</span>, <span class="mono">audit_logs</span>, <span class="mono">counters</span></caption>
+  <thead><tr><th style="width:21%">Field</th><th style="width:13%">Type</th><th>Description</th></tr></thead>
+  <tbody>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">bulk_messages</span></th></tr>
+    <tr><td class="mono">center_id / sender_id / sender_role / sender_name</td><td class="mono">string</td><td>Origin; compound-indexed on (centre, sender). The role is stored so that the chain rule can be evaluated on read.</td></tr>
+    <tr><td class="mono">recipient_role</td><td class="mono">string</td><td>The audience, validated server-side against the chain of §3.5.</td></tr>
+    <tr><td class="mono">subject / content</td><td class="mono">string</td><td>Message body.</td></tr>
+    <tr><td class="mono">attachments</td><td class="mono">object[]</td><td><span class="mono">{file_id, filename, content_type, size}</span>, uploaded first and referenced here. Download authorisation is evaluated on the message, never on the file identifier alone.</td></tr>
+    <tr><td class="mono">replies</td><td class="mono">object[]</td><td>Embedded <span class="mono">{teacher_id, teacher_name, content, timestamp}</span>.</td></tr>
+    <tr><td class="mono">sent_at / edited_at</td><td class="mono">datetime / datetime?</td><td>A correction to a sent message is visible as such.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">notifications</span> — TTL 180 days</th></tr>
+    <tr><td class="mono">user_id</td><td class="mono">string</td><td>Recipient; indexed with <span class="mono">created_at</span> both ascending (for the stream) and descending (for the list), and with <span class="mono">read</span>.</td></tr>
+    <tr><td class="mono">type / title / body / data</td><td class="mono">string / string / string / object</td><td>Event type (e.g. <span class="mono">absentee_alert</span>), display text and structured context.</td></tr>
+    <tr><td class="mono">read / created_at</td><td class="mono">bool / datetime</td><td>Read state; <span class="mono">created_at</span> also carries the TTL that expires the row after 180 days.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">audit_logs</span></th></tr>
+    <tr><td class="mono">seq</td><td class="mono">int</td><td>Atomic sequence from <span class="mono">counters</span>; unique via a partial index that tolerates pre-sequencing rows. The chain is built on this order, not on timestamps — two simultaneous writes previously read the same predecessor and split the chain silently.</td></tr>
+    <tr><td class="mono">actor_id / center_id / action</td><td class="mono">string</td><td>Who, where, what. Thirty-five action types are catalogued in Appendix B.</td></tr>
+    <tr><td class="mono">payload</td><td class="mono">object</td><td>Action-specific detail, serialised deterministically (sorted keys) when hashed.</td></tr>
+    <tr><td class="mono">timestamp</td><td class="mono">datetime</td><td>Truncated to milliseconds before hashing, because MongoDB stores only millisecond precision — hashing microseconds would make every recomputed hash differ from the stored one and report tampering in a sound record.</td></tr>
+    <tr><td class="mono">client_ip</td><td class="mono">string</td><td>Origin address, or <span class="mono">system</span>.</td></tr>
+    <tr><td class="mono">previous_hash / log_hash</td><td class="mono">string</td><td>SHA-256 chain (§10.7).</td></tr>
+    <tr><td class="mono">chain_gap</td><td class="mono">bool?</td><td>Set when the predecessor could not be resolved. The record says so explicitly rather than pretending the chain is intact.</td></tr>
+    <tr><td class="mono">purge_at</td><td class="mono">datetime?</td><td>Set to +730 days for ordinary actions; <strong>absent for financial and permission actions, which are never purged</strong>.</td></tr>
+    <tr><th colspan="3" style="background:#f3f6f8"><span class="mono">counters</span></th></tr>
+    <tr><td class="mono">_id / seq</td><td class="mono">string / int</td><td>Atomic sequence generator. Keys in use: <span class="mono">audit_logs</span> and <span class="mono">cert:&lt;center_id&gt;:&lt;year&gt;</span>.</td></tr>
+  </tbody>
+</table>
+
+<h2>7.11 Data dictionary — security and ephemeral state</h2>
+
+<table>
+  <caption>Table 7.17 — Security collections (all TTL-managed)</caption>
+  <thead><tr><th style="width:19%">Collection</th><th style="width:27%">Key structure</th><th>Fields and lifetime</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">revoked_tokens</td><td class="mono">jti</td><td><span class="mono">jti</span> (unique), <span class="mono">expires_at</span> (TTL 0 — deleted the moment the token would have expired anyway, so the blacklist never grows without bound).</td></tr>
+    <tr><td class="mono">login_attempts</td><td class="mono">_id = "ip:&lt;addr&gt;" or "user:&lt;name&gt;"</td><td><span class="mono">count</span>, <span class="mono">last_seen</span> (TTL ≥ 1 h), <span class="mono">locked_until</span>. Two independent keys: per-IP (5 attempts / 15 min) and per-account (10 / 15 min). An IP-only limiter is evaded by address rotation; behind a proxy it locks out every user at once.</td></tr>
+    <tr><td class="mono">register_attempts</td><td class="mono">_id = IP address</td><td><span class="mono">timestamps[]</span>, <span class="mono">last_seen</span> (TTL 2 h). Three successful registrations per hour. <strong>Recorded on success only</strong> — previously three validation errors consumed the whole hour's quota and locked out someone who had not registered once.</td></tr>
+    <tr><td class="mono">reset_requests</td><td class="mono">_id = "ip:…" or "user:…"</td><td><span class="mono">timestamps[]</span>, <span class="mono">last_seen</span> (TTL 2 h). Five reset requests per hour per key.</td></tr>
+    <tr><td class="mono">password_resets</td><td class="mono">username (unique)</td><td><span class="mono">code_hash</span> (HMAC-SHA256 of “username:code” under the application secret, so a code for one account is useless for another), <span class="mono">expires_at</span> (TTL 0, default 10 minutes), <span class="mono">attempts</span> (five wrong guesses invalidate), <span class="mono">requested_from_ip</span>, <span class="mono">created_at</span>. Any earlier plaintext <span class="mono">code</span> field is actively unset on write.</td></tr>
+    <tr><td class="mono">stream_tickets</td><td class="mono">ticket (unique)</td><td><span class="mono">user_id</span>, <span class="mono">created_at</span> (TTL 300 s sweep), <span class="mono">expires_at</span> (60 s validity enforced in code). Consumed by an atomic find-and-delete, so a ticket cannot be used twice even by two simultaneous requests.</td></tr>
+    <tr><td class="mono">files.files / files.chunks</td><td class="mono">GridFS</td><td>Metadata carries <span class="mono">kind</span>, <span class="mono">center_id</span>, <span class="mono">owner_id</span>, the <em>sniffed</em> <span class="mono">content_type</span>, <span class="mono">size</span> and <span class="mono">uploaded_at</span>.</td></tr>
+  </tbody>
+</table>
+
+</section>

@@ -1,0 +1,268 @@
+<!-- ============================ CHAPTER 10 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 10</span>Security Engineering</h1>
+
+<h2>10.1 Data sensitivity and threat model</h2>
+
+<p>Mishkaat stores the names, dates of birth, guardians' names, addresses and telephone numbers of <strong>children
+under eighteen</strong>, together with a continuous behavioural record of their attendance and academic
+performance, and the financial affairs of the centres that teach them. The security posture assumes the strictest
+applicable privacy regime, and security requirements are treated as functional requirements rather than as
+deployment hardening.</p>
+
+<table>
+  <caption>Table 10.1 — Threat model</caption>
+  <thead><tr><th style="width:6%">#</th><th style="width:24%">Threat</th><th style="width:27%">Realistic scenario</th><th>Control</th></tr></thead>
+  <tbody>
+    <tr><td class="c">T1</td><td><strong>Cross-tenant data access</strong></td><td>A manager of centre A reads the students, fees or recitations of centre B by changing an identifier in a URL.</td><td>Scope resolution on every query; the ownership gate on every student identifier; 314 isolation assertions (§13).</td></tr>
+    <tr><td class="c">T2</td><td><strong>Intra-tenant over-reach</strong></td><td>A circle teacher reads the file, guardian's phone number and metrics of a student from a colleague's circle.</td><td>The circle is a scope in its own right, not a detail inside the centre; <span class="mono">check_student_access</span> verifies circle membership, not merely centre membership.</td></tr>
+    <tr><td class="c">T3</td><td><strong>Identity spoofing through request fields</strong></td><td>A client submits another teacher's identifier as the recorder of a recitation.</td><td>The acting identity is always taken from the verified token, never from the body.</td></tr>
+    <tr><td class="c">T4</td><td><strong>Credential stuffing / brute force</strong></td><td>Automated password guessing, possibly rotating source addresses.</td><td>Dual-key lockout: per IP and per account, stored in the database so it is correct across workers.</td></tr>
+    <tr><td class="c">T5</td><td><strong>Token theft via XSS</strong></td><td>A compromised dependency or browser extension reads a long-lived token from browser storage.</td><td>The refresh token is in an <span class="mono">httpOnly</span> cookie unreadable by script; the access token lives only in memory and lasts one hour.</td></tr>
+    <tr><td class="c">T6</td><td><strong>Session persistence after revocation</strong></td><td>A dismissed employee continues using an issued token; or a user changes their password after a theft and the thief remains logged in.</td><td>JTI revocation list, <span class="mono">user_version</span> invalidation, a <span class="mono">password_changed_at</span> check against the token's issue time, and rejection of disabled accounts at token verification.</td></tr>
+    <tr><td class="c">T7</td><td><strong>Database compromise</strong></td><td>A stolen backup or direct database access exposes children's personal data.</td><td>Field-level Fernet encryption of date of birth, guardian name and address; backups encrypted with GPG before touching disk; the private key kept off the production host.</td></tr>
+    <tr><td class="c">T8</td><td><strong>Repudiation of financial acts</strong></td><td>A disputed payment; a log row edited by someone with database access.</td><td>Hash-chained audit log with atomic sequencing and a never-purged class for money and permissions.</td></tr>
+    <tr><td class="c">T9</td><td><strong>Malicious file upload</strong></td><td>An executable or an SVG carrying script uploaded as a “logo” and then served from the application's own origin.</td><td>Magic-byte sniffing rather than the declared type; an allow-list that excludes SVG; hard size caps enforced during chunked reading.</td></tr>
+    <tr><td class="c">T10</td><td><strong>Registration and reset abuse</strong></td><td>Flooding public registration; enumerating accounts through password reset.</td><td>Per-IP windows counted on success only; identical responses whether or not an account exists; hashed, short-lived, attempt-capped codes.</td></tr>
+    <tr><td class="c">T11</td><td><strong>Token leakage through URLs</strong></td><td>An access token passed as a query parameter to open an event stream is written into proxy logs, browser history and <span class="mono">Referer</span> headers.</td><td>Single-use stream tickets valid sixty seconds, obtained with a normal Authorization header.</td></tr>
+    <tr><td class="c">T12</td><td><strong>Information disclosure through errors</strong></td><td>A stack trace returned to the client reveals paths, versions and query structure.</td><td>A generic 500 with a request identifier; the traceback is logged server-side under the same identifier.</td></tr>
+  </tbody>
+</table>
+
+<h2>10.2 Authentication and session lifecycle</h2>
+
+<table>
+  <caption>Table 10.2 — Token design</caption>
+  <thead><tr><th style="width:22%">Property</th><th style="width:20%">Access token</th><th style="width:20%">Refresh token</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>Lifetime</td><td>60 minutes</td><td>7 days</td><td>A stolen access token expires quickly; the refresh token is not reachable by script.</td></tr>
+    <tr><td>Transport</td><td><span class="mono">Authorization: Bearer</span></td><td><span class="mono">httpOnly</span> cookie, path <span class="mono">/api/auth</span>, <span class="mono">SameSite=lax</span>, <span class="mono">Secure</span> in production</td><td>The path restriction means the cookie is not sent with ordinary API calls, narrowing exposure; <span class="mono">SameSite=lax</span> protects the refresh endpoint from cross-site forgery.</td></tr>
+    <tr><td>Client storage</td><td>A module-scoped variable</td><td>Never visible to JavaScript</td><td>Nothing in <span class="mono">localStorage</span>: one XSS flaw previously sufficed to steal a seven-day token that could be rotated quietly, keeping an attacker inside the account even after the owner changed their password elsewhere.</td></tr>
+    <tr><td>Claims</td><td colspan="2"><span class="mono">sub</span>, <span class="mono">uv</span> (user version), <span class="mono">exp</span>, <span class="mono">iat</span>, <span class="mono">jti</span>, <span class="mono">type</span></td><td>Type is verified so that a refresh token cannot be presented as an access token.</td></tr>
+    <tr><td>Rotation</td><td>Issued on refresh</td><td>Rotated; the previous one is revoked</td><td>Replay of a used refresh token fails.</td></tr>
+  </tbody>
+</table>
+
+<h3>10.2.1 The five verification checks</h3>
+<p>Every authenticated request performs all five, in order:</p>
+<ol>
+  <li>Signature and expiry verification (HS256).</li>
+  <li>Token type must be <span class="mono">access</span>.</li>
+  <li>The JTI must not appear in <span class="mono">revoked_tokens</span>.</li>
+  <li>The account must exist and be active — otherwise 403, so that deactivation takes effect on already-issued
+  tokens.</li>
+  <li>The token's <span class="mono">uv</span> must equal the account's current <span class="mono">user_version</span>,
+  <em>and</em> its <span class="mono">iat</span> must not precede <span class="mono">password_changed_at</span>.</li>
+</ol>
+<p>Checks 4 and 5 are what make a password change a genuine global logout rather than a local one.</p>
+
+<h3>10.2.2 Client-side session handling</h3>
+<p>Session persistence across a reload relies on the cookie alone: at boot the client posts an empty body to
+<span class="mono">/api/auth/refresh</span>. A single-flight guard ensures concurrent 401s trigger one shared
+refresh — because the server rotates and revokes, two parallel refreshes would invalidate each other and eject the
+user. A 403 is never treated as expiry; it is a permission shortfall, and logging the user out on one was a defect
+that has been removed.</p>
+
+<h2>10.3 Authorisation architecture</h2>
+
+<p>Authorisation is applied in four layers, and no layer is sufficient alone.</p>
+
+<table>
+  <caption>Table 10.3 — Authorisation layers</caption>
+  <thead><tr><th style="width:6%">L</th><th style="width:20%">Layer</th><th style="width:22%">Mechanism</th><th>What it stops</th></tr></thead>
+  <tbody>
+    <tr><td class="c">1</td><td>Role gate</td><td>An explicit role allow-list at the top of a handler; <span class="mono">teacher_only()</span> for attesting actions.</td><td>A guardian calling a finance endpoint; a manager recording a recitation.</td></tr>
+    <tr><td class="c">2</td><td>Scope filter</td><td><span class="mono">scope.student_query</span>, <span class="mono">visible_student_ids</span>, <span class="mono">visible_halaqah_ids</span> applied to the query itself.</td><td>A list endpoint returning rows outside the caller's centre or circle.</td></tr>
+    <tr><td class="c">3</td><td>Ownership gate</td><td><span class="mono">check_student_access(student_id)</span> on every endpoint that takes one.</td><td>Direct object reference: guessing or enumerating another student's identifier (BOLA / IDOR).</td></tr>
+    <tr><td class="c">4</td><td>Field redaction</td><td><span class="mono">redact_teacher</span> and equivalent response shaping.</td><td>Salary and marital status reaching a student, guardian or colleague inside an otherwise legitimate response.</td></tr>
+  </tbody>
+</table>
+
+<div class="note key">
+  <span class="lbl">Three rules that are not to be broken</span>
+  <strong>1.</strong> <span class="mono">check_student_access</span> is the <em>only</em> gate for any endpoint
+  taking a <span class="mono">student_id</span>. It is never bypassed with a hand-written
+  <span class="mono">center_id</span> comparison — one hole in it previously produced ten separate leaks.<br>
+  <strong>2.</strong> An empty scope returns <span class="mono">None</span>, never <span class="mono">{}</span>. An
+  empty MongoDB filter means <em>everything</em>, the exact inverse of the intent, and it reads as correct code.<br>
+  <strong>3.</strong> A path or query parameter narrows within the scope or returns 403. It never widens it.
+</div>
+
+<h3>10.3.1 Ownership resolution by role</h3>
+<table>
+  <caption>Table 10.4 — How <span class="mono">check_student_access</span> decides</caption>
+  <thead><tr><th style="width:18%">Caller role</th><th>Condition for access</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">admin / super_admin</td><td>Granted.</td></tr>
+    <tr><td class="mono">center_manager</td><td>The student's <span class="mono">center_id</span> equals the caller's.</td></tr>
+    <tr><td class="mono">teacher</td><td>Same centre <strong>and</strong> the student's <span class="mono">halaqah_id</span> is among the caller's active circles. Centre alone is insufficient — that was the defect that exposed every student in the centre to every teacher.</td></tr>
+    <tr><td class="mono">student</td><td><span class="mono">students.user_id</span> equals the caller's account ID, or the phone numbers match. <strong>Never by name</strong>: names are self-editable, so name matching would let a student rename themselves to a classmate and read that classmate's file, grades and fees.</td></tr>
+    <tr><td class="mono">parent</td><td><span class="mono">students.parent_user_id</span> equals the caller's account ID, or the phone numbers match (legacy accounts).</td></tr>
+  </tbody>
+</table>
+
+<h2>10.4 Credential policy and recovery</h2>
+
+<ul>
+  <li><strong>Hashing:</strong> bcrypt at cost 12, tunable upward by environment.</li>
+  <li><strong>Complexity:</strong> at least eight characters, including a letter and a digit, enforced uniformly on
+  every path that sets a password — self-service change, teacher account creation, manager account creation, public
+  registration, student and guardian issuance, and administrative reset.</li>
+  <li><strong>Issued passwords</strong> are generated from an alphabet that excludes visually confusable characters
+  (<span class="mono">O/0</span>, <span class="mono">l/1/I</span>), because they are written on paper and handed
+  over. They are shown exactly once and stored only as a hash. A forgotten password is <em>replaced</em>, never
+  recovered, and the replacement bumps <span class="mono">user_version</span>, closing open sessions.</li>
+</ul>
+
+<h3>10.4.1 The reset flow</h3>
+<ol>
+  <li>A reset request is rate limited on <strong>both</strong> the requesting IP and the target account: five per
+  hour each.</li>
+  <li>A code is generated and stored as <span class="mono">HMAC-SHA256(secret, "username:code")</span> — never in
+  plaintext, and bound to the username so that a code for one account cannot be used on another. Any plaintext
+  <span class="mono">code</span> field left by earlier versions is actively removed on write.</li>
+  <li>The record expires after ten minutes by TTL index, and five wrong attempts invalidate it.</li>
+  <li>Responses are identical whether or not the account exists, so the endpoint cannot enumerate accounts.</li>
+  <li>A successful reset bumps <span class="mono">user_version</span>, clears the account lockout, and writes a
+  permanent audit entry.</li>
+</ol>
+
+<h2>10.5 Rate limiting and lockout</h2>
+
+<table>
+  <caption>Table 10.5 — Limits</caption>
+  <thead><tr><th style="width:24%">Action</th><th style="width:20%">Key</th><th style="width:16%">Limit</th><th>Reasoning</th></tr></thead>
+  <tbody>
+    <tr><td>Login</td><td>IP address</td><td>5 / 15 min</td><td rowspan="2">A single key is insufficient. IP alone is evaded by address rotation, and behind a proxy it locks out <em>every</em> user after five wrong passwords from one person. Account alone allows unlimited spraying across many accounts. Both keys are checked and both are incremented.</td></tr>
+    <tr><td>Login</td><td>Account</td><td>10 / 15 min</td></tr>
+    <tr><td>Public centre registration</td><td>IP address</td><td>3 / 60 min</td><td>Counted <strong>on success only</strong>. Previously three validation failures — a missing field, a short password, a taken username — consumed the whole hour and locked out someone who had not registered once. A limit exists to deter flooding, not to punish typing.</td></tr>
+    <tr><td>Password reset request</td><td>IP and account</td><td>5 / hour each</td><td>Prevents reset flooding and account harassment.</td></tr>
+    <tr><td>Reset code verification</td><td>Reset record</td><td>5 attempts</td><td>Caps brute forcing of a short code.</td></tr>
+  </tbody>
+</table>
+
+<p>All limiter state lives in MongoDB with TTL indexes, so it is correct across worker processes and cannot grow
+without bound. The earlier in-process dictionary was both incorrect with multiple workers and an unbounded memory
+leak. Client IP resolution honours <span class="mono">X-Forwarded-For</span> <strong>only</strong> when
+<span class="mono">TRUST_PROXY</span> is set, because trusting the header unconditionally lets any client forge it.</p>
+
+<h2>10.6 Personal data protection at rest</h2>
+
+<p>Three student fields are encrypted with Fernet (AES-128-CBC with HMAC-SHA256) before being written:
+<span class="mono">date_of_birth</span>, <span class="mono">guardian_address</span> and
+<span class="mono">parent_name</span>. Decryption tolerates legacy plaintext, so enabling encryption on an existing
+database does not break reads.</p>
+
+<div class="note">
+  <span class="lbl">Why phone numbers are deliberately not encrypted</span>
+  Phone numbers back the ownership matching in <span class="mono">check_student_access</span> and the guardian
+  lookup used to send an absence alert. An encrypted field cannot be queried by equality, so encrypting them would
+  break authorisation itself. This is a documented, bounded trade-off rather than an omission.
+</div>
+
+<p>Two operational consequences follow, and both are stated in the deployment documentation: the key must be in a
+secret manager rather than only in an <span class="mono">.env</span> file, and <strong>losing it destroys those
+fields permanently</strong> — <span class="mono">decrypt_pii</span> tolerates plaintext, but not a wrong key. Key
+rotation requires a one-off re-encryption pass, which must be planned before it is needed.</p>
+
+<h2>10.7 Tamper-evident audit logging</h2>
+
+<p>Thirty-five action types are recorded (Appendix B). Each entry is linked to its predecessor:</p>
+
+<div class="formula">
+  h<sub>n</sub> = SHA-256( seq ∥ actor_id ∥ center_id ∥ action ∥ canonical(payload) ∥ timestamp<sub>ISO</sub> ∥ h<sub>n−1</sub> )
+  <span class="where">with <span class="mono">canonical(payload)</span> a JSON serialisation with sorted keys, and
+  h₀ = 64 zeros. Altering any field of any entry breaks every subsequent hash.</span>
+</div>
+
+<p>Three details make the chain sound in practice rather than only in principle:</p>
+
+<ul>
+  <li><strong>Atomic ordering.</strong> The sequence number comes from an atomic counter, and the chain is built on
+  that order. Reading the predecessor by sorting on timestamp meant two simultaneous writes obtained the
+  <em>same</em> predecessor hash, splitting the chain silently and causing later verification to report tampering
+  with no discoverable cause.</li>
+  <li><strong>Millisecond truncation.</strong> Timestamps are truncated to milliseconds before hashing, because
+  MongoDB stores only millisecond precision. Hashing microseconds would make every recomputed hash differ from the
+  stored one and report tampering in a perfectly sound record.</li>
+  <li><strong>Explicit gaps.</strong> When a predecessor cannot be resolved — after a short retry window that allows
+  for concurrent writes from another worker — the entry is written with <span class="mono">chain_gap: true</span>.
+  The record states the break rather than pretending the chain is intact.</li>
+</ul>
+
+<p><span class="mono">GET /api/audit-logs/verify</span> recomputes every hash from the stored fields and reports
+mismatches and marked gaps. Financial and credential actions carry no <span class="mono">purge_at</span> and are
+never removed; all other entries expire after 730 days.</p>
+
+<h2>10.8 File upload security</h2>
+
+<table>
+  <caption>Table 10.6 — Upload controls</caption>
+  <thead><tr><th style="width:24%">Control</th><th>Implementation and reason</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Content sniffing</strong></td><td>The type is determined from the file's magic bytes (PNG signature, JPEG <span class="mono">FF D8 FF</span>, RIFF/WEBP, <span class="mono">%PDF-</span>), never from the declared <span class="mono">content_type</span>, which the sender writes and can forge. The sniffed type is what is stored and what is served.</td></tr>
+    <tr><td><strong>No SVG</strong></td><td>SVG is a document that can carry script; serving one from the application's origin opens an injection path in a page the user trusts. Logos accept PNG, JPEG and WEBP only.</td></tr>
+    <tr><td><strong>Size caps during read</strong></td><td>512 KB for a logo, 5 MB for a document, enforced while reading in 64 KB chunks. Reading the whole file and then measuring it lets one sender load the server with whatever they please before being refused. Nginx caps the body independently at a lower level.</td></tr>
+    <tr><td><strong>Authorisation on the message</strong></td><td>An attachment download is authorised by the caller's right to the <em>message</em>, not by possession of the file identifier — otherwise anyone who guessed an identifier would read another centre's document.</td></tr>
+    <tr><td><strong>Storage in GridFS</strong></td><td>Files live in the database with metadata recording kind, centre, owner, sniffed type, size and upload time. A directory on a container's disk would lose the logo at the first redeployment; the database backup captures the files with the records that reference them.</td></tr>
+  </tbody>
+</table>
+
+<h2>10.9 Transport and HTTP hardening</h2>
+
+<table>
+  <caption>Table 10.7 — Response headers set by the application</caption>
+  <thead><tr><th style="width:34%">Header</th><th>Value and effect</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">Content-Security-Policy</td><td><span class="mono">default-src 'none'; frame-ancestors 'none'; base-uri 'none'</span> — the API serves JSON only; no script, no frame, no base rewriting.</td></tr>
+    <tr><td class="mono">X-Content-Type-Options</td><td><span class="mono">nosniff</span>.</td></tr>
+    <tr><td class="mono">X-Frame-Options</td><td><span class="mono">DENY</span> — no clickjacking surface.</td></tr>
+    <tr><td class="mono">Referrer-Policy</td><td><span class="mono">no-referrer</span>.</td></tr>
+    <tr><td class="mono">Cross-Origin-Opener-Policy</td><td><span class="mono">same-origin</span>.</td></tr>
+    <tr><td class="mono">Permissions-Policy</td><td><span class="mono">geolocation=(), microphone=(), camera=()</span>.</td></tr>
+    <tr><td class="mono">Strict-Transport-Security</td><td><span class="mono">max-age=31536000; includeSubDomains</span>, in production only.</td></tr>
+    <tr><td class="mono">X-Request-ID</td><td>Echoed or generated; the correlation key between a client-visible 500 and the server-side traceback.</td></tr>
+  </tbody>
+</table>
+
+<p>CORS allows an explicit list of origins with credentials enabled; a wildcard origin <strong>aborts the boot</strong>
+in production, because a wildcard with credentials is a contradiction. The origin list is whitespace-trimmed — a
+correctly written <span class="mono">"a, b"</span> configuration previously kept the space attached to the origin
+and silently blocked the real front end. Nginx adds an independent header set, an HTTP→HTTPS redirect, a
+<span class="mono">client_max_body_size</span> cap and an optional edge rate-limit zone on the login path as
+defence in depth.</p>
+
+<h2>10.10 Fail-fast production guards</h2>
+
+<p>The application <strong>refuses to start</strong> in production if any of the following holds. Each condition was
+chosen because the alternative is a silently insecure deployment that appears to work:</p>
+
+<table>
+  <caption>Table 10.8 — Boot-time refusals</caption>
+  <thead><tr><th style="width:34%">Condition</th><th>Why the boot is aborted</th></tr></thead>
+  <tbody>
+    <tr><td><span class="mono">SECRET_KEY</span> is still the built-in default</td><td>Every token in the deployment would be forgeable by anyone who has read the source.</td></tr>
+    <tr><td><span class="mono">PII_ENCRYPTION_KEY</span> is unset</td><td>Children's personal data would be written in plaintext. In development an ephemeral key is generated with a warning that the data will not survive a restart.</td></tr>
+    <tr><td><span class="mono">ALLOWED_ORIGINS</span> contains <span class="mono">*</span></td><td>A wildcard origin with credentials enabled exposes every authenticated endpoint to every site.</td></tr>
+    <tr><td><span class="mono">INITIAL_ADMIN_PASSWORD</span> is unset while bootstrapping the administrator</td><td>Otherwise the most powerful account would be created with a predictable password.</td></tr>
+    <tr><td><span class="mono">INITIAL_SUPER_ADMIN_PASSWORD</span> is unset while bootstrapping the super-administrator</td><td>This account sees and suspends every centre. It previously fell back to a fixed string whenever the administrator password was unset — including in production, because the earlier guard checked only the administrator account and was skipped entirely if that account already existed. The two accounts now also take <em>separate</em> passwords, so that a leak of one is not a leak of both.</td></tr>
+    <tr><td>Demo seeding</td><td><span class="mono">SEED_DEMO_DATA</span> defaults to false; demo accounts with published passwords are opt-in and are verified absent during onboarding.</td></tr>
+  </tbody>
+</table>
+
+<h2>10.11 Residual risks</h2>
+
+<table>
+  <caption>Table 10.9 — Known residual risks and their status</caption>
+  <thead><tr><th style="width:26%">Risk</th><th style="width:30%">Current mitigation</th><th>Residual exposure</th></tr></thead>
+  <tbody>
+    <tr><td>Phone numbers stored in plaintext</td><td>Required for ownership matching and guardian lookup</td><td>A database compromise exposes contact numbers. Accepted and documented; encrypting them would break authorisation.</td></tr>
+    <tr><td>Reset codes have no delivery channel</td><td>Retrieved by an administrator through an authenticated endpoint</td><td>Recovery depends on an administrator being reachable. Email or SMS delivery is future work.</td></tr>
+    <tr><td>PII key rotation</td><td>Documented as requiring a re-encryption pass</td><td>No tooling ships for the pass itself; it must be written before a rotation is attempted.</td></tr>
+    <tr><td>No server-side output rate limiting on read endpoints</td><td>Scope limits what can be read; CSV export is audited</td><td>An authorised insider can extract their own scope in bulk. Mitigated by audit, not prevented.</td></tr>
+    <tr><td>Naive UTC timestamps</td><td>A single time source; all comparisons consistent</td><td>Deployments spanning timezones must interpret timestamps as UTC. Migration is a data migration, recorded as future work.</td></tr>
+    <tr><td>The unique attendance index may fail to build on a legacy database</td><td>An explicit warning is logged and the service continues</td><td>Until duplicates are cleaned and the service restarted, daily uniqueness rests on the application-level upsert alone.</td></tr>
+  </tbody>
+</table>
+
+</section>

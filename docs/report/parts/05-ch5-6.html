@@ -1,0 +1,325 @@
+<!-- ============================ CHAPTER 5 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 5</span>System Architecture</h1>
+
+<h2>5.1 Architectural style and rationale</h2>
+
+<p>Mishkaat is a <strong>modular monolith</strong>: one deployable back-end process, internally decomposed by domain
+into routers over a shared set of cross-cutting modules, serving a decoupled single-page front end over a JSON API.
+The choice is deliberate and is defended here because it is the architectural decision with the widest consequences.</p>
+
+<table>
+  <caption>Table 5.1 — Architectural options considered</caption>
+  <thead><tr><th style="width:20%">Option</th><th style="width:32%">Why it was not chosen</th><th>What was chosen instead</th></tr></thead>
+  <tbody>
+    <tr><td>Microservices</td><td>The expected deployment is a single modest VPS run by one operator. Splitting eleven domains into services would multiply the operational surface — service discovery, distributed tracing, cross-service authorisation — for a system whose entire authorisation model depends on being decided in <em>one</em> place.</td><td>One process, domain-separated routers, one authorisation module.</td></tr>
+    <tr><td>Server-rendered templates</td><td>The interface needs to be installable, work from a cached shell, and re-render live analytics without full page loads.</td><td>A JSON API plus a SPA delivered as a PWA.</td></tr>
+    <tr><td>A synchronous WSGI framework</td><td>Most endpoints are I/O-bound aggregations over MongoDB, with a live notification stream held open per connected user. Thread-per-request scales poorly for held-open connections.</td><td>ASGI (FastAPI + Uvicorn) with an async MongoDB driver end-to-end.</td></tr>
+    <tr><td>A relational database</td><td>The academic record is naturally document-shaped and evolves: a recitation gained page counts and an error-tag map without a migration; judge scores are an array inside a contestant.</td><td>MongoDB, with integrity enforced by unique and partial indexes where it matters (§7.13).</td></tr>
+  </tbody>
+</table>
+
+<h2>5.2 Logical view</h2>
+
+<div class="diagram">╔══════════════════════════════════════════════════════════════════════════════╗
+║ PRESENTATION LAYER — React 19 SPA (TypeScript)                               ║
+║  pages/ (27)  ·  pages/dashboards/ (6)  ·  components/ (23)                  ║
+║  contexts/ AuthContext · NotificationsContext                                ║
+║  services/api.ts — axios instance, in-memory access token, single-flight     ║
+║                    refresh on 401, session-expiry handler                    ║
+╚═══════════════════════════════════════╤══════════════════════════════════════╝
+                                        │ /api/*   (Vite dev proxy → :8001,
+                                        │           Nginx in production)
+╔═══════════════════════════════════════▼══════════════════════════════════════╗
+║ MIDDLEWARE — GZip · CORS (explicit origins, credentials on)                  ║
+║              security + tracing (X-Request-ID, CSP, HSTS, frame deny)        ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ ROUTER LAYER — 22 domain routers, 136 endpoints                              ║
+║  auth · audit_logs · notifications · dashboard · centers · center_activity · ║
+║  students · accounts · teachers · halaqat · halaqat_overview · schedules ·   ║
+║  competitions · certificates · messages · recitations · performance ·        ║
+║  attendance · finance · review_plans · exports · health                      ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ DOMAIN / CROSS-CUTTING SERVICES                                              ║
+║  security.py   tokens, hashing, lockout, refresh cookie                      ║
+║  scope.py      the four-level visibility model                               ║
+║  common.py     ownership gate, ID validation, redaction, date parsing        ║
+║  pii.py        field-level encryption      audit.py    hash-chained log      ║
+║  files.py      GridFS + content sniffing   sse.py      persisted events      ║
+║  metrics.py    five metrics                forecast.py OLS completion model  ║
+║  gamification.py badges/XP/boards          scoring.py  legacy smart score    ║
+║  errors_taxonomy.py weighted error classes                                   ║
+╠══════════════════════════════════════════════════════════════════════════════╣
+║ PERSISTENCE — db.py (Motor client) · startup.py (71 indexes, bootstrap)      ║
+╚═══════════════════════════════════════╤══════════════════════════════════════╝
+                                        ▼
+                        MongoDB 7 · 28 collections · GridFS "files" bucket</div>
+<figcaption>Figure 5.1 — Logical architecture.</figcaption>
+
+<h2>5.3 Deployment view</h2>
+
+<p>The reference deployment is the Docker Compose stack shipped with the repository. Its defining property is that
+<strong>only Nginx is reachable</strong>: the application publishes no port and MongoDB publishes no port; both sit
+on a Docker network declared <span class="mono">internal: true</span>, which also denies them outbound internet
+access.</p>
+
+<div class="diagram">                    Internet
+                       │  443/tcp (TLS)
+          ┌────────────▼─────────────┐
+          │  nginx:1.27-alpine       │   networks: public + internal
+          │  TLS · HSTS · CSP        │   volumes: nginx.conf, ops/tls (ro)
+          │  rate-limit · body cap   │   80 → 301 → 443
+          └────────────┬─────────────┘
+                       │  proxy_pass → app:8001   (X-Forwarded-For set here)
+       ┌───────────────▼──────────────────────────┐
+       │  app  (backend/Dockerfile)               │   network: internal only
+       │  uvicorn, UVICORN_WORKERS=4              │   read_only: true
+       │  APP_ENV=production, TRUST_PROXY=true    │   tmpfs: /tmp
+       │  no published port                       │   cap_drop: ALL
+       └───────────────┬──────────────────────────┘   no-new-privileges
+                       │  mongodb://app-user@mongo:27017/?authSource=…
+       ┌───────────────▼──────────────────────────┐
+       │  mongo:7.0  --auth --bind_ip_all         │   network: internal only
+       │  volume mongo_data                       │   no published port
+       │  ops/mongo-init.js → scoped app user     │   healthcheck: ping
+       └──────────────────────────────────────────┘</div>
+<figcaption>Figure 5.2 — Container deployment topology (<span class="mono">docker-compose.yml</span>).</figcaption>
+
+<div class="note">
+  <span class="lbl">Why TRUST_PROXY is true here and false by default</span>
+  The rate limiter keys on the client IP. Behind a proxy, the socket peer is the proxy for every user, so five bad
+  passwords from one person would lock out every user of the deployment. The fix is to read
+  <span class="mono">X-Forwarded-For</span> — but only when the application is genuinely behind a proxy under the
+  operator's control, because trusting that header blindly lets any client forge it and evade the limiter
+  altogether. In the Compose stack the app has no published port and Nginx sets the header itself, so the flag is
+  safe; the shipped default in <span class="mono">.env.example</span> is <span class="mono">false</span>.
+</div>
+
+<p>A second supported topology runs the same components directly on a VPS under systemd. The
+<span class="mono">mishkaat.service</span> unit runs the API under <span class="mono">DynamicUser</span> with
+<span class="mono">NoNewPrivileges</span>, no write access outside <span class="mono">/tmp</span>, no access to
+kernel tunables, and an outbound network allow-list restricted to localhost. A companion timer unit runs the
+encrypted backup daily (§14.3).</p>
+
+<h2>5.4 Back-end module inventory</h2>
+
+<table>
+  <caption>Table 5.2 — Cross-cutting modules (<span class="mono">backend/app/</span>)</caption>
+  <thead><tr><th style="width:19%">Module</th><th class="c" style="width:7%">Lines</th><th>Responsibility and notable design decisions</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">main.py</td><td class="c num">117</td><td>Application assembly: lifespan hook, GZip, CORS, the security/tracing middleware, and router inclusion. Router order is deliberate — fixed paths precede parameterised ones so that <span class="mono">/api/centers/{id}</span> cannot swallow <span class="mono">/api/centers/pending</span>. Interactive docs are served only outside production.</td></tr>
+    <tr><td class="mono">config.py</td><td class="c num">156</td><td>All settings, secrets and calibration constants. Contains the production fail-fast guards: default <span class="mono">SECRET_KEY</span>, missing <span class="mono">PII_ENCRYPTION_KEY</span> and a wildcard CORS origin each abort the boot.</td></tr>
+    <tr><td class="mono">models.py</td><td class="c num">638</td><td>All Pydantic request/response models, the role and status literals, competition branches, milestone definitions and teacher evaluation criteria, plus field validators for error tags and page counts.</td></tr>
+    <tr><td class="mono">security.py</td><td class="c num">311</td><td>Password hashing and complexity, JWT encode/decode with type, JTI, <span class="mono">user_version</span> and <span class="mono">iat</span> checks, revocation lookup, dual-key rate limiting, reset-code hashing, and the <span class="mono">httpOnly</span> refresh cookie.</td></tr>
+    <tr><td class="mono">scope.py</td><td class="c num">241</td><td>The single source of visibility boundaries: teacher record and circle resolution, own-student resolution, circle and student ID sets, the student query filter, the leaderboard query, the circle-in-scope assertion and the teacher-only guard.</td></tr>
+    <tr><td class="mono">common.py</td><td class="c num">194</td><td><span class="mono">check_student_access</span> (the ownership gate), safe ObjectId conversion, client IP resolution, teacher redaction, date-boundary parsing, and the soft-delete and void filters.</td></tr>
+    <tr><td class="mono">startup.py</td><td class="c num">562</td><td>Idempotent creation of 71 indexes with conflict recovery, administrator and super-administrator bootstrap, and opt-in demo seeding.</td></tr>
+    <tr><td class="mono">metrics.py</td><td class="c num">208</td><td>The five performance metrics, page derivation, error density and attendance rate.</td></tr>
+    <tr><td class="mono">forecast.py</td><td class="c num">249</td><td>Training-row construction, Gaussian-elimination OLS with R², domain sign constraints, prediction with plausibility guard, and date projection.</td></tr>
+    <tr><td class="mono">gamification.py</td><td class="c num">209</td><td>Ten badges, four challenges, four leaderboard definitions, idempotent XP award and bulk totals.</td></tr>
+    <tr><td class="mono">errors_taxonomy.py</td><td class="c num">117</td><td>The four error classes with weights, the legacy counter mapping, normalisation, weighted load, high-severity count and the “was this tagged?” predicate.</td></tr>
+    <tr><td class="mono">audit.py</td><td class="c num">98</td><td>Atomic sequence allocation, previous-hash resolution with explicit gap marking, chain entry construction and the hash-input reconstruction used by the verifier.</td></tr>
+    <tr><td class="mono">files.py</td><td class="c num">139</td><td>GridFS storage with chunked size-capped reads, magic-byte content sniffing, and an allow-list that excludes SVG.</td></tr>
+    <tr><td class="mono">sse.py</td><td class="c num">74</td><td>Single-use stream tickets and database-backed notification persistence.</td></tr>
+    <tr><td class="mono">scoring.py</td><td class="c num">74</td><td>The legacy composite “smart evaluation” score, extracted into one function after the honour roll and the ranking screen had drifted to different time windows.</td></tr>
+    <tr><td class="mono">pii.py</td><td class="c num">51</td><td>Fernet encrypt/decrypt with legacy-plaintext tolerance, and the student PII field list.</td></tr>
+    <tr><td class="mono">clock.py</td><td class="c num">29</td><td>The single time source — naive UTC, replacing the deprecated <span class="mono">datetime.utcnow()</span> without changing a single stored value.</td></tr>
+    <tr><td class="mono">db.py</td><td class="c num">11</td><td>The Motor client and database handle.</td></tr>
+  </tbody>
+</table>
+
+<h2>5.5 Router inventory</h2>
+
+<table>
+  <caption>Table 5.3 — Domain routers</caption>
+  <thead><tr><th style="width:17%">Router</th><th class="c" style="width:7%">Lines</th><th class="c" style="width:9%">Endpoints</th><th>Domain</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">centers.py</td><td class="c num">673</td><td class="c num">17</td><td>Centre CRUD, public registration, approval workflow, logo, super-admin centre control, public best-centres listing</td></tr>
+    <tr><td class="mono">finance.py</td><td class="c num">669</td><td class="c num">15</td><td>Fees, salaries, expenses, voids, financial summary</td></tr>
+    <tr><td class="mono">competitions.py</td><td class="c num">535</td><td class="c num">13</td><td>Competitions, judging panels, contestants, per-judge scoring, lifecycle transitions</td></tr>
+    <tr><td class="mono">auth.py</td><td class="c num">506</td><td class="c num">10</td><td>Login, refresh, logout, profile, password change and reset paths</td></tr>
+    <tr><td class="mono">recitations.py</td><td class="c num">483</td><td class="c num">6</td><td>Recitation CRUD, per-student history, completion prediction endpoint</td></tr>
+    <tr><td class="mono">teachers.py</td><td class="c num">426</td><td class="c num">8</td><td>Teacher CRUD, circle transfer, evaluations</td></tr>
+    <tr><td class="mono">performance.py</td><td class="c num">354</td><td class="c num">6</td><td>Metrics, journey, leaderboards, challenges, badge recomputation</td></tr>
+    <tr><td class="mono">attendance.py</td><td class="c num">335</td><td class="c num">7</td><td>Roll-call, per-circle, per-student and per-centre views, corrections</td></tr>
+    <tr><td class="mono">certificates.py</td><td class="c num">334</td><td class="c num">5</td><td>Milestone and competition certificates, eligibility, revocation</td></tr>
+    <tr><td class="mono">messages.py</td><td class="c num">302</td><td class="c num">9</td><td>Broadcasts, inbox, audiences, replies, attachments</td></tr>
+    <tr><td class="mono">review_plans.py</td><td class="c num">285</td><td class="c num">5</td><td>Review plans and the daily derived review portion</td></tr>
+    <tr><td class="mono">halaqat_overview.py</td><td class="c num">264</td><td class="c num">3</td><td>Circle performance overview, ranking, circle detail</td></tr>
+    <tr><td class="mono">students.py</td><td class="c num">207</td><td class="c num">5</td><td>Student CRUD within scope</td></tr>
+    <tr><td class="mono">dashboard.py</td><td class="c num">201</td><td class="c num">4</td><td>Role-aware statistics, honour roll, rankings, per-student analytics</td></tr>
+    <tr><td class="mono">center_activity.py</td><td class="c num">199</td><td class="c num">1</td><td>Per-centre platform activity index</td></tr>
+    <tr><td class="mono">accounts.py</td><td class="c num">193</td><td class="c num">3</td><td>Student and guardian account issuance and reset</td></tr>
+    <tr><td class="mono">schedules.py</td><td class="c num">168</td><td class="c num">4</td><td>Academic timetable CRUD</td></tr>
+    <tr><td class="mono">notifications.py</td><td class="c num">140</td><td class="c num">5</td><td>Stored notifications, read state, stream ticket, event stream</td></tr>
+    <tr><td class="mono">exports.py</td><td class="c num">139</td><td class="c num">2</td><td>CSV export of students and attendance</td></tr>
+    <tr><td class="mono">halaqat.py</td><td class="c num">134</td><td class="c num">4</td><td>Circle CRUD</td></tr>
+    <tr><td class="mono">audit_logs.py</td><td class="c num">117</td><td class="c num">2</td><td>Audit log listing and chain verification</td></tr>
+    <tr><td class="mono">health.py</td><td class="c num">42</td><td class="c num">2</td><td>Liveness and readiness</td></tr>
+    <tr><th>Total</th><th class="c">6,866</th><th class="c">136</th><th></th></tr>
+  </tbody>
+</table>
+
+<h2>5.6 Front-end structure</h2>
+
+<table>
+  <caption>Table 5.4 — Front-end organisation (<span class="mono">frontend/src/</span>)</caption>
+  <thead><tr><th style="width:20%">Directory</th><th class="c" style="width:9%">Modules</th><th>Contents</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">pages/</td><td class="c num">27</td><td>One module per screen: Landing, Login, Dashboard, Centers, Students, Teachers, Halaqat, Recitations, Attendance, Finance, Reports, Rankings, Leaderboards, StudentAnalytics, StudentPerformance, ReviewPlans, AcademicSchedules, Competitions, Certificates, BulkMessages, NotificationsPage, AuditLogPage, ProfilePage, SettingsPage, RegisterCenter, Sponsorships, ErrorPages.</td></tr>
+    <tr><td class="mono">pages/dashboards/</td><td class="c num">6</td><td>A distinct dashboard per role: SuperAdmin, Admin, CenterManager, Teacher, Student, Parent.</td></tr>
+    <tr><td class="mono">components/</td><td class="c num">23</td><td>Fifteen primitives in <span class="mono">ui/</span> (button, card, input, label, avatar, loading, StatCard, PageHeader, EmptyState, NumberInput, PermissionBadge, WelcomeHero, MishkaatMark, ErrorTagger, StudentReportSheet) plus domain components: CertificateSheet and Ornaments, HalaqatRanking and HalaqahDetailModal, CenterActivityPanel, StudentAccountsModal, TeacherEvaluationModal, DashboardLayout.</td></tr>
+    <tr><td class="mono">contexts/</td><td class="c num">2</td><td><span class="mono">AuthContext</span> (session restoration, role predicate, expiry handling) and <span class="mono">NotificationsContext</span>.</td></tr>
+    <tr><td class="mono">services/</td><td class="c num">1</td><td><span class="mono">api.ts</span> — the axios instance, the in-memory access token store, and the single-flight refresh interceptor.</td></tr>
+    <tr><td class="mono">lib/</td><td class="c num">5</td><td>theme, class-name utilities, number/date formatting, landscape printing, error mapping.</td></tr>
+    <tr><td class="mono">hooks/</td><td class="c num">1</td><td><span class="mono">useNotifications</span> — polling and live stream subscription.</td></tr>
+    <tr><td class="mono">types/</td><td class="c num">1</td><td>Shared TypeScript interfaces mirroring the API contract.</td></tr>
+  </tbody>
+</table>
+
+<h3>5.6.1 Token handling in the client</h3>
+<p>The access token lives in a module-scoped variable — not in <span class="mono">localStorage</span> — so it
+disappears when the tab closes and is never readable by injected script. The refresh token is never seen by
+JavaScript at all: the server sets it as an <span class="mono">httpOnly</span> cookie scoped to
+<span class="mono">/api/auth</span> with <span class="mono">SameSite=lax</span>, and the browser attaches it
+automatically. Session persistence across a page reload is preserved by calling
+<span class="mono">/api/auth/refresh</span> on boot with no body: the cookie alone re-establishes the session.</p>
+
+<p>A single-flight guard wraps refresh. Because the server rotates the refresh token and revokes the previous one,
+two concurrent refreshes would invalidate each other and log the user out; concurrent 401s therefore await one
+shared refresh promise. A 403 is never treated as session expiry — it is a permission shortfall, and logging the
+user out on one would be both wrong and confusing.</p>
+
+<h2>5.7 Request lifecycle</h2>
+
+<div class="diagram">1  Nginx          TLS termination, security headers, body-size cap, edge rate limit
+2  GZipMiddleware  compresses responses ≥ 1000 bytes
+3  CORSMiddleware  explicit origin allow-list; credentials enabled; "*" refused in prod
+4  security_and_tracing_middleware
+                   ├─ assigns or echoes X-Request-ID
+                   ├─ catches unhandled exceptions → generic 500 + request id
+                   │  (the traceback is logged server-side, never returned)
+                   └─ sets nosniff, DENY, no-referrer, COOP, Permissions-Policy,
+                      CSP "default-src 'none'", and HSTS in production
+5  Depends(get_current_user)
+                   ├─ decode JWT, verify signature and token type ("access")
+                   ├─ reject if the JTI is on the revocation list
+                   ├─ reject if the account is disabled            → 403
+                   ├─ reject if user_version ≠ token "uv"          → 401
+                   └─ reject if password_changed_at > token "iat"  → 401
+6  Role guard       role allow-list, or scope.teacher_only() for attesting actions
+7  Scope resolution scope.student_query / visible_student_ids / visible_halaqah_ids
+                   (None ⇒ nothing visible — never an empty filter)
+8  Ownership gate   check_student_access(student_id) for any endpoint taking one
+9  Handler          Motor query, Pydantic validation, serialisation
+10 Side effects     audit entry · notification · XP award · model cache invalidation</div>
+<figcaption>Figure 5.3 — The path of an authenticated request.</figcaption>
+
+<h2>5.8 Recurring design patterns</h2>
+
+<table>
+  <caption>Table 5.5 — Patterns used consistently across the code base</caption>
+  <thead><tr><th style="width:24%">Pattern</th><th>Application</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Single gate</strong></td><td>Every endpoint accepting a <span class="mono">student_id</span> passes it through <span class="mono">check_student_access</span>, never through a hand-written <span class="mono">center_id</span> comparison. One hole in the gate previously produced ten leaks; one fix closed all ten.</td></tr>
+    <tr><td><strong>Fail closed</strong></td><td>Absent assignment means denial. An empty scope returns <span class="mono">None</span>; a manager with no <span class="mono">center_id</span> sees nothing rather than everything.</td></tr>
+    <tr><td><strong>Identity from the token</strong></td><td>The acting user is taken from the verified token, never from a request field. This removed a class of both bugs and forgeries: the client used to send the account ID where the teacher-record ID was expected, so every teacher's recitation was refused.</td></tr>
+    <tr><td><strong>Compute on read</strong></td><td>No derived academic value is stored. Metrics, ranks and forecasts are functions of the session records at the moment of the query.</td></tr>
+    <tr><td><strong>Constraint in the database</strong></td><td>Where duplication must be impossible, a unique (often partial) index enforces it. An application check followed by a write is not atomic — two simultaneous clicks both find nothing and both insert.</td></tr>
+    <tr><td><strong>Idempotent side effects</strong></td><td>XP awards carry a unique (student, reason, source) key; a duplicate-key error is treated as success, not failure.</td></tr>
+    <tr><td><strong>Bulk over per-row</strong></td><td>Aggregate screens load their history in one or two queries keyed by an <span class="mono">$in</span> list, rather than a query per student.</td></tr>
+    <tr><td><strong>Soft delete and void</strong></td><td>Academic records are soft-deleted with <span class="mono">is_deleted</span>; money is voided with a reason and an actor. Both filters use <span class="mono">$ne: true</span> so that historical rows lacking the field are still visible.</td></tr>
+    <tr><td><strong>Configuration over constants</strong></td><td>Calibration values — severity weights, smoothing, windows, XP rates — live in <span class="mono">config.py</span> and are environment-tunable, not buried inside a function.</td></tr>
+    <tr><td><strong>Decision records in code</strong></td><td>Non-obvious decisions are documented at the site of the code, stating what the previous behaviour was and why it was wrong. This report draws directly on those records.</td></tr>
+  </tbody>
+</table>
+
+</section>
+
+<!-- ============================ CHAPTER 6 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 6</span>Technology Stack</h1>
+
+<h2>6.1 Back-end technologies</h2>
+
+<table>
+  <caption>Table 6.1 — Back-end dependencies (<span class="mono">backend/requirements.txt</span>, all version-pinned)</caption>
+  <thead><tr><th style="width:19%">Component</th><th style="width:11%">Version</th><th>Role and rationale</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Python</strong></td><td class="mono">≥ 3.9</td><td>Implementation language. Chosen because the analytical layer — regression fitting, metric computation — is expressed naturally here, so no separate analytics service is needed: the linear algebra is implemented in-process with no numerical dependency.</td></tr>
+    <tr><td><strong>FastAPI</strong></td><td class="mono">0.110.1</td><td>ASGI web framework. Provides dependency injection (used for authentication), automatic request validation from type hints, and OpenAPI generation — enabled in development, disabled entirely in production.</td></tr>
+    <tr><td><strong>Uvicorn</strong></td><td class="mono">0.25.0</td><td>ASGI server, run with four workers behind Nginx.</td></tr>
+    <tr><td><strong>Motor</strong></td><td class="mono">3.3.1</td><td>Asynchronous MongoDB driver, including the GridFS bucket used for file storage. Keeps the request path non-blocking end to end.</td></tr>
+    <tr><td><strong>Pydantic</strong></td><td class="mono">2.12.5</td><td>Request and response models. Typed models eliminate mass-assignment: an endpoint that accepted a raw <span class="mono">dict</span> was replaced with a declared model for exactly this reason. Custom validators enforce error-tag codes and plausible page counts.</td></tr>
+    <tr><td><strong>PyJWT</strong></td><td class="mono">2.11.0</td><td>HS256 token encoding and decoding, with explicit verification of token type, JTI, user version and issue time.</td></tr>
+    <tr><td><strong>bcrypt</strong></td><td class="mono">via passlib 1.7.4</td><td>Password hashing at cost 12 (OWASP guidance), tunable by environment. Hashing and verification call bcrypt directly.</td></tr>
+    <tr><td><strong>cryptography</strong></td><td class="mono">44.0.1</td><td>Fernet (AES-128-CBC + HMAC-SHA256) for field-level encryption of student personal data at rest.</td></tr>
+    <tr><td><strong>python-multipart</strong></td><td class="mono">0.0.22</td><td>Multipart parsing for the login form and file uploads.</td></tr>
+    <tr><td><strong>python-dotenv</strong></td><td class="mono">1.2.1</td><td>Environment loading, invoked before any setting is read.</td></tr>
+  </tbody>
+</table>
+
+<h2>6.2 Front-end technologies</h2>
+
+<table>
+  <caption>Table 6.2 — Front-end dependencies (<span class="mono">frontend/package.json</span>)</caption>
+  <thead><tr><th style="width:19%">Component</th><th style="width:11%">Version</th><th>Role and rationale</th></tr></thead>
+  <tbody>
+    <tr><td><strong>React</strong></td><td class="mono">19.1.0</td><td>UI library for the single-page application.</td></tr>
+    <tr><td><strong>TypeScript</strong></td><td class="mono">5.9</td><td>Static typing across the client; shared interfaces mirror the API contract, so a field renamed on the server surfaces as a compile error.</td></tr>
+    <tr><td><strong>Vite</strong></td><td class="mono">7.2</td><td>Build tool and development server, with a proxy to the API so that the front end and API share an origin in development as they do in production.</td></tr>
+    <tr><td><strong>React Router</strong></td><td class="mono">7.13</td><td>Client routing, with role-aware route guards mirroring the server's permissions.</td></tr>
+    <tr><td><strong>Tailwind CSS</strong></td><td class="mono">4.1</td><td>Utility-first styling with a custom token layer for the Islamic palette and dark mode.</td></tr>
+    <tr><td><strong>Radix UI</strong></td><td class="mono">various</td><td>Accessible unstyled primitives: dialog, dropdown, select, tabs, toast, progress, avatar, label, slot.</td></tr>
+    <tr><td><strong>axios</strong></td><td class="mono">1.13</td><td>HTTP client, carrying the request interceptor that attaches the bearer token and the response interceptor that performs single-flight refresh.</td></tr>
+    <tr><td><strong>react-hook-form + zod</strong></td><td class="mono">7.71 / 4.3</td><td>Form state and schema validation on the client, mirroring the server's Pydantic constraints.</td></tr>
+    <tr><td><strong>Recharts</strong></td><td class="mono">2.12</td><td>Progress and analytics charts.</td></tr>
+    <tr><td><strong>lucide-react</strong></td><td class="mono">0.563</td><td>Icon set, also used for badge and challenge glyphs.</td></tr>
+    <tr><td><strong>clsx / tailwind-merge / CVA</strong></td><td class="mono">—</td><td>Deterministic class composition for the component primitives.</td></tr>
+  </tbody>
+</table>
+
+<h2>6.3 Infrastructure and operations</h2>
+
+<table>
+  <caption>Table 6.3 — Infrastructure components</caption>
+  <thead><tr><th style="width:19%">Component</th><th style="width:11%">Version</th><th>Role</th></tr></thead>
+  <tbody>
+    <tr><td><strong>MongoDB</strong></td><td class="mono">7.0</td><td>Primary data store, started with <span class="mono">--auth</span>, bound to an internal network only, initialised with a scoped non-root application user.</td></tr>
+    <tr><td><strong>GridFS</strong></td><td class="mono">—</td><td>Binary store for centre logos and message attachments, inside the database so that container redeployment does not lose files and the database backup captures them.</td></tr>
+    <tr><td><strong>Nginx</strong></td><td class="mono">1.27-alpine</td><td>TLS termination, HTTP→HTTPS redirect, security headers, body-size cap, edge rate limiting on the login path, static asset delivery.</td></tr>
+    <tr><td><strong>Docker / Compose</strong></td><td class="mono">24+ / 2+</td><td>Reference deployment with isolated internal and public networks, a read-only application filesystem, dropped capabilities and <span class="mono">no-new-privileges</span>.</td></tr>
+    <tr><td><strong>systemd</strong></td><td class="mono">—</td><td>Alternative deployment: a sandboxed service unit plus a daily backup timer.</td></tr>
+    <tr><td><strong>mongodump + GPG</strong></td><td class="mono">—</td><td>Backups piped directly into encryption so that plaintext never touches disk, retained 30 days, optionally shipped off-host with rclone.</td></tr>
+  </tbody>
+</table>
+
+<h2>6.4 Development tooling</h2>
+
+<table>
+  <caption>Table 6.4 — Development and quality tooling</caption>
+  <thead><tr><th style="width:24%">Tool</th><th>Use</th></tr></thead>
+  <tbody>
+    <tr><td>ESLint 9 + typescript-eslint</td><td>Front-end linting, including React hooks rules.</td></tr>
+    <tr><td><span class="mono">tsc -b</span></td><td>Type checking as a build gate; <span class="mono">noUnusedParameters</span> is enforced.</td></tr>
+    <tr><td><span class="mono">compileall</span> / pyflakes</td><td>Back-end syntax and unused-symbol gates, listed as pre-onboarding checks.</td></tr>
+    <tr><td>Seven Python test suites</td><td>Behavioural isolation and business-rule tests run against a live MongoDB (Ch. 13).</td></tr>
+    <tr><td>Icon build scripts</td><td>All PWA icons are generated from one vector source; changing an icon requires bumping the service-worker cache name.</td></tr>
+  </tbody>
+</table>
+
+<h2>6.5 Dependency policy</h2>
+
+<ul>
+  <li><strong>Every back-end dependency is pinned to an exact version.</strong> The runtime surface of this system
+  includes cryptography and token handling; a floating version is an unreviewed change to security-relevant code.</li>
+  <li><strong>The dependency list is deliberately short.</strong> Nine runtime packages. The forecasting model is
+  implemented with plain Python arithmetic rather than pulling in a numerical stack, which keeps the image small and
+  the audit surface narrow.</li>
+  <li><strong>Vulnerability scanning is specified as a CI gate</strong> (<span class="mono">pip audit</span>, build
+  fails on critical findings), with a quarterly review of Python and MongoDB minor versions.</li>
+  <li><strong>No third-party analytics or telemetry</strong> is included anywhere in the client, because the
+  platform holds data about minors.</li>
+</ul>
+
+</section>

@@ -1,0 +1,268 @@
+<!-- ============================ CHAPTER 13 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 13</span>Verification and Quality Assurance</h1>
+
+<h2>13.1 Testing philosophy</h2>
+
+<p>The test strategy is behavioural rather than unit-oriented, and it rests on three commitments that differ from
+conventional practice.</p>
+
+<div class="note key">
+  <span class="lbl">Commitment 1 — test for leakage, not for success</span>
+  In an isolation suite, <strong>a 200 response is not a failure; a 200 response carrying another party's data
+  is.</strong> Each assertion asks whether the payload contains something that does not belong to the caller. A
+  suite that only checks status codes would have passed against every one of the seventeen leaks that motivated the
+  scope module.
+</div>
+
+<div class="note key">
+  <span class="lbl">Commitment 2 — every assertion is verified to fail</span>
+  Each test was run against the defect reverted, to confirm that it actually fails. An assertion that passes both
+  with and without the fix protects nothing. This is stated explicitly in the headers of the regression and
+  performance suites.
+</div>
+
+<div class="note key">
+  <span class="lbl">Commitment 3 — a new endpoint touching student or circle data is added to the isolation suite in the same commit</span>
+  This is the rule that keeps the boundary from eroding endpoint by endpoint, which is how it eroded before.
+</div>
+
+<p>Suites run against a live MongoDB. Each creates a temporary database, exercises the application layer directly
+(the startup routine, routers and scope helpers are imported and called), and drops the database at the end, so
+production data is never touched.</p>
+
+<h2>13.2 Test suite inventory</h2>
+
+<table>
+  <caption>Table 13.1 — Test suites</caption>
+  <thead><tr><th style="width:26%">Suite</th><th class="c" style="width:8%">Lines</th><th class="c" style="width:9%">Assertion sites</th><th>What it guards</th></tr></thead>
+  <tbody>
+    <tr>
+      <td class="mono">data_isolation_test.py</td><td class="c num">346</td><td class="c num">39</td>
+      <td>The four-level scope model on a fixture centre with two circles, each with its own teacher and two
+      students. Documented at <strong>63 assertions</strong> including those executed inside loops. Verifies that a
+      teacher cannot read a student of another circle, cannot record for one, and that a manager reads everything
+      but records nothing.</td>
+    </tr>
+    <tr>
+      <td class="mono">competitions_accounts_test.py</td><td class="c num">441</td><td class="c num">80</td>
+      <td>Documented at <strong>79 assertions</strong>. Branch separation; per-judge marking and the panel mean;
+      that a second judge's marking does not erase the first; immutability after approval; invisibility of a
+      competition to a non-judge and its disappearance after approval; that administration approves but does not
+      mark; that an evaluation is readable by its subject and administration only; and that student and guardian
+      accounts see only what belongs to them.</td>
+    </tr>
+    <tr>
+      <td class="mono">audit_2026_09_03_test.py</td><td class="c num">402</td><td class="c num">69</td>
+      <td>A regression suite pinning each fix of the 2026-09-03 review: dual-key rate limiting, hashed reset codes,
+      atomic audit sequencing, the removal of name-based ownership matching, salary redaction, CSV encoding, ID
+      validation, CORS origin parsing and the security headers.</td>
+    </tr>
+    <tr>
+      <td class="mono">owner_batch_2026_09_07_test.py</td><td class="c num">415</td><td class="c num">66</td>
+      <td>The closed messaging chain; certificate issuance by the manager only, after approval, after the milestone,
+      and never twice; the once-a-day and once-a-month guards; correctability of every administrative act; a student
+      seeing circle peers on the leaderboard and full competition results <em>without</em> being able to open anyone's
+      file; a teacher seeing the aggregate circle ranking but not another circle's detail; and the activity index
+      measuring movement rather than size.</td>
+    </tr>
+    <tr>
+      <td class="mono">performance_layer_test.py</td><td class="c num">297</td><td class="c num">29</td>
+      <td>Documented at <strong>31 assertions</strong>. The metrics, the taxonomy, badge idempotence and the
+      forecast. Its decisive case is <span class="mono">forecast_reacts_to_quality</span>: two students identical in
+      quantity and attendance and differing only in errors — <em>if their forecasts are equal, quality is not
+      entering the computation</em>, and the central contribution of the layer is absent.</td>
+    </tr>
+    <tr>
+      <td class="mono">center_approval_test.py</td><td class="c num">140</td><td class="c num">17</td>
+      <td>The full approval cycle. Motivated by a complete dead end: the registrant could not log in and saw
+      “account disabled” — a rejection message, not a waiting one — while the administrator's centre list was empty
+      (it scoped a global role to a centre it did not have) and no approval control existed in the interface at all,
+      though both endpoints existed on the server.</td>
+    </tr>
+    <tr>
+      <td class="mono">register_center_test.py</td><td class="c num">128</td><td class="c num">14</td>
+      <td>Public registration. Motivated by the registration form lacking an email field the server required, so
+      every attempt returned 400 — and then 429, because failures consumed the hourly quota. The decisive assertion
+      is that <em>errors do not consume the quota</em>: five failures followed by one valid attempt must succeed.</td>
+    </tr>
+    <tr><th>Total</th><th class="c">2,169</th><th class="c">314</th><th></th></tr>
+  </tbody>
+</table>
+
+<p class="small">“Assertion sites” counts calls to the suites' assertion helper in the source. Where a suite's own
+header or the project documentation states a different figure, that figure counts assertions <em>executed</em>,
+including those inside loops; both are given above.</p>
+
+<p>A separate historical artefact, <span class="mono">backend_test_results.json</span>, records an end-to-end API
+run of 2 April 2026 with 34 of 34 checks passing — health, logins for five roles, and the principal CRUD paths. It
+predates the scope model and the analytical layer and is retained as a record, not as current coverage.</p>
+
+<h2>13.3 Representative invariants</h2>
+
+<table>
+  <caption>Table 13.2 — A selection of invariants under test</caption>
+  <thead><tr><th style="width:30%">Invariant</th><th>Why it is the right thing to assert</th></tr></thead>
+  <tbody>
+    <tr><td>A teacher requesting a student from another circle receives 403 — <em>not</em> a 200 with an empty body</td><td>An empty 200 would indicate the scope filter is being applied where an authorisation decision was required, which fails differently on the next endpoint.</td></tr>
+    <tr><td>A student who sees a peer's name on a leaderboard still receives 403 when opening that peer's record</td><td>This is the exact boundary of sanctioned exception E1; without the assertion, the exception would quietly widen.</td></tr>
+    <tr><td>A second judge's marking does not erase the first's</td><td>The previous single-score model lost marks silently, with no way to tell who had given what.</td></tr>
+    <tr><td>Two identical students differing only in errors receive different forecasts</td><td>Equality here would mean the entire quality-sensitivity contribution is inoperative while appearing to work.</td></tr>
+    <tr><td>Five failed registrations followed by one valid one succeed</td><td>A limiter that punishes typographical errors makes the feature unusable while looking like abuse protection.</td></tr>
+    <tr><td>Reprocessing a session or re-submitting a roll grants no additional XP</td><td>Idempotence is a property of the unique index; asserting it prevents a future refactor from removing the index as “redundant”.</td></tr>
+    <tr><td>A voided fee disappears from every total, not merely from the list</td><td>A void that only hides a row is a cancellation on screen and money still present in the figures.</td></tr>
+    <tr><td>An approved competition rejects marking, registration, editing and deletion</td><td>Four separate paths; freezing three of them is not freezing.</td></tr>
+  </tbody>
+</table>
+
+<h2>13.4 Static quality gates</h2>
+
+<table>
+  <caption>Table 13.3 — Pre-deployment checks</caption>
+  <thead><tr><th style="width:34%">Gate</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><span class="mono">python -m compileall</span></td><td>Syntax integrity of the entire back end.</td></tr>
+    <tr><td><span class="mono">python -m pyflakes</span></td><td>Unused and undefined symbols; must print nothing.</td></tr>
+    <tr><td><span class="mono">tsc -b</span></td><td>Type checking as a build gate. <span class="mono">noUnusedParameters</span> is enforced — and once broke the build entirely, because an unused middleware parameter meant <span class="mono">npm run build</span> had been failing unnoticed.</td></tr>
+    <tr><td><span class="mono">eslint</span></td><td>Front-end linting including React hook rules.</td></tr>
+    <tr><td><span class="mono">pip audit</span> in CI</td><td>Dependency vulnerabilities; specified to fail the build on critical findings.</td></tr>
+    <tr><td>Audit-tag count check</td><td>A grep-based confirmation that the security review's fixes are present in the deployed tree before a centre is onboarded.</td></tr>
+  </tbody>
+</table>
+
+<h2>13.5 Coverage gaps</h2>
+
+<p>Stated plainly, because a report that claims complete coverage is not credible:</p>
+<ul>
+  <li><strong>No automated front-end tests.</strong> No component, integration or end-to-end browser suite exists.
+  Interface behaviour is verified manually.</li>
+  <li><strong>No continuous integration pipeline is committed.</strong> The gates above are documented as procedure;
+  they are not enforced automatically on every push.</li>
+  <li><strong>No load or performance testing.</strong> The index strategy and the bulk-query patterns are reasoned
+  rather than measured; no figure for concurrent users or p95 latency is claimed anywhere in this report.</li>
+  <li><strong>No formal coverage measurement.</strong> The suites target authorisation boundaries and business rules
+  by design; ordinary CRUD paths are covered only where they intersect those boundaries.</li>
+  <li><strong>The forecast has not been validated against outcomes.</strong> What is tested is that quality affects
+  the prediction — not that the prediction is accurate. Accuracy requires a season of real completions (§16.2).</li>
+</ul>
+
+</section>
+
+<!-- ============================ CHAPTER 14 ============================ -->
+<section class="chapter-page">
+<h1 class="chapter"><span class="num">Chapter 14</span>Deployment and Operations</h1>
+
+<h2>14.1 Deployment topologies</h2>
+
+<h3>14.1.1 Docker Compose (recommended)</h3>
+<ol>
+  <li>Copy <span class="mono">backend/.env.example</span> to <span class="mono">backend/.env</span> and complete
+  every field; create a top-level <span class="mono">.env</span> with the MongoDB root and application credentials
+  and the database name.</li>
+  <li>Place the TLS certificate and key in <span class="mono">ops/tls/</span> and set the real hostname in
+  <span class="mono">ops/nginx.conf</span>.</li>
+  <li>Build the front end (<span class="mono">npm run build</span>) so that Nginx has static assets to serve.</li>
+  <li><span class="mono">docker compose up -d --build</span>.</li>
+  <li>Watch the first boot: if <span class="mono">INITIAL_ADMIN_PASSWORD</span> was not set in a development
+  environment, the generated password is printed <strong>once</strong>.</li>
+</ol>
+<p>The stack gives, by construction, a topology in which Mongo and the application are unreachable from the
+internet: neither publishes a port, and both sit on a network declared <span class="mono">internal: true</span>. The
+application container additionally runs with a read-only root filesystem, a <span class="mono">tmpfs</span> at
+<span class="mono">/tmp</span>, all capabilities dropped and <span class="mono">no-new-privileges</span>.</p>
+
+<h3>14.1.2 Single VPS with systemd</h3>
+<p>The application is installed under <span class="mono">/opt/mishkaat</span> with its environment file at
+<span class="mono">/etc/mishkaat/mishkaat.env</span> (mode 600, owned by root). Three units are supplied: the API
+service, a one-shot backup service and a timer that runs it daily. The API unit runs under
+<span class="mono">DynamicUser</span> with <span class="mono">NoNewPrivileges</span>, no write access outside
+<span class="mono">/tmp</span>, no access to kernel tunables, and an outbound network allow-list restricted to
+localhost — so the process can reach MongoDB and nothing else.</p>
+
+<h2>14.2 Configuration reference</h2>
+<p>The complete environment variable reference is Appendix A. Three settings deserve emphasis here:</p>
+<ul>
+  <li><span class="mono">TRUST_PROXY</span> — must be true when, and only when, a reverse proxy under the operator's
+  control sets <span class="mono">X-Forwarded-For</span>. False behind a proxy means five wrong passwords from one
+  person lock out everybody; true without a proxy means a client can forge the header and evade the limiter
+  entirely.</li>
+  <li><span class="mono">PII_ENCRYPTION_KEY</span> — must be in a secret manager and backed up. Losing it destroys
+  the encrypted fields permanently.</li>
+  <li><span class="mono">SEED_DEMO_DATA</span> — must remain false in production, and its absence must be verified
+  during onboarding rather than assumed.</li>
+</ul>
+
+<h2>14.3 Backup and disaster recovery</h2>
+
+<div class="diagram">  mongodump --archive --gzip ──┐
+                               ├──► gpg --encrypt ──► /var/backups/mishkaat/
+                               │                      mishkaat-<UTC>.archive.gpg (mode 600)
+   plaintext NEVER touches disk ┘
+                               │
+                               ├──► retention: last 30 days (RETENTION_DAYS)
+                               └──► optional: rclone copy → off-host remote
+
+  restore.sh <archive> ──► gpg --decrypt ──► mongorestore   (staging host, private key)</div>
+<figcaption>Figure 14.1 — Backup pipeline.</figcaption>
+
+<p>The design point is the key split: a backup-only GPG key pair is generated, and <strong>only the public key is
+installed on the production host</strong>. The private key stays with the operator, off-host, so a compromise of the
+server yields encrypted archives that the attacker cannot read. The timer fires daily at 03:17 UTC. A restore drill
+is documented as a requirement to be performed <em>before</em> it is needed, not after.</p>
+
+<h2>14.4 Health and observability</h2>
+
+<table>
+  <caption>Table 14.1 — Monitoring signals</caption>
+  <thead><tr><th style="width:28%">Signal</th><th>What to watch and why</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">GET /api/health</td><td>Liveness, unauthenticated. Monitor this <em>and</em> the site root separately, so that an Nginx or TLS failure is distinguishable from an application failure.</td></tr>
+    <tr><td class="mono">GET /api/health/ready</td><td>Readiness, including database reachability.</td></tr>
+    <tr><td><span class="mono">LOGIN_FAILED</span> rate</td><td>A spike from one address within the lockout window indicates brute forcing.</td></tr>
+    <tr><td><span class="mono">PUBLIC_REGISTER_CENTER</span> rate</td><td>A spike indicates registration spam.</td></tr>
+    <tr><td>Backup journal</td><td>Alert if the backup unit has not run in more than 26 hours.</td></tr>
+    <tr><td>TTL collection sizes</td><td><span class="mono">revoked_tokens</span>, <span class="mono">login_attempts</span> and <span class="mono">register_attempts</span> should stay small (&lt; 10k documents). Growth means TTL indexes are missing.</td></tr>
+    <tr><td>Application logs</td><td>Shipped to a central store with ≥ 90 days retention. Every 500 carries a request identifier that correlates the client's response with the server-side traceback.</td></tr>
+    <tr><td>Audit review</td><td>A scheduled weekly review of <span class="mono">GET /api/audit-logs</span>, plus periodic chain verification.</td></tr>
+  </tbody>
+</table>
+
+<h2>14.5 Centre onboarding checklist</h2>
+
+<p>A per-centre security checklist is part of the repository and is to be completed <strong>once for every centre</strong>
+before credentials are handed over. Its sections, in order:</p>
+
+<table>
+  <caption>Table 14.2 — Onboarding checklist sections</caption>
+  <thead><tr><th style="width:7%">§</th><th style="width:26%">Section</th><th>Representative checks</th></tr></thead>
+  <tbody>
+    <tr><td class="c">0</td><td>Pre-flight</td><td>The audit commit is deployed; the back end compiles; static analysis is clean; the cryptography dependency is importable.</td></tr>
+    <tr><td class="c">1</td><td>Environment</td><td>Every secret is per-instance and real; <span class="mono">.env</span> is git-ignored.</td></tr>
+    <tr><td class="c">2</td><td>Demo accounts</td><td><span class="mono">SEED_DEMO_DATA</span> false; <em>verify</em> that no demo user exists in the database.</td></tr>
+    <tr><td class="c">3</td><td>Centre creation</td><td>Credentials delivered out of band; the manager changes the password on first login (which invalidates other sessions); the centre link is verified on the manager account.</td></tr>
+    <tr><td class="c">4</td><td><strong>Isolation probes</strong></td><td>A scripted list of cross-tenant requests from the new manager's token. <strong>Every probe must return 403 or an empty list; if any returns 200 with data, stop and redeploy.</strong> Probes are repeated as a guardian and as a student.</td></tr>
+    <tr><td class="c">5</td><td>Session lifecycle</td><td>Refresh rotation works; logout genuinely revokes; a password change invalidates other tokens; a disabled user is rejected on both paths.</td></tr>
+    <tr><td class="c">6</td><td>Encryption at rest</td><td>Inspect the database directly: the encrypted fields must appear as Fernet tokens, not plaintext, and must return decrypted through the API. Confirm the key is in the secret store.</td></tr>
+    <tr><td class="c">7</td><td>Database hardening</td><td>Bound to localhost or a private network; a scoped database user; daily encrypted backups; a rehearsed restore; TTL indexes verified present.</td></tr>
+    <tr><td class="c">8</td><td>Proxy and TLS</td><td>HTTPS enforced; security headers set at the edge; body size capped; an edge rate-limit zone on the login path.</td></tr>
+    <tr><td class="c">9</td><td>Monitoring</td><td>Alert rules in place; weekly audit review scheduled; <strong>privacy regime acknowledged — minor data is not exported to third-party analytics</strong>.</td></tr>
+    <tr><td class="c">10</td><td>Patch hygiene</td><td>Dependency audit in CI; pinned requirements; quarterly platform review.</td></tr>
+    <tr><td class="c">11</td><td>Sign-off</td><td>Centre name, onboarding administrator, date; every box checked or explicitly waived with the justification logged in the audit record.</td></tr>
+  </tbody>
+</table>
+
+<h2>14.6 Scaling considerations</h2>
+
+<table>
+  <caption>Table 14.3 — Scaling posture</caption>
+  <thead><tr><th style="width:24%">Dimension</th><th>Current position and next step</th></tr></thead>
+  <tbody>
+    <tr><td>Application processes</td><td>Four Uvicorn workers behind Nginx. Scaling horizontally is safe because no correctness-bearing state lives in process memory: rate limiting, notification fan-out and counters are all in MongoDB. The one in-memory item is the forecast model cache, which is per-worker and explicitly advisory.</td></tr>
+    <tr><td>Database</td><td>A single MongoDB instance. The indexes cover every hot path. A replica set is the next step, both for availability and to move heavy analytical reads to a secondary.</td></tr>
+    <tr><td>Analytical reads</td><td>Metrics are computed on read. For a large centre the circle overview and leaderboards load history in bulk, but the cost still grows with volume. If it becomes a constraint, the correct response is a cached <em>snapshot</em> with an explicit computation timestamp — not a stored derived value that silently diverges from its sources.</td></tr>
+    <tr><td>File storage</td><td>GridFS. Files are small and few; if attachment volume grows, an object store with signed URLs is the migration, at the cost of leaving the single-backup property behind.</td></tr>
+    <tr><td>Live notifications</td><td>The stream polls the database, which is correct across workers and requires no broker. At high connection counts a publish/subscribe layer would reduce read load — at the cost of the property that makes the current design robust.</td></tr>
+  </tbody>
+</table>
+
+</section>
