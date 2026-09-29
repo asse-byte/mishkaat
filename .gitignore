@@ -106,3 +106,4 @@ secret_key*
 # Python bytecode
 __pycache__/
 *.py[cod]
+.demo-venv/
