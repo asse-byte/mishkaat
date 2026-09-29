@@ -31,6 +31,15 @@ const utf8HeadersPlugin = () => ({
   },
 });
 
+const apiProxy = {
+  '/api': {
+    // العنوان قابل للضبط حتى يمكن تشغيل أكثر من خادم تطوير جنباً إلى جنب
+    // (مراجعة/تصميم على منفذ، وعملك الجاري على آخر). الافتراضي لم يتغيّر.
+    target: process.env.VITE_API_TARGET || 'http://localhost:8001',
+    changeOrigin: true,
+  },
+}
+
 export default defineConfig({
   plugins: [react(), tailwindcss(), utf8HeadersPlugin()],
   resolve: {
@@ -41,13 +50,14 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
-    proxy: {
-      '/api': {
-        // العنوان قابل للضبط حتى يمكن تشغيل أكثر من خادم تطوير جنباً إلى جنب
-        // (مراجعة/تصميم على منفذ، وعملك الجاري على آخر). الافتراضي لم يتغيّر.
-        target: process.env.VITE_API_TARGET || 'http://localhost:8001',
-        changeOrigin: true,
-      },
-    },
+    proxy: apiProxy,
+  },
+  // وضع العرض التجريبي (ops/demo.sh): يخدم نسخة البناء ويمرّر /api إلى الخادم الخلفي.
+  // allowedHosts مفتوح لأن رابط النفق (trycloudflare.com وغيره) اسمه يتغيّر في كل مرة.
+  preview: {
+    host: '0.0.0.0',
+    port: 3000,
+    allowedHosts: true,
+    proxy: apiProxy,
   },
 })
