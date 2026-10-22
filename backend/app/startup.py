@@ -10,6 +10,7 @@ import secrets
 
 from app.config import IS_PRODUCTION, LOCKOUT_MINUTES, REGISTER_WINDOW_MINUTES, logger
 from app.db import db
+from app.pii import decrypt_pii
 from app.security import get_password_hash
 
 
@@ -165,6 +166,14 @@ async def startup_event():
         partialFilterExpression={"kind": "competition"}, name="uniq_competition_student")
     await _safe_create_index(db.certificates, [("center_id", 1), ("issued_at", -1)])
     await _safe_create_index(db.certificates, [("serial", 1)], unique=True)
+
+    # [إصلاح 2026-10-22] حسابات أولياء الأمور الصادرة قبل إصلاح accounts.py حملت
+    # اسماً معمّى (نُسخ parent_name المعمّى كما هو). يُفكّ هنا عند الإقلاع؛ و
+    # decrypt_pii تُعيد النصّ الصريح كما هو، فالخطوة بلا أثر على ما صحّ من قبل.
+    async for u in db.users.find({"role": "parent", "name": {"$regex": "^gAAAAA"}}, {"name": 1}):
+        plain = decrypt_pii(u["name"])
+        if plain != u["name"]:
+            await db.users.update_one({"_id": u["_id"]}, {"$set": {"name": plain}})
 
     # [AUDIT-2026-05-22 fix: admin bootstrap — never ship default password to production]
     SEED_DEMO_DATA = os.getenv("SEED_DEMO_DATA", "false").lower() in ("true", "1", "yes")

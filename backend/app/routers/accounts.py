@@ -28,6 +28,7 @@ from app.audit import write_audit_log
 from app.clock import utcnow
 from app.common import check_student_access, safe_object_id
 from app.db import db
+from app.pii import decrypt_pii
 from app.security import (
     get_current_user,
     get_password_hash,
@@ -126,7 +127,9 @@ async def issue_account(student_id: str, req: AccountRequest,
         name = req.name or student.get("name")
         phone = student.get("phone")
     else:
-        name = req.name or student.get("parent_name") or f"وليّ أمر {student.get('name')}"
+        # [إصلاح 2026-10-22] parent_name معمّى في سجلّ الطالب (pii._STUDENT_PII_FIELDS)،
+        # وكان يُنسخ كما هو اسماً للحساب: فيرى وليّ الأمر في لوحته «مرحباً بك، gAAAA…».
+        name = req.name or decrypt_pii(student.get("parent_name")) or f"وليّ أمر {student.get('name')}"
         phone = student.get("parent_phone")
 
     user_doc = {

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
 import WelcomeHero from '@/components/ui/WelcomeHero';
+import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/ui/StatCard';
 
 interface CenterData {
@@ -44,6 +45,7 @@ const SeqBadge = ({ id }: { id: string }) => (
 );
 
 export default function AdminDashboard() {
+  const { user } = useAuth();
   const [showAddForm, setShowAddForm]     = useState(false);
   const [searchTerm, setSearchTerm]       = useState('');
   const [centers, setCenters]             = useState<CenterData[]>([]);
@@ -148,7 +150,7 @@ export default function AdminDashboard() {
 
       {/* Hero banner */}
       <WelcomeHero
-        name={null}
+        name={user?.name || null}
         roleTitle="مدير النظام"
         subtext="إدارة وتسجيل مراكز تحفيظ القرآن الكريم"
         stats={[

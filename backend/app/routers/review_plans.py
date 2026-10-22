@@ -147,6 +147,10 @@ async def create_review_plan(plan: ReviewPlanCreate, current_user: dict = Depend
     data["created_at"] = utcnow()
     data["created_by"] = str(current_user["_id"])
     result = await db.review_plans.insert_one(data)
+    # [إصلاح 2026-10-22] insert_one يضيف `_id` (ObjectId) إلى القاموس نفسه، فيفشل
+    # ترميز الجواب بـ500 — والخطة محفوظة فعلاً. فيرى الشيخ «خطأ داخلي» عند أوّل
+    # ضبطٍ لمعدّل مراجعة أيّ طالب.
+    data.pop("_id", None)
     data["id"] = str(result.inserted_id)
     data["created_at"] = data["created_at"].isoformat()
     return data

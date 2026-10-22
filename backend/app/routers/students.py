@@ -10,7 +10,8 @@ from fastapi import Query
 from typing import Optional
 import re
 
-from app.common import check_student_access, safe_object_id, serialize_doc
+from app.common import NOT_DELETED, check_student_access, safe_object_id, serialize_doc
+from app.config import TOTAL_QURAN_PAGES, VERSES_PER_PAGE
 from app.db import db
 from app.models import StudentCreate, StudentUpdate
 from app.pii import decrypt_student_doc, encrypt_student_doc
@@ -18,6 +19,37 @@ from app.scope import student_query, teacher_halaqah_ids
 from app.security import get_current_user
 
 router = APIRouter()
+
+
+async def memorization_progress(student_ids: list) -> dict:
+    """
+    [إصلاح 2026-10-22] نسبة الحفظ والسورة الحالية محسوبتان من التسميع.
+
+    كانت `progress` و`current_surah` حقلين يُكتبان صفراً عند التسجيل ولا يحدّثهما
+    شيء بعد ذلك، فتعرض لوحة الطالب «0 / 30 جزءاً» ولوحة وليّ الأمر «الحفظ 0%» مهما
+    سمّع. الحساب هنا هو حساب metrics.pages_memorized نفسه (صفحات الحفظ الجديد:
+    المُدخَلة صراحةً، وإلا آيات النطاق ÷ VERSES_PER_PAGE)، بتجميعٍ واحد للقائمة كلّها.
+    """
+    if not student_ids:
+        return {}
+    verses = {"$max": [1, {"$add": [{"$subtract": ["$end_ayah", "$start_ayah"]}, 1]}]}
+    pages = {"$cond": [{"$gt": [{"$ifNull": ["$pages_count", 0]}, 0]},
+                       "$pages_count", {"$divide": [verses, VERSES_PER_PAGE]}]}
+    rows = db.recitations.aggregate([
+        {"$match": {**NOT_DELETED, "student_id": {"$in": student_ids},
+                    "recitation_type": {"$ne": "review"}}},
+        {"$sort": {"date": 1}},
+        {"$group": {"_id": "$student_id", "pages": {"$sum": pages},
+                    "surah": {"$last": "$surah_name"}, "ayah": {"$last": "$end_ayah"}}},
+    ])
+    out = {}
+    async for r in rows:
+        out[r["_id"]] = {
+            "progress": round(min(100.0, 100.0 * r["pages"] / TOTAL_QURAN_PAGES), 1),
+            "current_surah": r.get("surah"),
+            "current_ayah": r.get("ayah"),
+        }
+    return out
 
 
 # ==================== Students Routes ====================
@@ -63,10 +95,12 @@ async def get_students(
             query["name"] = {"$regex": safe, "$options": "i"}
 
     students = await db.students.find(query).skip(skip).limit(limit).to_list(limit)
+    progress = await memorization_progress([str(s["_id"]) for s in students])
     result = []
     for s in students:
         # [AUDIT-2026-05-22 fix: decrypt PII before serialization]
         doc = serialize_doc(decrypt_student_doc(s))
+        doc.update(progress.get(doc["id"], {}))
         doc["enrollment_date"] = doc.get("enrollment_date", utcnow())
         if isinstance(doc["enrollment_date"], datetime):
             doc["enrollment_date"] = doc["enrollment_date"].isoformat()
@@ -81,6 +115,7 @@ async def get_student(student_id: str, current_user: dict = Depends(get_current_
     """
     student = await check_student_access(student_id, current_user)
     doc = serialize_doc(decrypt_student_doc(student))
+    doc.update((await memorization_progress([doc["id"]])).get(doc["id"], {}))
     if isinstance(doc.get("enrollment_date"), datetime):
         doc["enrollment_date"] = doc["enrollment_date"].isoformat()
     return doc

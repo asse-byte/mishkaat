@@ -1,6 +1,9 @@
 fastapi==0.110.1
 uvicorn==0.25.0
 motor==3.3.1
+# motor 3.3 يستورد pymongo.cursor._QUERY_OPTIONS التي حُذفت في pymongo 4.9 — بلا هذا القيد
+# يُثبّت pip أحدثَ pymongo فيسقط الخادم عند الإقلاع بـ ImportError.
+pymongo>=4.5,<4.9
 pydantic==2.12.5
 python-dotenv==1.2.1
 PyJWT==2.11.0

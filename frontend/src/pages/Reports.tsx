@@ -100,12 +100,19 @@ export default function Reports() {
   );
 
   // ── Computed values ──────────────────────────────────────────
+  // [إصلاح 2026-10-22] سجلّ التسميع لا يحمل halaqah_id، وسجلّ الحضور لا يحمل
+  // halaqah_name: فكان مرشّح الحلقة يُفرغ تقرير التسميع كلَّه، وعمود «الحلقة» في
+  // تقرير الحضور «—» دائماً. الحلقة تُستدلّ من الطالب، واسمها من قائمة الحلقات.
+  const halaqahOfStudent = new Map<string, string>((data?.students || []).map(s => [s.id, s.halaqah_id]));
+  const halaqahName = new Map<string, string>((data?.halaqat || []).map(h => [h.id, h.name]));
+  const recHalaqah = (r: { halaqah_id?: string; student_id?: string }) =>
+    r.halaqah_id || halaqahOfStudent.get(r.student_id || '');
   const filteredAtt = data?.attendance.filter(a =>
     (!filterHalaqah || a.halaqah_id === filterHalaqah) &&
     (!filterMonth || a.date?.startsWith(filterMonth))
   ) || [];
   const filteredRec = data?.recitations.filter(r =>
-    (!filterHalaqah || r.halaqah_id === filterHalaqah) &&
+    (!filterHalaqah || recHalaqah(r) === filterHalaqah) &&
     (!filterMonth || r.date?.startsWith(filterMonth))
   ) || [];
 
@@ -131,7 +138,7 @@ export default function Reports() {
 
   // Per-halaqah recitation summary
   const halaqahRecStats = (data?.halaqat || []).map(h => {
-    const hRec = filteredRec.filter(r => r.halaqah_id === h.id);
+    const hRec = filteredRec.filter(r => recHalaqah(r) === h.id);
     const hExc = hRec.filter(r => r.evaluation === 'excellent').length;
     return { ...h, total: hRec.length, excellent: hExc, rate: hRec.length > 0 ? Math.round(hExc / hRec.length * 100) : 0 };
   });
@@ -269,7 +276,7 @@ export default function Reports() {
                   {filteredAtt.slice(0, 50).map((a: any, i: number) => (
                     <tr key={a.id || i} className="hover:bg-[hsl(var(--muted))]/20">
                       <td className="px-4 py-2.5 font-medium">{a.student_name || '—'}</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || '—'}</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || halaqahName.get(a.halaqah_id) || '—'}</td>
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{new Date(a.date || Date.now()).toLocaleDateString('ar-SA')}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${a.status==='present'?'bg-emerald-100 text-emerald-700':a.status==='absent'?'bg-red-100 text-red-700':a.status==='late'?'bg-amber-100 text-amber-700':'bg-blue-100 text-blue-700'}`}>
