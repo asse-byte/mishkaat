@@ -39,6 +39,8 @@ class UserCreate(UserBase):
 class UserResponse(UserBase):
     id: str
     created_at: datetime
+    # كلمة مرور مؤقتة أعطاها المسؤول: الواجهة تُلزم بتغييرها قبل أي شيء آخر
+    must_change_password: bool = False
 
     # [AUDIT-2026-09-03 fix: class-based Config محذوف في Pydantic v3 — سيتوقف التطبيق عن
     #  الإقلاع عند أول ترقية للمكتبة. صار ConfigDict.]

@@ -142,8 +142,12 @@ async def _decode_and_verify(token: str, expected_type: str = "access") -> tuple
                 password_changed_at = datetime.fromisoformat(password_changed_at)
             except ValueError:
                 password_changed_at = None
+        # [إصلاح 2026-10-22] iat بالثواني الصحيحة، ووقت التغيير بأجزاء الثانية: التوكن
+        # الذي يعيده /change-password يصدر في الثانية نفسها فيبدو «أقدم» من التغيير
+        # ويُرفض فوراً — فيخرج المستخدم بعد كل تغيير لكلمة مروره. المقارنة بالثانية؛
+        # والتوكن القديم من الثانية نفسها يسقط بفحص user_version أعلاه.
         if password_changed_at:
-            if password_changed_at.timestamp() > token_iat:
+            if int(password_changed_at.timestamp()) > token_iat:
                 raise credentials_exception
 
     return payload, user

@@ -17,13 +17,53 @@ import jwt
 import secrets
 
 from app.audit import write_audit_log
-from app.common import _PHONE_SCOPED_ROLES, client_ip
+from app.common import _PHONE_SCOPED_ROLES, client_ip, safe_object_id
 from app.config import ACCESS_TOKEN_EXPIRE_MINUTES, ALGORITHM, MAX_LOGIN_ATTEMPTS, REFRESH_TOKEN_EXPIRE_DAYS, RESET_CODE_TTL_MINUTES, RESET_MAX_VERIFY_ATTEMPTS, SECRET_KEY, logger
 from app.db import db
+from app.routers.accounts import _suggest_password
+from app.sse import push_notification
 from app.models import AdminResetPasswordRequest, ChangePasswordRequest, ForgotPasswordRequest, LogoutBody, RefreshRequest, ResetPasswordRequest, Token, UpdateProfileRequest, UserResponse
 from app.security import _check_rate_limit, _check_reset_request_rate, _clear_attempts, _clear_attempts_for_account, _decode_and_verify, _record_failed_attempt, authenticate_user, create_access_token, create_refresh_token, get_current_user, get_password_hash, get_user_by_username, hash_reset_code, oauth2_scheme, revoke_jti, validate_password_complexity, verify_password, REFRESH_COOKIE, set_refresh_cookie, clear_refresh_cookie
 
 router = APIRouter()
+
+
+def _user_response(user: dict) -> UserResponse:
+    return UserResponse(
+        id=str(user["_id"]),
+        username=user["username"],
+        name=user["name"],
+        email=user.get("email"),
+        phone=user.get("phone"),
+        role=user["role"],
+        center_id=user.get("center_id"),
+        is_active=user["is_active"],
+        created_at=user["created_at"],
+        must_change_password=bool(user.get("must_change_password")),
+    )
+
+
+# [إصلاح 2026-10-22] «نسيت كلمة المرور؟» كان زرّاً بلا وظيفة، والرمز الذي يولّده
+# /forgot-password لا يصل إلى أحد: لا SMS ولا بريد، يُكتب في سجلّ الخادم فقط.
+# فصار الطلب يصل إلى من يملك إعادة تعيين كلمة مرور صاحبه — بقواعد
+# /admin-reset-password نفسها — فيعطيه كلمة مرور مؤقتة يغيّرها عند أوّل دخول.
+_PASSWORD_HELPER_ROLE = {
+    "student": "center_manager", "parent": "center_manager", "teacher": "center_manager",
+    "center_manager": "admin", "admin": "super_admin", "super_admin": "super_admin",
+}
+HELP_REQUEST_TTL_DAYS = 7
+
+
+async def _password_helpers(user: dict) -> list:
+    role = _PASSWORD_HELPER_ROLE.get(user.get("role"))
+    if not role:
+        return []
+    q = {"role": role, "is_active": True, "_id": {"$ne": user["_id"]}}
+    if role == "center_manager":
+        if not user.get("center_id"):
+            return []
+        q["center_id"] = user["center_id"]
+    return await db.users.find(q, {"_id": 1}).to_list(50)
 
 
 @router.post("/api/auth/login", response_model=Token)
@@ -90,17 +130,7 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
     access_token, _ = create_access_token(user)
     refresh_token, _ = create_refresh_token(user)
 
-    user_response = UserResponse(
-        id=str(user["_id"]),
-        username=user["username"],
-        name=user["name"],
-        email=user.get("email"),
-        phone=user.get("phone"),
-        role=user["role"],
-        center_id=user.get("center_id"),
-        is_active=user["is_active"],
-        created_at=user["created_at"]
-    )
+    user_response = _user_response(user)
 
     # [إصلاح 2026-09-04] توكن التجديد يخرج في كعكة httpOnly لا في جسم الاستجابة،
     # فلا تصل إليه JavaScript ولا يُحفَظ في localStorage.
@@ -137,17 +167,7 @@ async def refresh_access_token(request: Request, body: Optional[RefreshRequest] 
     new_access, _ = create_access_token(user)
     new_refresh, _ = create_refresh_token(user)
 
-    user_response = UserResponse(
-        id=str(user["_id"]),
-        username=user["username"],
-        name=user["name"],
-        email=user.get("email"),
-        phone=user.get("phone"),
-        role=user["role"],
-        center_id=user.get("center_id"),
-        is_active=user["is_active"],
-        created_at=user["created_at"],
-    )
+    user_response = _user_response(user)
     out = Token(
         access_token=new_access,
         token_type="bearer",
@@ -162,17 +182,7 @@ async def refresh_access_token(request: Request, body: Optional[RefreshRequest] 
 @router.get("/api/auth/me", response_model=UserResponse)
 async def get_me(current_user: dict = Depends(get_current_user)):
     """الحصول على بيانات المستخدم الحالي"""
-    return UserResponse(
-        id=str(current_user["_id"]),
-        username=current_user["username"],
-        name=current_user["name"],
-        email=current_user.get("email"),
-        phone=current_user.get("phone"),
-        role=current_user["role"],
-        center_id=current_user.get("center_id"),
-        is_active=current_user["is_active"],
-        created_at=current_user["created_at"]
-    )
+    return _user_response(current_user)
 
 @router.post("/api/auth/logout")
 async def logout(
@@ -265,6 +275,10 @@ async def change_password(
     set_refresh_cookie(resp, new_refresh)
     return resp
 
+FORGOT_REPLY = ("إن كان اسم المستخدم صحيحاً فقد وصل طلبك إلى المسؤول عن حسابك — مدير مركزك، "
+                "أو إدارة النظام إن كنت مدير مركز — وسيعطيك كلمة مرور مؤقتة تغيّرها عند الدخول.")
+
+
 @router.post("/api/auth/forgot-password")
 async def forgot_password(data: ForgotPasswordRequest, request: Request):
     """طلب إعادة تعيين كلمة المرور (لا يسرب الرمز في الاستجابة)"""
@@ -274,7 +288,7 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request):
     user = await get_user_by_username(data.username)
     if not user:
         # Don't leak whether user exists to avoid user enumeration
-        return {"message": "إذا كان المستخدم موجوداً، فقد تم إرسال رمز التحقق"}
+        return {"message": FORGOT_REPLY}
 
     # Generate 6-digit code
     code = "".join(secrets.choice("0123456789") for _ in range(6))
@@ -299,7 +313,76 @@ async def forgot_password(data: ForgotPasswordRequest, request: Request):
     # In production, this would send an SMS/Email. Here we log it server-side only.
     logger.info(f"[reset] code issued for {data.username}: {code} (expires in {RESET_CODE_TTL_MINUTES} min)")
 
-    return {"message": "إذا كان المستخدم موجوداً، فقد تم إرسال رمز التحقق"}
+    # طلبٌ مفتوح واحد لكل حساب؛ والإشعار يُرسَل عند فتحه لا عند كل تكرار
+    res = await db.password_help_requests.update_one(
+        {"username": user["username"], "resolved_at": None},
+        {"$set": {
+            "user_id": str(user["_id"]),
+            "name": user.get("name"),
+            "role": user["role"],
+            "center_id": user.get("center_id"),
+            "phone": user.get("phone"),
+            "requested_at": utcnow(),
+            "requested_from_ip": ip,
+        }},
+        upsert=True,
+    )
+    if res.upserted_id is not None:
+        for helper in await _password_helpers(user):
+            await push_notification(
+                str(helper["_id"]), "password_help", "طلب استعادة كلمة مرور",
+                f"{user.get('name') or user['username']} ({user['username']}) نسي كلمة مروره. "
+                "أعطه كلمة مرور مؤقتة من لوحة التحكم.",
+                {"username": user["username"]},
+            )
+
+    return {"message": FORGOT_REPLY}
+
+
+@router.get("/api/auth/password-help-requests")
+async def list_password_help_requests(current_user: dict = Depends(get_current_user)):
+    """طلبات الاستعادة التي يملك هذا المستخدم معالجتها."""
+    role = current_user["role"]
+    targets = [r for r, helper in _PASSWORD_HELPER_ROLE.items() if helper == role]
+    if not targets:
+        return []
+    q = {
+        "resolved_at": None,
+        "role": {"$in": targets},
+        "username": {"$ne": current_user["username"]},
+        "requested_at": {"$gte": utcnow() - timedelta(days=HELP_REQUEST_TTL_DAYS)},
+    }
+    if role == "center_manager":
+        if not current_user.get("center_id"):
+            return []
+        q["center_id"] = current_user["center_id"]
+    docs = await db.password_help_requests.find(q).sort("requested_at", -1).to_list(50)
+    return [{
+        "id": str(d["_id"]),
+        "username": d["username"],
+        "name": d.get("name"),
+        "role": d.get("role"),
+        "phone": d.get("phone"),
+        "requested_at": d["requested_at"].isoformat(),
+    } for d in docs]
+
+
+@router.post("/api/auth/password-help-requests/{request_id}/resolve")
+async def resolve_password_help_request(request_id: str, request: Request,
+                                        current_user: dict = Depends(get_current_user)):
+    """كلمة مرور مؤقتة لصاحب الطلب — تُعرض مرّة واحدة ليبلّغه بها المسؤول."""
+    if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
+        raise HTTPException(status_code=403, detail="غير مصرح")
+    req = await db.password_help_requests.find_one(
+        {"_id": safe_object_id(request_id), "resolved_at": None})
+    if not req:
+        raise HTTPException(status_code=404, detail="الطلب غير موجود أو عولج من قبل")
+    target = await get_user_by_username(req["username"])
+    if not target:
+        raise HTTPException(status_code=404, detail="المستخدم غير موجود")
+    password = _suggest_password()
+    await _reset_by_staff(target, current_user, password, request)
+    return {"username": target["username"], "name": target.get("name"), "password": password}
 
 @router.get("/api/auth/reset-codes")
 async def get_reset_codes(current_user: dict = Depends(get_current_user)):
@@ -399,9 +482,6 @@ async def admin_reset_password(
     """
     [AUDIT-2026-09-03 addition] المسار المشروع الذي كانت /auth/reset-codes تُستعمل لأجله:
     إعادة تعيين كلمة مرور مستخدم من قبل الإدارة — لكن ضمن نطاق محدود ومسجّل.
-
-    القواعد: مدير المركز لا يطال إلا مستخدمي مركزه، ولا أحد دون المدير العام يطال حساب
-    admin أو super_admin، ولا أحد يعيد تعيين كلمة مروره بهذه النقطة (لذلك change-password).
     """
     if current_user["role"] not in ["admin", "super_admin", "center_manager"]:
         raise HTTPException(status_code=403, detail="غير مصرح")
@@ -410,6 +490,16 @@ async def admin_reset_password(
     if not target:
         raise HTTPException(status_code=404, detail="المستخدم غير موجود")
 
+    validate_password_complexity(data.new_password)
+    await _reset_by_staff(target, current_user, data.new_password, request)
+    return {"message": "تمت إعادة تعيين كلمة المرور. أُنهيت جلسات المستخدم على كل الأجهزة."}
+
+
+async def _reset_by_staff(target: dict, current_user: dict, new_password: str, request: Request) -> None:
+    """
+    القواعد: مدير المركز لا يطال إلا مستخدمي مركزه، ولا أحد دون المدير العام يطال حساب
+    admin أو super_admin، ولا أحد يعيد تعيين كلمة مروره بهذه النقطة (لذلك change-password).
+    """
     if str(target["_id"]) == str(current_user["_id"]):
         raise HTTPException(status_code=400, detail="استخدم تغيير كلمة المرور من ملفك الشخصي")
 
@@ -425,28 +515,28 @@ async def admin_reset_password(
         if not current_user.get("center_id") or target.get("center_id") != current_user.get("center_id"):
             raise HTTPException(status_code=403, detail="هذا المستخدم لا ينتمي لمركزك")
 
-    validate_password_complexity(data.new_password)
-
     await db.users.update_one(
         {"_id": target["_id"]},
         {"$set": {
-            "hashed_password": get_password_hash(data.new_password),
+            "hashed_password": get_password_hash(new_password),
             "user_version": int(target.get("user_version", 0)) + 1,
             "password_changed_at": utcnow(),
             "must_change_password": True,
         }}
     )
-    await db.password_resets.delete_one({"username": data.username})
-    await _clear_attempts_for_account(data.username)
+    await db.password_resets.delete_one({"username": target["username"]})
+    await db.password_help_requests.update_many(
+        {"username": target["username"], "resolved_at": None},
+        {"$set": {"resolved_at": utcnow(), "resolved_by": current_user["username"]}})
+    await _clear_attempts_for_account(target["username"])
 
     await write_audit_log(
         actor_id=str(current_user["_id"]),
         center_id=current_user.get("center_id", "system"),
         action="ADMIN_RESET_PASSWORD",
-        payload={"target_username": data.username, "target_role": target_role, "by": current_user["username"]},
+        payload={"target_username": target["username"], "target_role": target_role, "by": current_user["username"]},
         client_ip=client_ip(request),
     )
-    return {"message": "تمت إعادة تعيين كلمة المرور. أُنهيت جلسات المستخدم على كل الأجهزة."}
 
 @router.put("/api/auth/profile")
 async def update_profile(

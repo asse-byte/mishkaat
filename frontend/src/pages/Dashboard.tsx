@@ -6,13 +6,10 @@ import CenterManagerDashboard from './dashboards/CenterManagerDashboard';
 import TeacherDashboard from './dashboards/TeacherDashboard';
 import StudentDashboard from './dashboards/StudentDashboard';
 import ParentDashboard from './dashboards/ParentDashboard';
+import PasswordHelpRequests from '@/components/auth/PasswordHelpRequests';
 
-export default function Dashboard() {
-  const { user } = useAuth();
-
-  if (!user) return null;
-
-  switch (user.role) {
+function RoleDashboard({ role }: { role: string }) {
+  switch (role) {
     case 'admin':
       return <AdminDashboard />;
     case 'super_admin':
@@ -28,4 +25,21 @@ export default function Dashboard() {
     default:
       return <AdminDashboard />;
   }
+}
+
+export default function Dashboard() {
+  const { user } = useAuth();
+
+  if (!user) return null;
+
+  // من يملك إعادة تعيين كلمات المرور يرى طلبات «نسيت كلمة المرور» أعلى لوحته
+  if (['admin', 'super_admin', 'center_manager'].includes(user.role)) {
+    return (
+      <div className="space-y-5">
+        <PasswordHelpRequests />
+        <RoleDashboard role={user.role} />
+      </div>
+    );
+  }
+  return <RoleDashboard role={user.role} />;
 }

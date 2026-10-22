@@ -35,6 +35,7 @@ import Certificates from '@/pages/Certificates';
 import BulkMessages from '@/pages/BulkMessages';
 import { NotFoundPage, ForbiddenPage } from '@/pages/ErrorPages';
 import DashboardLayout from '@/components/layout/DashboardLayout';
+import ForcePasswordChange from '@/components/auth/ForcePasswordChange';
 
 /**
  * [إصلاح 2026-09-03] حراسة المسارات بالأدوار.
@@ -54,7 +55,7 @@ function ProtectedRoute({
   children: React.ReactNode;
   roles?: UserRole[];
 }) {
-  const { isAuthenticated, isLoading, hasRole } = useAuth();
+  const { user, isAuthenticated, isLoading, hasRole } = useAuth();
 
   if (isLoading) {
     return <LoadingPage />;
@@ -62,6 +63,10 @@ function ProtectedRoute({
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (user?.must_change_password) {
+    return <ForcePasswordChange />;
   }
 
   if (roles && !hasRole(roles)) {
