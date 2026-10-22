@@ -3,7 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   ShieldAlert, Search, Calendar, Activity,
   ChevronRight, ChevronLeft, LogIn, LogOut,
-  KeyRound, User, RefreshCw,
+  KeyRound, User, RefreshCw, Wallet, Building2, Award, BookOpen, UserPlus,
 } from 'lucide-react';
 import api from '@/services/api';
 import PageHeader from '@/components/ui/PageHeader';
@@ -13,6 +13,8 @@ interface AuditLog {
   action: string;
   username: string;
   role?: string;
+  actor_name?: string;
+  center_name?: string;
   ip?: string;
   timestamp: string;
 }
@@ -22,11 +24,47 @@ const actionConfig: Record<string, { label: string; cls: string; icon: typeof Lo
   LOGIN_FAILED:     { label: 'محاولة فاشلة',   cls: 'bg-red-100 text-red-700',         icon: ShieldAlert },
   LOGOUT:           { label: 'تسجيل خروج',    cls: 'bg-gray-100 text-gray-600',        icon: LogOut     },
   PASSWORD_CHANGED: { label: 'تغيير مرور',    cls: 'bg-purple-100 text-purple-700',    icon: KeyRound   },
+  // [إصلاح 2026-10-22] كانت الأنواع الأربعة أعلاه وحدها معرَّفة، فيظهر الباقي رمزاً
+  // إنجليزياً («collect_fee») ولا يُختار من الفلتر. هذه كل الأنواع التي يكتبها الخادم.
+  LOGIN_DENIED_PENDING:  { label: 'دخول مرفوض: مركز قيد المراجعة', cls: 'bg-amber-100 text-amber-700', icon: ShieldAlert },
+  LOGIN_DENIED_DISABLED: { label: 'دخول مرفوض: حساب موقوف',  cls: 'bg-red-100 text-red-700',      icon: ShieldAlert },
+  PASSWORD_RESET_VIA_CODE: { label: 'استعادة كلمة المرور',   cls: 'bg-purple-100 text-purple-700', icon: KeyRound },
+  ADMIN_RESET_PASSWORD:  { label: 'إعادة تعيين مرور (الإدارة)', cls: 'bg-purple-100 text-purple-700', icon: KeyRound },
+  ACCOUNT_PASSWORD_RESET: { label: 'إعادة تعيين مرور حساب', cls: 'bg-purple-100 text-purple-700', icon: KeyRound },
+  ACCOUNT_ISSUED:        { label: 'إصدار حساب',             cls: 'bg-sky-100 text-sky-700',       icon: UserPlus },
+  PROFILE_UPDATED:       { label: 'تحديث الملف الشخصي',     cls: 'bg-gray-100 text-gray-600',     icon: User },
+  PUBLIC_REGISTER_CENTER: { label: 'طلب تسجيل مركز',        cls: 'bg-sky-100 text-sky-700',       icon: Building2 },
+  ADMIN_REGISTER_CENTER: { label: 'تسجيل مركز (الإدارة)',   cls: 'bg-sky-100 text-sky-700',       icon: Building2 },
+  SUPER_REGISTER_CENTER: { label: 'تسجيل مركز (المدير العام)', cls: 'bg-sky-100 text-sky-700',    icon: Building2 },
+  CENTER_APPROVED:       { label: 'اعتماد مركز',            cls: 'bg-emerald-100 text-emerald-700', icon: Building2 },
+  CENTER_REJECTED:       { label: 'رفض مركز',               cls: 'bg-red-100 text-red-700',       icon: Building2 },
+  SUPER_CENTER_STATUS_CHANGE: { label: 'إيقاف/تفعيل مركز',  cls: 'bg-amber-100 text-amber-700',   icon: Building2 },
+  CENTER_LOGO_UPDATED:   { label: 'تحديث شعار المركز',      cls: 'bg-gray-100 text-gray-600',     icon: Building2 },
+  TEACHER_TRANSFERRED:   { label: 'نقل محفّظ',              cls: 'bg-sky-100 text-sky-700',       icon: User },
+  collect_fee:           { label: 'تحصيل رسوم',             cls: 'bg-emerald-100 text-emerald-700', icon: Wallet },
+  update_fee:            { label: 'تعديل رسوم',             cls: 'bg-amber-100 text-amber-700',   icon: Wallet },
+  void_fee:              { label: 'إلغاء رسوم',             cls: 'bg-red-100 text-red-700',       icon: Wallet },
+  pay_salary:            { label: 'صرف راتب',               cls: 'bg-emerald-100 text-emerald-700', icon: Wallet },
+  update_salary:         { label: 'تعديل راتب',             cls: 'bg-amber-100 text-amber-700',   icon: Wallet },
+  void_salary:           { label: 'إلغاء راتب',             cls: 'bg-red-100 text-red-700',       icon: Wallet },
+  create_expense:        { label: 'إضافة مصروف',            cls: 'bg-emerald-100 text-emerald-700', icon: Wallet },
+  update_expense:        { label: 'تعديل مصروف',            cls: 'bg-amber-100 text-amber-700',   icon: Wallet },
+  delete_expense:        { label: 'إبطال مصروف',            cls: 'bg-red-100 text-red-700',       icon: Wallet },
+  UPDATE_RECITATION:     { label: 'تعديل تسميع',            cls: 'bg-amber-100 text-amber-700',   icon: BookOpen },
+  DELETE_RECITATION:     { label: 'حذف تسميع',              cls: 'bg-red-100 text-red-700',       icon: BookOpen },
+  UPDATE_ATTENDANCE:     { label: 'تعديل حضور',             cls: 'bg-amber-100 text-amber-700',   icon: Calendar },
+  DELETE_ATTENDANCE:     { label: 'حذف حضور',               cls: 'bg-red-100 text-red-700',       icon: Calendar },
+  EXPORT_STUDENTS:       { label: 'تصدير بيانات الطلاب',    cls: 'bg-gray-100 text-gray-600',     icon: User },
+  COMPETITION_CREATED:   { label: 'إنشاء مسابقة',           cls: 'bg-sky-100 text-sky-700',       icon: Award },
+  COMPETITION_APPROVED:  { label: 'اعتماد نتائج مسابقة',    cls: 'bg-emerald-100 text-emerald-700', icon: Award },
+  CERTIFICATE_ISSUED:    { label: 'إصدار شهادة',            cls: 'bg-emerald-100 text-emerald-700', icon: Award },
+  CERTIFICATE_REVOKED:   { label: 'إلغاء شهادة',            cls: 'bg-red-100 text-red-700',       icon: Award },
 };
 
 const roleLabels: Record<string, string> = {
   admin: 'مدير النظام', center_manager: 'مدير مركز',
   teacher: 'محفظ', student: 'طالب', parent: 'ولي أمر',
+  super_admin: 'المدير العام',
 };
 
 export default function AuditLogPage() {
@@ -45,11 +83,12 @@ export default function AuditLogPage() {
     if (user?.role !== 'admin') return;
     setLoading(true);
     try {
-      const res = await api.get(`/audit-logs?skip=${page * limit}&limit=${limit}`);
+      const action = filterAction ? `&action=${encodeURIComponent(filterAction)}` : '';
+      const res = await api.get(`/audit-logs?skip=${page * limit}&limit=${limit}${action}`);
       setLogs(res.data || []);
     } catch { /* silent */ }
     finally { setLoading(false); }
-  }, [page, user]);
+  }, [page, user, filterAction]);
 
   useEffect(() => { fetchLogs(); }, [fetchLogs]);
 
@@ -69,7 +108,10 @@ export default function AuditLogPage() {
   const filtered = logs.filter(log => {
     const matchSearch = !search ||
       (log.username || '').toLowerCase().includes(search.toLowerCase()) ||
-      (log.role || '').includes(search);
+      (log.actor_name || '').includes(search) ||
+      (log.center_name || '').includes(search) ||
+      (log.role || '').includes(search) ||
+      (roleLabels[log.role || ''] || '').includes(search);
     const matchAction = !filterAction || log.action === filterAction;
     const matchDate   = !filterDate || log.timestamp?.startsWith(filterDate);
     return matchSearch && matchAction && matchDate;
@@ -117,7 +159,7 @@ export default function AuditLogPage() {
               onChange={e => setSearch(e.target.value)}
               className="form-input pr-9" />
           </div>
-          <select value={filterAction} onChange={e => setFilterAction(e.target.value)}
+          <select value={filterAction} onChange={e => { setFilterAction(e.target.value); setPage(0); }}
             title="فلتر نوع العملية" className="form-input">
             <option value="">كل الأنواع</option>
             {Object.entries(actionConfig).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
@@ -169,13 +211,15 @@ export default function AuditLogPage() {
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 gradient-primary rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0">
-                            {(log.username || '?').charAt(0).toUpperCase()}
+                            {(log.actor_name || log.username || '?').charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <p className="font-bold text-[hsl(var(--foreground))]" dir="ltr">{log.username}</p>
-                            {log.role && (
+                            <p className="font-bold text-[hsl(var(--foreground))]">
+                              {log.actor_name || <span dir="ltr">{log.username || '—'}</span>}
+                            </p>
+                            {(log.role || log.center_name) && (
                               <p className="text-xs text-[hsl(var(--muted-foreground))]">
-                                {roleLabels[log.role] || log.role}
+                                {[log.role && (roleLabels[log.role] || log.role), log.center_name].filter(Boolean).join(' · ')}
                               </p>
                             )}
                           </div>

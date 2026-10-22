@@ -80,17 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => setSessionExpiredHandler(null);
   }, []);
 
+  // [إصلاح 2026-10-22] لا يُقلَب isLoading هنا: PublicRoute يعرض شاشة التحميل
+  // مكان صفحة الدخول ما دام true، فكانت الصفحة تُفكّ وتُركّب من جديد — فتضيع
+  // رسالة الخطأ والحقول معاً، ويرى من أخطأ في كلمة المرور نموذجاً فارغاً بلا تفسير.
+  // isLoading لاستعادة الجلسة عند فتح التطبيق وحدها؛ وانتظار الدخول في الصفحة نفسها.
   const login = async (username: string, password: string) => {
-    setIsLoading(true);
-    try {
-      const response = await authApi.login(username, password);
-      // توكن الوصول إلى الذاكرة؛ وتوكن التجديد وصل في كعكة httpOnly لا تراها هذه الشيفرة
-      tokenStore.set(response.access_token);
-      localStorage.setItem('user', JSON.stringify(response.user));
-      setUser(response.user);
-    } finally {
-      setIsLoading(false);
-    }
+    const response = await authApi.login(username, password);
+    // توكن الوصول إلى الذاكرة؛ وتوكن التجديد وصل في كعكة httpOnly لا تراها هذه الشيفرة
+    tokenStore.set(response.access_token);
+    localStorage.setItem('user', JSON.stringify(response.user));
+    setUser(response.user);
   };
 
   const logout = async () => {

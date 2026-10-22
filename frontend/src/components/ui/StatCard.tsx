@@ -30,7 +30,13 @@ export default function StatCard({ title, value, icon: Icon, gradientClass, tren
           <p className="text-xs font-bold text-[hsl(var(--muted-foreground))] uppercase tracking-wider truncate mb-1">
             {title}
           </p>
-          <h3 className="text-3xl font-bold text-[hsl(var(--foreground))] amount leading-none">
+          {/* [إصلاح 2026-10-22] المبالغ الطويلة («1,438,400 FCFA») كانت تفيض فوق الأيقونة
+              على شاشة 1440 فتختفي خاناتها الأولى — والإشارة السالبة معها. الخطّ يصغر للقيم
+              الطويلة، والعملة تنزل إلى سطرٍ ثانٍ إن ضاق المكان، والرقم نفسه لا ينكسر. */}
+          <h3 className={cn(
+            "font-bold text-[hsl(var(--foreground))] amount !whitespace-normal",
+            String(value).length > 9 ? "text-2xl leading-tight" : "text-3xl leading-none"
+          )}>
             {value}
           </h3>
         </div>

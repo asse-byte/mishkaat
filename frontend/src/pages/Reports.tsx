@@ -100,12 +100,19 @@ export default function Reports() {
   );
 
   // ── Computed values ──────────────────────────────────────────
+  // [إصلاح 2026-10-22] سجلّ التسميع لا يحمل halaqah_id، وسجلّ الحضور لا يحمل
+  // halaqah_name: فكان مرشّح الحلقة يُفرغ تقرير التسميع كلَّه، وعمود «الحلقة» في
+  // تقرير الحضور «—» دائماً. الحلقة تُستدلّ من الطالب، واسمها من قائمة الحلقات.
+  const halaqahOfStudent = new Map<string, string>((data?.students || []).map(s => [s.id, s.halaqah_id]));
+  const halaqahName = new Map<string, string>((data?.halaqat || []).map(h => [h.id, h.name]));
+  const recHalaqah = (r: { halaqah_id?: string; student_id?: string }) =>
+    r.halaqah_id || halaqahOfStudent.get(r.student_id || '');
   const filteredAtt = data?.attendance.filter(a =>
     (!filterHalaqah || a.halaqah_id === filterHalaqah) &&
     (!filterMonth || a.date?.startsWith(filterMonth))
   ) || [];
   const filteredRec = data?.recitations.filter(r =>
-    (!filterHalaqah || r.halaqah_id === filterHalaqah) &&
+    (!filterHalaqah || recHalaqah(r) === filterHalaqah) &&
     (!filterMonth || r.date?.startsWith(filterMonth))
   ) || [];
 
@@ -117,21 +124,33 @@ export default function Reports() {
   const recAvgMistakes = filteredRec.length > 0
     ? (filteredRec.reduce((s, r) => s + (r.mistakes_count || 0), 0) / filteredRec.length).toFixed(1) : '0';
 
-  const feePaid    = (data?.fees || []).filter(f => f.status === 'paid');
-  const feePending = (data?.fees || []).filter(f => f.status === 'pending');
+  // [إصلاح 2026-10-22] التقرير المالي وتقرير الطلاب كانا يتجاهلان المرشّحَين:
+  // «التقرير المالي لشهر أكتوبر» يعرض رسوم كل الأشهر وكل الحلقات. و«صافي
+  // الإيرادات» كان المحصَّلَ ناقصاً المعلَّق — طرحُ مالٍ لم يُقبض من مالٍ قُبض
+  // لا يعني شيئاً؛ مكانه نسبةُ التحصيل. والمعلَّق يشمل المتأخّر (overdue) أيضاً.
+  const filteredFees = (data?.fees || []).filter(f =>
+    (!filterHalaqah || halaqahOfStudent.get(f.student_id) === filterHalaqah) &&
+    (!filterMonth || (f.month || f.due_date || '').startsWith(filterMonth))
+  );
+  const filteredStudents = (data?.students || []).filter(s => !filterHalaqah || s.halaqah_id === filterHalaqah);
+  const shownHalaqat = (data?.halaqat || []).filter(h => !filterHalaqah || h.id === filterHalaqah);
+
+  const feePaid    = filteredFees.filter(f => f.status === 'paid');
+  const feePending = filteredFees.filter(f => f.status !== 'paid');
   const totalPaid  = feePaid.reduce((s, f) => s + (f.amount || 0), 0);
   const totalPend  = feePending.reduce((s, f) => s + (f.amount || 0), 0);
+  const collectRate = totalPaid + totalPend > 0 ? Math.round(totalPaid / (totalPaid + totalPend) * 100) : 0;
 
   // Per-halaqah attendance summary
-  const halaqahAttStats = (data?.halaqat || []).map(h => {
+  const halaqahAttStats = shownHalaqat.map(h => {
     const hAtt = filteredAtt.filter(a => a.halaqah_id === h.id);
     const hPres = hAtt.filter(a => a.status === 'present').length;
     return { ...h, total: hAtt.length, present: hPres, rate: hAtt.length > 0 ? Math.round(hPres / hAtt.length * 100) : 0 };
   });
 
   // Per-halaqah recitation summary
-  const halaqahRecStats = (data?.halaqat || []).map(h => {
-    const hRec = filteredRec.filter(r => r.halaqah_id === h.id);
+  const halaqahRecStats = shownHalaqat.map(h => {
+    const hRec = filteredRec.filter(r => recHalaqah(r) === h.id);
     const hExc = hRec.filter(r => r.evaluation === 'excellent').length;
     return { ...h, total: hRec.length, excellent: hExc, rate: hRec.length > 0 ? Math.round(hExc / hRec.length * 100) : 0 };
   });
@@ -269,7 +288,7 @@ export default function Reports() {
                   {filteredAtt.slice(0, 50).map((a: any, i: number) => (
                     <tr key={a.id || i} className="hover:bg-[hsl(var(--muted))]/20">
                       <td className="px-4 py-2.5 font-medium">{a.student_name || '—'}</td>
-                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || '—'}</td>
+                      <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{a.halaqah_name || halaqahName.get(a.halaqah_id) || '—'}</td>
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{new Date(a.date || Date.now()).toLocaleDateString('ar-SA')}</td>
                       <td className="px-4 py-2.5">
                         <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${a.status==='present'?'bg-emerald-100 text-emerald-700':a.status==='absent'?'bg-red-100 text-red-700':a.status==='late'?'bg-amber-100 text-amber-700':'bg-blue-100 text-blue-700'}`}>
@@ -377,7 +396,7 @@ export default function Reports() {
             {[
               { label: 'إجمالي المحصَّل',  val: FCFA(totalPaid), cls: 'stat-card-teal' },
               { label: 'رسوم معلقة',       val: FCFA(totalPend), cls: 'stat-card-amber' },
-              { label: 'صافي الإيرادات',   val: FCFA(totalPaid - totalPend), cls: 'stat-card-teal' },
+              { label: 'نسبة التحصيل',     val: `${collectRate}%`, cls: 'stat-card-teal' },
             ].map(s => (
               <div key={s.label} className={`${s.cls} p-5`}>
                 <p className="num-display text-xl text-[hsl(var(--ink))] amount" dir="ltr">{s.val}</p>
@@ -401,7 +420,7 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
-                  {(data?.fees || []).map((f: any, i: number) => (
+                  {filteredFees.map((f: any, i: number) => (
                     <tr key={f.id || i} className="hover:bg-[hsl(var(--muted))]/20">
                       <td className="px-4 py-2.5 font-medium">{f.student_name || '—'}</td>
                       <td className="px-4 py-2.5 font-bold" dir="ltr">{FCFA(f.amount || 0)}</td>
@@ -425,7 +444,7 @@ export default function Reports() {
         <div className="space-y-5">
           <div className="grid grid-cols-3 gap-4">
             {[
-              { label: 'إجمالي الطلاب',    val: data?.students.length || 0, cls: 'stat-card-teal' },
+              { label: 'إجمالي الطلاب',    val: filteredStudents.length, cls: 'stat-card-teal' },
               { label: 'إجمالي المحفظين',  val: data?.teachers.length || 0, cls: 'stat-card-amber' },
               { label: 'إجمالي الحلقات',   val: data?.halaqat.length || 0,  cls: 'stat-card-teal' },
             ].map(s => (
@@ -452,7 +471,7 @@ export default function Reports() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[hsl(var(--border))]">
-                  {(data?.students || []).map((s: any, i: number) => (
+                  {filteredStudents.map((s: any, i: number) => (
                     <tr key={s.id || i} className="hover:bg-[hsl(var(--muted))]/20">
                       <td className="px-4 py-2.5 text-[hsl(var(--muted-foreground))]">{i + 1}</td>
                       <td className="px-4 py-2.5 font-bold text-[hsl(var(--foreground))]">{s.name}</td>

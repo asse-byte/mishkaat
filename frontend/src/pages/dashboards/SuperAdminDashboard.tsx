@@ -9,7 +9,7 @@ import {
   CheckCircle2, XCircle, Users, GraduationCap,
   BookOpen, AlertCircle, X, Eye, Calendar,
   ShieldAlert, Landmark,
-  TrendingUp, RefreshCw, Key,
+  TrendingUp, TrendingDown, RefreshCw, Key,
 } from 'lucide-react';
 import api, { centersApi } from '@/services/api';
 import StatCard from '@/components/ui/StatCard';
@@ -205,7 +205,7 @@ export default function SuperAdminDashboard() {
           <StatCard
             title="صافي الرصيد الإجمالي العام"
             value={formatAmount(stats.global_balance_fcfa)}
-            icon={TrendingUp}
+            icon={stats.global_balance_fcfa >= 0 ? TrendingUp : TrendingDown}
             gradientClass={stats.global_balance_fcfa >= 0 ? "stat-card-green" : "stat-card-rose"}
           />
         </div>

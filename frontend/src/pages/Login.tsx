@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { LoadingSpinner } from '@/components/ui/loading';
+import { errorMessage } from '@/lib/errors';
 import { Eye, EyeOff } from 'lucide-react';
 import MishkaatMark from '@/components/ui/MishkaatMark';
 
@@ -13,21 +14,27 @@ import MishkaatMark from '@/components/ui/MishkaatMark';
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     if (!username || !password) { setError('الرجاء إدخال اسم المستخدم وكلمة المرور'); return; }
+    setSubmitting(true);
     try {
       await login(username, password);
       navigate('/dashboard');
-    } catch {
-      setError('اسم المستخدم أو كلمة المرور غير صحيحة');
+    } catch (err) {
+      // [إصلاح 2026-10-22] رسالة الخادم أدقّ من نصٍّ ثابت: عدد المحاولات المتبقية،
+      // وقفل الدخول المؤقّت، و«حسابك بانتظار اعتماد الإدارة» لمن سجّل مركزه للتوّ.
+      setError(errorMessage(err, 'اسم المستخدم أو كلمة المرور غير صحيحة'));
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -94,10 +101,10 @@ export default function Login() {
 
           <button
             type="submit"
-            disabled={isLoading}
+            disabled={submitting}
             className="btn-primary w-full py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {isLoading ? <><LoadingSpinner size="sm" /><span>جاري الدخول…</span></> : 'تسجيل الدخول'}
+            {submitting ? <><LoadingSpinner size="sm" /><span>جاري الدخول…</span></> : 'تسجيل الدخول'}
           </button>
         </form>
 
