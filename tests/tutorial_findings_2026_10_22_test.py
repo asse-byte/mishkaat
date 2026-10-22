@@ -3,13 +3,14 @@
 
     backend/.venv/Scripts/python.exe tests/tutorial_findings_2026_10_22_test.py
 
-ثلاثة أعطال كانت ظاهرةً على الشاشة لكل مستخدم، لا في حالةٍ طرفية:
+أربعة أعطال كانت ظاهرةً على الشاشة لكل مستخدم، لا في حالةٍ طرفية:
 
 1. اسم وليّ الأمر معمّى: الحساب يأخذ parent_name من سجلّ الطالب، وهو حقلٌ معمّى،
    فتقول لوحة وليّ الأمر «مرحباً بك، gAAAA…».
 2. نسبة الحفظ صفرٌ دائماً: `progress` يُكتب صفراً عند التسجيل ولا يُحدَّث، فلوحة
    الطالب «0 / 30 جزءاً» ولوحة وليّه «الحفظ 0%» مهما سمّع.
 3. أوّل ضبطٍ لمعدّل المراجعة يعود 500 — والخطة محفوظة فعلاً.
+4. سجلّ النشاط بلا أسماء: الصفحة تقرأ username وrole، والسجلّ يحفظ actor_id فقط.
 """
 import asyncio
 import os
@@ -135,6 +136,24 @@ async def main():
             "center_id": cid, "student_id": sid, "juz_per_day": 0.5})
         check("أوّل ضبطٍ لمعدّل المراجعة يعود 200 لا 500", r.status_code == 200, str(r.status_code))
         check("  ويحمل معرّف الخطة", bool(r.json().get("id")) and "_id" not in r.json())
+
+        # ---------------------------------------------------- سجلّ النشاط
+        await c.post("/api/auth/login", data={"username": "mgr", "password": "wrong"})
+        admin = {"Authorization": "Bearer " + (await c.post("/api/auth/login", data={
+            "username": "admin", "password": "Admin@12345"})).json()["access_token"]}
+        r = await c.get("/api/audit-logs?action=ACCOUNT_ISSUED", headers=admin)
+        e = (r.json() or [{}])[0]
+        check("سجلّ النشاط يسمّي الفاعل ودوره ومركزه",
+              e.get("actor_name") == "mgr" and e.get("role") == "center_manager"
+              and e.get("center_name") == "مركز", str({k: e.get(k) for k in ("actor_name", "role", "center_name")}))
+        r = await c.get("/api/audit-logs?action=LOGIN_FAILED", headers=admin)
+        e = (r.json() or [{}])[0]
+        check("  والمحاولة الفاشلة باسم المستخدم المُدخَل", e.get("username") == "mgr", repr(e.get("username")))
+        raw = await db.audit_logs.find_one({"action": "ACCOUNT_ISSUED"})
+        check("  والسجلّ المخزَّن لم يُمسّ (الإضافة للعرض فقط)",
+              "actor_name" not in raw and "username" not in raw)
+        r = await c.get("/api/audit-logs/verify", headers=admin)
+        check("  وسلسلة البصمات سليمة", r.json().get("intact") is True, str(r.json().get("message")))
 
     await mongo.drop_database(TEST_DB)
     print()

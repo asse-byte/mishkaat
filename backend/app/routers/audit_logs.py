@@ -9,12 +9,40 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import hashlib
 
+from bson import ObjectId
+
 from app.audit import audit_hash_input
 from app.common import parse_date_boundary, serialize_doc
 from app.db import db
 from app.security import get_current_user
 
 router = APIRouter()
+
+
+async def _attach_people(items: list) -> None:
+    """
+    [إصلاح 2026-10-22] السجلّ يحفظ actor_id وcenter_id وclient_ip، وصفحة «سجلّ النشاط»
+    تقرأ username وrole وip — حقولٌ لم تُكتب قطّ. فكان عمود المستخدم «؟» في كل سطر،
+    وعنوان IP «—» دائماً: سجلٌّ لا يُعرف منه من فعل ماذا. تُضاف هنا للعرض فقط —
+    السجلّ المخزَّن وبصمته لا يُمسّان.
+    """
+    def oids(key):
+        return [ObjectId(i[key]) for i in items
+                if isinstance(i.get(key), str) and ObjectId.is_valid(i[key])]
+
+    users = {str(u["_id"]): u async for u in db.users.find(
+        {"_id": {"$in": oids("actor_id")}}, {"name": 1, "username": 1, "role": 1})}
+    centers = {str(c["_id"]): c.get("name") async for c in db.centers.find(
+        {"_id": {"$in": oids("center_id")}}, {"name": 1})}
+    for item in items:
+        payload = item.get("payload") if isinstance(item.get("payload"), dict) else {}
+        u = users.get(item.get("actor_id")) or {}
+        item["username"] = u.get("username") or payload.get("username")
+        item["actor_name"] = u.get("name")
+        item["role"] = u.get("role") or payload.get("role")
+        item["center_name"] = centers.get(item.get("center_id"))
+        ip = item.get("client_ip")
+        item["ip"] = ip if ip and ip != "system" else None
 
 
 @router.get("/api/audit-logs")
@@ -60,6 +88,7 @@ async def get_audit_logs(
     total = await db.audit_logs.count_documents(query)
     logs = await db.audit_logs.find(query).sort("timestamp", -1).skip(skip).limit(limit).to_list(limit)
     items = [serialize_doc(log) for log in logs]
+    await _attach_people(items)
     # [AUDIT-2026-09-03 addition: العدّاد الكلي حتى يعرف الترقيم في الواجهة أين يتوقف]
     return JSONResponse(
         content=jsonable_encoder(items),
