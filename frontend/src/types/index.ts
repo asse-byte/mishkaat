@@ -10,6 +10,8 @@ export interface User {
   phone?: string;
   created_at: string;
   is_active: boolean;
+  /** دخل بكلمة مرور مؤقتة من المسؤول: لا يستعمل التطبيق قبل أن يغيّرها */
+  must_change_password?: boolean;
 }
 
 export interface Center {

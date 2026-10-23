@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { authApi } from '@/services/api';
 import { LoadingSpinner } from '@/components/ui/loading';
 import { errorMessage } from '@/lib/errors';
 import { Eye, EyeOff } from 'lucide-react';
@@ -20,6 +21,27 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  // [إصلاح 2026-10-22] «نسيت كلمة المرور؟» كان زرّاً بلا وظيفة. الطلب يصل الآن إلى
+  // المسؤول عن الحساب فيعطيه كلمة مرور مؤقتة — لا قناة SMS أو بريد لإرسال رمز.
+  const [forgot, setForgot] = useState(false);
+  const [forgotSent, setForgotSent] = useState('');
+
+  const openForgot = () => { setForgot(true); setError(''); setForgotSent(''); };
+  const backToLogin = () => { setForgot(false); setError(''); };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    if (!username.trim()) { setError('الرجاء إدخال اسم المستخدم'); return; }
+    setSubmitting(true);
+    try {
+      setForgotSent(await authApi.forgotPassword(username.trim()));
+    } catch (err) {
+      setError(errorMessage(err, 'تعذّر إرسال الطلب، حاول بعد قليل'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +72,61 @@ export default function Login() {
           <p className="text-white/55 text-sm mt-1">نظام إدارة دور القرآن الكريم</p>
         </div>
 
+        {forgot ? (
+        <div className="bg-[hsl(var(--surface))] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-7">
+          <h2 className="text-lg mb-2">استعادة كلمة المرور</h2>
+          <p className="text-sm text-[hsl(var(--ink-3))] mb-6 leading-relaxed">
+            اكتب اسم المستخدم، فيصل طلبك إلى مدير مركزك — أو إلى إدارة النظام إن كنت مدير مركز —
+            فيعطيك كلمة مرور مؤقتة تغيّرها عند الدخول.
+          </p>
+
+          {forgotSent ? (
+            <div role="status"
+              className="p-4 rounded-[var(--radius-sm)] bg-[hsl(var(--ok-wash))] border border-[hsl(var(--ok)/.3)] text-[hsl(var(--ink))] text-sm leading-relaxed">
+              {forgotSent}
+            </div>
+          ) : (
+            <form onSubmit={handleForgot} className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-[hsl(var(--ink-2))] mb-1.5">اسم المستخدم</label>
+                <input
+                  type="text"
+                  placeholder="أدخل اسم المستخدم"
+                  value={username}
+                  onChange={e => setUsername(e.target.value)}
+                  dir="ltr"
+                  className="form-input"
+                  autoFocus
+                />
+              </div>
+
+              {error && (
+                <div
+                  role="alert"
+                  className="p-3 rounded-[var(--radius-sm)] bg-[hsl(var(--danger-wash))] border border-[hsl(var(--danger)/.3)] text-[hsl(var(--danger))] text-sm text-center font-medium"
+                >
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="btn-primary w-full py-3 text-base mt-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting ? <><LoadingSpinner size="sm" /><span>جاري الإرسال…</span></> : 'أرسل الطلب'}
+              </button>
+            </form>
+          )}
+
+          <div className="mt-5 text-center">
+            <button type="button" onClick={backToLogin}
+              className="text-sm font-semibold text-[hsl(var(--lamp-strong))] hover:underline">
+              العودة إلى تسجيل الدخول
+            </button>
+          </div>
+        </div>
+        ) : (
         <div className="bg-[hsl(var(--surface))] rounded-[var(--radius-lg)] shadow-[var(--shadow-lg)] p-7">
           <h2 className="text-lg mb-6">تسجيل الدخول</h2>
 
@@ -109,11 +186,13 @@ export default function Login() {
         </form>
 
           <div className="mt-5 text-center">
-            <button className="text-sm font-semibold text-[hsl(var(--lamp-strong))] hover:underline">
+            <button type="button" onClick={openForgot}
+              className="text-sm font-semibold text-[hsl(var(--lamp-strong))] hover:underline">
               نسيت كلمة المرور؟
             </button>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

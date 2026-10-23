@@ -9,6 +9,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   login: (username: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   hasRole: (roles: UserRole | UserRole[]) => boolean;
 }
 
@@ -103,6 +104,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const changePassword = async (currentPassword: string, newPassword: string) => {
+    tokenStore.set(await authApi.changePassword(currentPassword, newPassword));
+    setUser(u => {
+      if (!u) return u;
+      const next = { ...u, must_change_password: false };
+      localStorage.setItem('user', JSON.stringify(next));
+      return next;
+    });
+  };
+
   const hasRole = (roles: UserRole | UserRole[]): boolean => {
     if (!user) return false;
     const roleArray = Array.isArray(roles) ? roles : [roles];
@@ -117,6 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         login,
         logout,
+        changePassword,
         hasRole,
       }}
     >

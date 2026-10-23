@@ -147,6 +147,19 @@ export const authApi = {
     await api.post('/auth/logout', {});
   },
 
+  forgotPassword: async (username: string): Promise<string> => {
+    const { data } = await api.post<{ message: string }>('/auth/forgot-password', { username });
+    return data.message;
+  },
+
+  // الخادم يرفع user_version فتسقط جلسات الأجهزة الأخرى، ويعيد توكناً جديداً لهذا الجهاز
+  changePassword: async (currentPassword: string, newPassword: string): Promise<string> => {
+    const { data } = await api.post<{ access_token: string }>('/auth/change-password', {
+      current_password: currentPassword, new_password: newPassword,
+    });
+    return data.access_token;
+  },
+
   getMe: async (): Promise<User> => {
     const response = await api.get<User>('/auth/me');
     return response.data;
